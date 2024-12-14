@@ -1,6 +1,8 @@
 package cuebook
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -8,6 +10,42 @@ import (
 
 	"cuelang.org/go/cue/cuecontext"
 )
+
+func Merge(w io.Writer, source []byte, e *Entry) (n int64, err error) {
+	start, end, ok := e.GetByteOffsetInSource()
+	if !ok {
+		for i := len(source) - 1; i >= 0; i-- {
+			if source[i] == ']' {
+				// found end of the list
+				start = i
+				end = i
+				break
+			}
+		}
+		return 0, errors.New("could not find the end of list")
+	}
+	if start > 0 {
+		n, err = io.Copy(w, bytes.NewReader(source[:start]))
+		if err != nil {
+			return n, err
+		}
+	}
+	more, err := e.WriteTo(w)
+	n += more
+	if err != nil {
+		return n, err
+	}
+	if _, err = w.Write([]byte(`,`)); err != nil {
+		return n, err
+	}
+	n++ // for comma
+	more, err = io.Copy(w, bytes.NewReader(source[end:]))
+	n += more
+	if err != nil {
+		return n, err
+	}
+	return n, nil
+}
 
 // UUID is the name of the map field in which UUID is stored on the disk.
 const UUID = "ID"
