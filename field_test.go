@@ -31,6 +31,7 @@ func SubstituteValue(w io.Writer, source []byte, v cue.Value, value string) (err
 	}
 
 	if label, ok := v.Label(); ok {
+		// TODO: quote label? literal.Label.Quote(label)
 		if _, err = io.WriteString(w, label); err != nil {
 			return err
 		}
@@ -42,9 +43,12 @@ func SubstituteValue(w io.Writer, source []byte, v cue.Value, value string) (err
 	switch kind := v.Kind(); kind {
 	case cue.StringKind:
 		// TODO: adjust tab indent based on line position
-		if _, err = io.WriteString(w, literal.String.WithOptionalTabIndent(3).Quote(value)); err != nil {
+		if _, err = io.WriteString(w, literal.String.WithOptionalTabIndent(2).Quote(value)); err != nil {
 			return err
 		}
+	case cue.BoolKind, cue.FloatKind, cue.BytesKind, cue.ListKind, cue.NumberKind, cue.StructKind:
+		// TODO: implement
+		fallthrough
 	default:
 		return fmt.Errorf("unsupport value kind: %s", kind)
 	}
@@ -68,5 +72,5 @@ func TestFieldSubstitution(t *testing.T) {
 	b := &bytes.Buffer{}
 	t.Log(value.Label())
 	SubstituteValue(b, []byte(basicStruct), value.Value(), "???\n???")
-	t.Fatal(b.String())
+	// t.Fatal(b.String())
 }
