@@ -5,9 +5,10 @@ import (
 	"os"
 
 	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dkotik/cuebook/terminalui"
+	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/urfave/cli/v3"
 )
 
@@ -21,7 +22,7 @@ func main() {
 	cmd := &cli.Command{
 		Name:  "cuebook",
 		Usage: "edit lists of structured data items",
-		Action: func(context.Context, *cli.Command) (err error) {
+		Action: func(ctx context.Context, cmd *cli.Command) (err error) {
 			items := []list.Item{
 				terminalui.Item("Ramen"),
 				terminalui.Item("Tomato Soup"),
@@ -45,7 +46,24 @@ func main() {
 			l.Styles.PaginationStyle = paginationStyle
 			l.Styles.HelpStyle = helpStyle
 
-			_, err = tea.NewProgram(terminalui.List{List: l}).Run()
+			card1, err := card.New("Title", "sdf sdf sdf", "sdf sdfsdf sdf")
+			if err != nil {
+				return err
+			}
+
+			card2, err := card.New("Title2", "....", "????")
+			if err != nil {
+				return err
+			}
+
+			_, err = tea.NewProgram(
+				terminalui.New(
+					terminalui.NewSwitch(card1, card2, false),
+					// card1,
+				),
+				tea.WithContext(ctx),
+				tea.WithAltScreen(),
+			).Run()
 			return err
 		},
 	}
