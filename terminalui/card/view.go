@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui"
 	"github.com/muesli/reflow/truncate"
 )
@@ -12,7 +12,8 @@ import (
 var (
 	styleTitle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.AdaptiveColor{Light: "236", Dark: "86"}) // aqua
+			Foreground(lipgloss.Color(86)) // aqua
+	// lipgloss.AdaptiveColor{Light: "236", Dark: "86"}
 
 	borderInactive = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("243")).
