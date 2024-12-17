@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/list"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/v2/list"
+	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -49,8 +49,8 @@ type List struct {
 	quitting bool
 }
 
-func (m List) Init() tea.Cmd {
-	return nil
+func (m List) Init() (tea.Model, tea.Cmd) {
+	return m, nil
 }
 
 func (m List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

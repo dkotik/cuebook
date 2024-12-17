@@ -1,7 +1,6 @@
 package card
 
 import (
-	"errors"
 	"slices"
 	"strings"
 
@@ -9,22 +8,22 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 
-type card struct {
+type Card struct {
 	Rendered    string
 	Title       string
 	Description []string
 	Selected    bool
 }
 
-func (c card) Height() int {
+func (c Card) Height() int {
 	return len(c.Description) + 1 // for title
 }
 
-func (c card) Init() (tea.Model, tea.Cmd) {
+func (c Card) Init() (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func (c card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (c Card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		c.Rendered = c.Render(msg)
@@ -32,13 +31,13 @@ func (c card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func New(title string, description ...string) (tea.Model, error) {
+func New(title string, description ...string) (Card, error) {
 	title = strings.TrimSpace(title)
 	if title == "" {
-		return nil, errors.New("empty title")
+		title = "???"
 	}
 	// TODO: split description lines by "\n"
-	return card{
+	return Card{
 		Selected: false,
 		Title:    title,
 		Description: slices.DeleteFunc(description, func(s string) bool {

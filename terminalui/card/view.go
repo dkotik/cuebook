@@ -22,7 +22,7 @@ var (
 			Render(" " + lipgloss.ThickBorder().Left)
 )
 
-func (c card) Render(size tea.WindowSizeMsg) string {
+func (c Card) Render(size tea.WindowSizeMsg) string {
 	width := size.Width
 	if width < 4 {
 		return strings.Repeat(" ", width)
@@ -61,6 +61,6 @@ func (c card) Render(size tea.WindowSizeMsg) string {
 	return b.String()
 }
 
-func (c card) View() string {
+func (c Card) View() string {
 	return c.Rendered
 }
