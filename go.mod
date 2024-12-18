@@ -10,6 +10,7 @@ require (
 	github.com/charmbracelet/bubbletea/v2 v2.0.0-alpha.2
 	github.com/charmbracelet/lipgloss/v2 v2.0.0-alpha.2
 	github.com/charmbracelet/x/ansi v0.4.5
+	github.com/davecgh/go-spew v1.1.1
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/muesli/reflow v0.3.0
 	github.com/nicksnyder/go-i18n/v2 v2.4.1

@@ -1,7 +1,6 @@
 package textarea
 
 import (
-	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/lipgloss/v2"
 )
 
@@ -17,7 +16,5 @@ func (t Textarea) View() string {
 
 	return lipgloss.JoinVertical(lipgloss.Left,
 		" "+t.Label+":",
-		ta, " "+t.help.ShortHelpView([]key.Binding{
-			t.saveKey, t.escapeKey,
-		}))
+		ta, t.status.View())
 }
