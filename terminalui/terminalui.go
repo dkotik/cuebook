@@ -11,29 +11,15 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-type (
-	ErrorEvent   error
-	BackEvent    struct{}
-	IsBusyEvent  bool
-	setBusyEvent bool
-)
-
-func WithBusySignal(cmd tea.Cmd) tea.Cmd {
-	return tea.Sequence(
-		func() tea.Msg { return setBusyEvent(true) },
-		cmd,
-		func() tea.Msg { return setBusyEvent(false) },
-	)
+func New(initial tea.Model) tea.Model {
+	return window{current: initial}
 }
 
 type window struct {
-	model tea.Model
-	stack []tea.Model
-	busy  uint8
-}
-
-func New(initial tea.Model) tea.Model {
-	return window{model: initial}
+	current tea.Model
+	stack   []tea.Model
+	size    tea.WindowSizeMsg
+	busy    uint8
 }
 
 func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -44,14 +30,14 @@ func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
 		os.Exit(1)
 	}
 
-	w.model, cmd = w.model.Init()
+	w.current, cmd = w.current.Init()
 	return w, WithBusySignal(cmd)
 }
 
 func (w window) back() (tea.Model, tea.Cmd) {
 	if l := len(w.stack); l > 0 {
 		l--
-		w.model = w.stack[l]
+		w.current = w.stack[l]
 		w.stack = w.stack[:l]
 		return w, nil
 	}
@@ -64,15 +50,17 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	spew.Fdump(logFile, time.Now().Format("04:05.000"), msg)
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		w.size = msg
 	case SwitchTo:
 		w.stack = append(w.stack, msg)
-		w.model = msg
+		w.current, cmd = msg.Update(w.size)
 	case BackEvent:
 		return w.back()
 	case setBusyEvent:
 		if bool(msg) {
 			w.busy++
-			w.model, cmd = w.model.Update(IsBusyEvent(true))
+			w.current, cmd = w.current.Update(IsBusyEvent(true))
 			return w, cmd
 		} else {
 			w.busy--
@@ -87,7 +75,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 		return w, nil
 	case IsBusyEvent:
-		w.model, cmd = w.model.Update(IsBusyEvent(w.busy != 0))
+		w.current, cmd = w.current.Update(IsBusyEvent(w.busy != 0))
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case tea.KeyEscape:
@@ -95,15 +83,15 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		default:
 			if w.busy == 0 {
 				// forward key events only if not busy
-				w.model, cmd = w.model.Update(msg)
+				w.current, cmd = w.current.Update(msg)
 			}
 		}
 	default:
-		w.model, cmd = w.model.Update(msg)
+		w.current, cmd = w.current.Update(msg)
 	}
 	return w, cmd
 }
 
 func (w window) View() string {
-	return w.model.View()
+	return w.current.View()
 }

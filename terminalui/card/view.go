@@ -63,5 +63,5 @@ func (c Card) Render(size tea.WindowSizeMsg) string {
 }
 
 func (c Card) View() string {
-	return c.Rendered
+	return c.rendered
 }

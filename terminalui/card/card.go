@@ -4,15 +4,16 @@ import (
 	"slices"
 	"strings"
 
-	"cuelang.org/go/cue"
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 
 type Card struct {
-	Rendered    string
+	ID          string
 	Title       string
 	Description []string
 	Selected    bool
+
+	rendered string
 }
 
 func (c Card) Height() int {
@@ -26,7 +27,7 @@ func (c Card) Init() (tea.Model, tea.Cmd) {
 func (c Card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		c.Rendered = c.Render(msg)
+		c.rendered = c.Render(msg)
 	}
 	return c, nil
 }
@@ -44,10 +45,4 @@ func New(title string, description ...string) (Card, error) {
 			return strings.TrimSpace(s) == ""
 		}),
 	}, nil
-}
-
-func NewFromCueStructure(v cue.Value) (tea.Model, error) {
-	// field: string @cuebook(detail)
-
-	return New("test")
 }

@@ -46,7 +46,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.Spinner.Tick
 		}
 	case spinner.TickMsg:
-		// panic("Sdsd")
 		if m.Busy {
 			var cmd tea.Cmd
 			m.Spinner, cmd = m.Spinner.Update(msg)

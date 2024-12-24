@@ -5,8 +5,6 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/terminalui"
-	"github.com/dkotik/cuebook/terminalui/textarea"
 	"github.com/urfave/cli/v3"
 )
 
@@ -26,15 +24,7 @@ func main() {
 			// }
 
 			_, err = tea.NewProgram(
-				terminalui.New(
-					textarea.Textarea{
-						Label:    "Enter field",
-						Required: true,
-					},
-					// list.New(card1, card2),
-					// terminalui.NewSwitch(card1, card2, false),
-					// card1,
-				),
+				NewTerminalUI(ctx, "test/testdata/simple.cue"),
 				tea.WithContext(ctx),
 				tea.WithAltScreen(),
 			).Run()
