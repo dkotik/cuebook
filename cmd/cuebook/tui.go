@@ -8,6 +8,7 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui"
 	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/file"
@@ -27,9 +28,31 @@ func (s *cueFileState) Load(ctx context.Context, content file.ContentEvent) (tea
 	if err := s.parse(content); err != nil {
 		return nil, err
 	}
-	return terminalui.SwitchTo(list.New(card.Card{
-		Title: "string",
-	})), nil
+	size, err := s.Tree.Len().Int64()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the length of the Cue list: %w", err)
+	}
+
+	cards := make([]tea.Model, 0, int(size))
+	// next, err := s.Tree.List()
+	// if err != nil {
+	// 	return nil, errors.New("unable to iterate over the Cue list")
+	// }
+	// for next.Next() {
+	// 	cards = append(cards, card.New("title string"+strconv.Itoa(len(cards)), "description ...string"))
+	// }
+	book, err := cuebook.New(content)
+	if err != nil {
+		return nil, err
+	}
+	for entry, err := range book.EachEntry() {
+		if err != nil {
+			return nil, err
+		}
+		cards = append(cards, card.New(entry.String(), "description ...string"))
+	}
+
+	return terminalui.SwitchTo(list.New(cards...)), nil
 }
 
 func (s *cueFileState) parse(source []byte) (err error) {

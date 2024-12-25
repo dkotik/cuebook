@@ -9,6 +9,7 @@ import (
 )
 
 var _ io.WriterTo = (*Entry)(nil)
+var _ fmt.Stringer = (*Entry)(nil)
 
 type Entry struct {
 	node *cue.Value
@@ -16,9 +17,13 @@ type Entry struct {
 	Fields []FieldType
 }
 
+func (e Entry) String() string {
+	return fmt.Sprintf("%v", e.Fields)
+}
+
 func NewEntry(v cue.Value) (*Entry, error) {
 	if !v.IsConcrete() || v.IsNull() {
-		return nil, errors.New("cannot load abstract value")
+		return nil, errors.New("cannot load an abstract value")
 	}
 	if k := v.Kind(); k != cue.StructKind {
 		return nil, fmt.Errorf("value is not a structured object: %s", k)
@@ -84,6 +89,7 @@ func (e *Entry) GetByteOffsetInSource() (start, end int, ok bool) {
 	if e.node != nil {
 		_, expressions := e.node.Expr()
 		for _, expression := range expressions {
+			// ignore abstract definitions
 			if expression.IsConcrete() {
 				if source := expression.Source(); source != nil {
 					// found first concrete data definition
@@ -91,7 +97,6 @@ func (e *Entry) GetByteOffsetInSource() (start, end int, ok bool) {
 					return source.Pos().Offset(), source.End().Offset(), true
 				}
 			}
-			// ignore abstract definitions
 		}
 	}
 	return 0, 0, false

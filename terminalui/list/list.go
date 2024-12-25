@@ -2,7 +2,6 @@ package list
 
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/terminalui/card"
 )
 
 func New(items ...tea.Model) tea.Model {
@@ -51,7 +50,7 @@ func (l list) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var model tea.Model
 		for i, item := range l.Items {
 			model, cmd = item.Update(msg)
-			l.Items[i] = model.(card.Card)
+			l.Items[i] = model
 			cmds = append(cmds, cmd)
 		}
 

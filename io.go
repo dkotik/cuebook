@@ -11,14 +11,17 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 )
 
+type SourceByteRange struct {
+	BeginAt int
+	EndAt   int
+}
+
 func Merge(w io.Writer, source []byte, e *Entry) (n int64, err error) {
 	start, end, ok := e.GetByteOffsetInSource()
 	if !ok {
 		for i := len(source) - 1; i >= 0; i-- {
 			if source[i] == ']' {
 				// found end of the list
-				start = i
-				end = i
 				break
 			}
 		}

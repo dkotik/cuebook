@@ -1,4 +1,9 @@
-// cue export --out=cue simple.cue
+// # Example File
+//
+// First comment is a description of the contents in Markdown format.
+// The first heading is the title of the document.
+//
+// `cue export --out=yaml simple.cue`
 
 #email: =~ "^[^@]+@[^@]+$"
 

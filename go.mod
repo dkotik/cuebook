@@ -1,8 +1,6 @@
 module github.com/dkotik/cuebook
 
-go 1.22.0
-
-toolchain go1.23.3
+go 1.23.4
 
 require (
 	cuelang.org/go v0.11.0
@@ -15,8 +13,8 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/nicksnyder/go-i18n/v2 v2.4.1
 	github.com/rivo/uniseg v0.4.7
-	github.com/rs/xid v1.3.0
 	github.com/urfave/cli/v3 v3.0.0-beta1
+	github.com/yuin/goldmark v1.7.8
 	golang.org/x/text v0.19.0
 )
 
