@@ -59,7 +59,7 @@ func (b CueBook) EachEntry() iter.Seq2[Entry, error] {
 			// 	return yield(Entry{}, err)
 			// }
 			entry, err := NewEntry(next.Value())
-			if !yield(*entry, errors.Join(
+			if !yield(entry, errors.Join(
 				err,
 				next.Value().Err(),
 			)) {
@@ -77,16 +77,18 @@ func (b CueBook) Len() int {
 	return int(length)
 }
 
-func GetByteSpanInSource(v cue.Value) (start, end int, ok bool) {
+func GetByteSpanInSource(v cue.Value) (byteRange SourceByteRange) {
 	_, expressions := v.Expr()
 	for _, expression := range expressions {
 		if expression.IsConcrete() {
 			if source := expression.Source(); source != nil {
 				// found first concrete data definition
 				// with present source pointer
-				return source.Pos().Offset(), source.End().Offset(), true
+				byteRange.BeginsAt = source.Pos().Offset()
+				byteRange.EndsAt = source.End().Offset()
+				break
 			}
 		}
 	}
-	return 0, 0, false
+	return byteRange
 }

@@ -1,14 +1,70 @@
 package cuebook
 
 import (
+	"bytes"
 	"encoding"
+	"fmt"
 	"strconv"
 
+	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/literal"
 )
 
-// null  +bool  +string  bytes  +number  list  struct
+type Field struct {
+	Name  string
+	Value cue.Value
+}
 
+func (f Field) String() string {
+	switch k := f.Value.Kind(); k {
+	case cue.BoolKind:
+		value, err := f.Value.Bool()
+		if err != nil || !value {
+			return "X"
+		}
+		return booleanTrue
+	case cue.IntKind, cue.FloatKind, cue.NumberKind:
+		b := &bytes.Buffer{}
+		_, _ = fmt.Fprintf(b, "%v", f.Value)
+		return b.String()
+	case cue.StringKind:
+		value, _ := f.Value.String()
+		return value
+	case cue.BytesKind, cue.ListKind, cue.StructKind:
+		value, _ := f.Value.MarshalJSON()
+		return string(value)
+	case cue.NullKind, cue.BottomKind:
+		fallthrough
+	default:
+		return informationUnavailable
+	}
+}
+
+func (f Field) MarshallText() ([]byte, error) {
+	switch k := f.Value.Kind(); k {
+	case cue.BoolKind:
+		value, err := f.Value.Bool()
+		if err != nil || !value {
+			return nil, err
+		}
+		return []byte(booleanTrue), nil
+	case cue.IntKind, cue.FloatKind, cue.NumberKind:
+		b := &bytes.Buffer{}
+		_, err := fmt.Fprintf(b, "%v", f.Value)
+		return b.Bytes(), err // TODO: test this
+	case cue.StringKind:
+		value, err := f.Value.String()
+		return []byte(value), err
+	case cue.BytesKind, cue.ListKind, cue.StructKind:
+		return f.Value.MarshalJSON()
+	case cue.NullKind, cue.BottomKind:
+		return nil, nil
+	default:
+		panic(fmt.Errorf("unknown data type: %s", k))
+	}
+}
+
+// DEPRECATED
 type FieldType interface {
 	GetName() string
 	encoding.TextMarshaler

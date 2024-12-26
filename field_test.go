@@ -22,11 +22,11 @@ const basicStruct = `{
 }`
 
 func SubstituteValue(w io.Writer, source []byte, v cue.Value, value string) (err error) {
-	start, end, ok := cuebook.GetByteSpanInSource(v)
-	if !ok {
+	byteRange := cuebook.GetByteSpanInSource(v)
+	if !byteRange.IsValid() {
 		return errors.New("unable to determine buffer bounds")
 	}
-	if _, err = io.Copy(w, bytes.NewReader(source[:start])); err != nil {
+	if _, err = io.Copy(w, bytes.NewReader(source[:byteRange.BeginsAt])); err != nil {
 		return err
 	}
 
@@ -53,7 +53,7 @@ func SubstituteValue(w io.Writer, source []byte, v cue.Value, value string) (err
 		return fmt.Errorf("unsupport value kind: %s", kind)
 	}
 
-	if _, err = io.Copy(w, bytes.NewReader(source[end:])); err != nil {
+	if _, err = io.Copy(w, bytes.NewReader(source[byteRange.EndsAt:])); err != nil {
 		return err
 	}
 	return nil
