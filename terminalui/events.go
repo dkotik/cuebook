@@ -19,11 +19,28 @@ func WithBusySignal(cmd tea.Cmd) tea.Cmd {
 
 func Propagate(
 	cmd tea.Msg,
-	children ...*tea.Model,
+	children []tea.Model,
 ) (out tea.Cmd) {
 	commands := make([]tea.Cmd, 0, len(children))
 	for i, child := range children {
-		*children[i], out = (*child).Update(cmd)
+		children[i], out = child.Update(cmd)
+		if out != nil {
+			commands = append(commands, out)
+		}
+	}
+
+	if len(commands) == 0 {
+		return nil
+	}
+	return tea.Batch(commands...)
+}
+
+func PropagateInit(
+	children []tea.Model,
+) (out tea.Cmd) {
+	commands := make([]tea.Cmd, 0, len(children))
+	for i, child := range children {
+		children[i], out = child.Init()
 		if out != nil {
 			commands = append(commands, out)
 		}

@@ -4,15 +4,19 @@ Package terminalui provides user interface built on Charm.
 package terminalui
 
 import (
-	"os"
+	"cmp"
+	"log/slog"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/davecgh/go-spew/spew"
 )
 
-func New(initial tea.Model) tea.Model {
-	return window{current: initial}
+func New(initial tea.Model, logger *slog.Logger) tea.Model {
+	return window{
+		current: initial,
+		logger:  cmp.Or(logger, slog.Default()),
+	}
 }
 
 type window struct {
@@ -20,23 +24,19 @@ type window struct {
 	stack   []tea.Model
 	size    tea.WindowSizeMsg
 	busy    uint8
+	logger  *slog.Logger
 }
 
 func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
-	// TODO: logging should be behind a flag?
-	var err error
-	logFile, err = os.OpenFile("test/testdata/debug.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
-	if err != nil {
-		os.Exit(1)
-	}
-
 	w.current, cmd = w.current.Init()
+	w.stack = make([]tea.Model, 0, 5)
+	w.stack = append(w.stack, w.current)
 	return w, WithBusySignal(cmd)
 }
 
 func (w window) back() (tea.Model, tea.Cmd) {
 	if l := len(w.stack); l > 0 {
-		l--
+		l -= 2
 		w.current = w.stack[l]
 		w.stack = w.stack[:l]
 		return w, nil
@@ -44,14 +44,12 @@ func (w window) back() (tea.Model, tea.Cmd) {
 	return w, tea.Quit
 }
 
-var logFile *os.File
-
 func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
-	spew.Fdump(logFile, time.Now().Format("04:05.000"), msg)
-
+	w.logger.Debug(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		w.size = msg
+		w.current, cmd = w.current.Update(msg)
 	case SwitchTo:
 		w.stack = append(w.stack, msg)
 		w.current, cmd = msg.Update(w.size)

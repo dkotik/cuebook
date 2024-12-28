@@ -13,11 +13,7 @@ type card struct {
 	Description []string
 	Selected    bool
 
-	rendered string
-}
-
-func (c card) Height() int {
-	return len(c.Description) + 1 // for title
+	width int
 }
 
 func (c card) Init() (tea.Model, tea.Cmd) {
@@ -27,7 +23,7 @@ func (c card) Init() (tea.Model, tea.Cmd) {
 func (c card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		c.rendered = c.Render(msg)
+		c.width = msg.Width
 	}
 	return c, nil
 }

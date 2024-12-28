@@ -27,6 +27,7 @@ func main() {
 				NewTerminalUI(ctx, "test/testdata/simple.cue"),
 				tea.WithContext(ctx),
 				tea.WithAltScreen(),
+				tea.WithMouseCellMotion(),
 			).Run()
 			return err
 		},

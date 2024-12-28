@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"os"
+
+	"log/slog"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
@@ -12,6 +15,20 @@ import (
 )
 
 func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
+	logFile, err := os.OpenFile("test/testdata/debug.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	if err != nil {
+		panic(err)
+	}
+	go func() {
+		<-ctx.Done()
+		if err := logFile.Close(); err != nil {
+			panic(err)
+		}
+	}()
+	logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+
 	window := terminalui.New(
 		file.New(filePath),
 		// textarea.Textarea{
@@ -21,6 +38,7 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 		// list.New(card1, card2),
 		// terminalui.NewSwitch(card1, card2, false),
 		// card1,
+		slog.New(logger).With("component", "bubbletea"),
 	)
 
 	return terminalui.NewDomainAdaptor(ctx,
@@ -44,7 +62,11 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 					// TODO: slog invalid byte ranges?
 				}
 
-				cards = append(cards, card.New(entry.Title, description...))
+				cards = append(cards,
+					terminalui.NewCached(
+						card.New(entry.Title, description...),
+					),
+				)
 			}
 
 			return terminalui.SwitchTo(list.New(cards...)), nil
