@@ -8,11 +8,6 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 )
 
-var selectedStyle = lipgloss.NewStyle().
-	// Margin(1).
-	AlignHorizontal(lipgloss.Left).
-	AlignVertical(lipgloss.Center)
-
 func (l List) cardSeparator() string {
 	return strings.Repeat(" ", l.Size.Width)
 }
@@ -111,8 +106,11 @@ func (l List) View() string {
 		view = lipgloss.JoinVertical(lipgloss.Left, lines...)
 	}
 
-	return selectedStyle.
+	return lipgloss.NewStyle().
+		// AlignHorizontal(lipgloss.Left).
+		AlignVertical(lipgloss.Center).
 		Height(l.Size.Height).
-		MarginLeft(l.Size.Width / 3).
+		MarginLeft(l.Size.Width / 4).
+		// MarginRight(l.Size.Width / 3).
 		Render(view)
 }

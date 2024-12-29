@@ -25,8 +25,9 @@ type List struct {
 	fullScreenView *viewport.Model
 }
 
-func (l List) Init() (tea.Model, tea.Cmd) {
-	return l, terminalui.PropagateInit(l.Items)
+func (l List) Init() (m tea.Model, cmd tea.Cmd) {
+	m, cmd = l.applySelection(0)
+	return m, tea.Batch(terminalui.PropagateInit(l.Items), cmd)
 }
 
 func (l List) IsFullscreen() bool {
@@ -40,7 +41,7 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case tea.KeyEnter:
-			event := selectEvent{Index: l.SelectedIndex}
+			event := applySelectionEvent{Index: l.SelectedIndex}
 			return l, func() tea.Msg {
 				return event
 			}
@@ -53,9 +54,8 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if len(l.Items) > 1 {
 				if l.SelectedIndex < len(l.Items)-1 {
-					l.SelectedIndex++
+					return l.applySelection(l.SelectedIndex + 1)
 				}
-				return l, nil
 			}
 		case tea.KeyUp, 'k':
 			if l.IsFullscreen() && !l.fullScreenView.AtTop() {
@@ -67,13 +67,17 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if len(l.Items) > 1 {
 				if l.SelectedIndex > 0 {
-					l.SelectedIndex--
+					return l.applySelection(l.SelectedIndex - 1)
 				}
-				return l, nil
 			}
+		}
+	case applySelectionEvent:
+		if l.SelectedIndex != msg.Index && msg.Index >= 0 && msg.Index < len(l.Items) {
+			return l.applySelection(msg.Index)
 		}
 	case tea.WindowSizeMsg:
 		l.Size = msg
+		msg.Width = msg.Width * 2 / 3
 		if msg.Width > 80 {
 			msg.Width = 80
 		}

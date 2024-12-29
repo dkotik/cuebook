@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/dkotik/cuebook/terminalui/list"
 )
 
 type card struct {
@@ -24,6 +25,8 @@ func (c card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		c.width = msg.Width
+	case list.SelectionActivateEvent:
+		c.Selected = bool(msg)
 	}
 	return c, nil
 }

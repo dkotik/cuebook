@@ -52,7 +52,10 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		w.current, cmd = w.current.Update(msg)
 	case SwitchTo:
 		w.stack = append(w.stack, msg)
+		var cmdInit tea.Cmd
+		w.current, cmdInit = msg.Init()
 		w.current, cmd = msg.Update(w.size)
+		cmd = tea.Batch(cmd, cmdInit)
 	case BackEvent:
 		return w.back()
 	case setBusyEvent:
