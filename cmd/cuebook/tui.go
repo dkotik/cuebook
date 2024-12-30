@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui"
 	"github.com/dkotik/cuebook/terminalui/card"
@@ -44,10 +45,14 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 	return terminalui.NewDomainAdaptor(ctx,
 		func(ctx context.Context, content file.ContentEvent) (tea.Msg, error) {
 			book, err := cuebook.New(content)
-			cards := make([]tea.Model, 0, book.Len())
+			cards := make([]tea.Model, 0, book.Len()+1)
 			if err != nil {
 				return nil, err
 			}
+			cards = append(cards, list.Title{
+				Text:  "skdjflkadksafkl ajs;jsadfadsjhsadkf sadjfas nsbdfjasdkf skjfhasjsdjkfbaisdasdhf ajsdlkjalkfadsl haskfhsafn saf 98-06458-6983-684356 3459843986-436-09358 035-0436093456-45869348-643568345683546834968-43560-4604564  9450684 90684036-03456",
+				Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
+			})
 			for entry, err := range book.EachEntry() {
 				if err != nil {
 					return nil, err

@@ -2,6 +2,7 @@ package terminalui
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/charmbracelet/x/ansi/parser"
 	"github.com/mattn/go-runewidth"
@@ -12,6 +13,12 @@ const (
 	bullet   = "•"
 	ellipsis = "…"
 )
+
+func SplitLines(s string) []string {
+	// normalize line endings
+	normalized := strings.ReplaceAll(s, "\r\n", "\n")
+	return strings.Split(normalized, "\n")
+}
 
 func PadLine(s string, w int) string {
 	length := runewidth.StringWidth(s)

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/dkotik/cuebook/terminalui"
 )
 
 func (l List) cardSeparator() string {
@@ -16,13 +17,10 @@ func (l List) forwardLineIterator() iter.Seq[string] {
 	separator := l.cardSeparator()
 	return func(yield func(value string) bool) {
 		for _, card := range l.Items[l.SelectedIndex+1:] {
-			// TODO: do not return the last separator, check if final item
 			if !yield(separator) {
 				return
 			}
-
-			normalized := strings.ReplaceAll(card.View(), "\r\n", "\n") // normalize line endings
-			for _, line := range strings.Split(normalized, "\n") {
+			for _, line := range terminalui.SplitLines(card.View()) {
 				if !yield(line) {
 					return
 				}
@@ -38,15 +36,37 @@ func (l List) reverseLineIterator() iter.Seq[string] {
 			if !yield(separator) {
 				return
 			}
-
-			normalized := strings.ReplaceAll(l.Items[i].View(), "\r\n", "\n") // normalize line endings
-			lines := strings.Split(normalized, "\n")
+			lines := terminalui.SplitLines(l.Items[i].View())
 			for j := len(lines) - 1; j >= 0; j-- {
 				if !yield(lines[j]) {
 					return
 				}
 			}
 		}
+
+		// if l.Title == "" {
+		// 	return
+		// }
+		// if !yield(separator) {
+		// 	return
+		// }
+		// title := terminalui.SplitLines(
+		// 	lipgloss.NewStyle().
+		// 		// AlignHorizontal(lipgloss.Left).
+		// 		// AlignVertical(lipgloss.Center).
+		// 		// Height(l.Size.Height).
+		// 		// MarginRight(l.Size.Width / 3).
+		// 		// MarginLeft(l.Size.Width / 4).
+		// 		Width(l.Size.Width * 3 / 5).
+		// 		Render(l.Title),
+		// )
+
+		// for i := len(title) - 1; i >= 0; i-- {
+		// 	// lines = append([]string{title[i]}, lines...)
+		// 	if !yield(title[i]) {
+		// 		return
+		// 	}
+		// }
 	}
 }
 
@@ -103,6 +123,24 @@ func (l List) View() string {
 			lines = append([]string{line}, lines...)
 			space--
 		}
+
+		// if space > 0 && l.Title != "" {
+		// 	// there is place for title
+		// 	title := terminalui.SplitLines(
+		// 		lipgloss.NewStyle().
+		// 			// AlignHorizontal(lipgloss.Left).
+		// 			AlignVertical(lipgloss.Center).
+		// 			Height(l.Size.Height).
+		// 			MarginLeft(l.Size.Width / 4).
+		// 			// MarginRight(l.Size.Width / 3).
+		// 			Render(l.Title),
+		// 	)
+
+		// 	for i := min(space, len(title)); i >= 0; i-- {
+		// 		lines = append([]string{title[i]}, lines...)
+		// 	}
+		// }
+
 		view = lipgloss.JoinVertical(lipgloss.Left, lines...)
 	}
 
