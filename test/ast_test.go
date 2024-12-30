@@ -69,5 +69,6 @@ func TestNodeStructure(t *testing.T) {
 		}
 		// t.Fatal(root.Value().Kind())
 	}
+
 	// t.Fatal("comp")
 }

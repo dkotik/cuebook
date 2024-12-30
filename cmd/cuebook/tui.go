@@ -46,6 +46,7 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 		func(ctx context.Context, content file.ContentEvent) (tea.Msg, error) {
 			book, err := cuebook.New(content)
 			cards := make([]tea.Model, 0, book.Len()+1)
+			// cards := make([]tea.Model, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -63,7 +64,10 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 					byteRange = cuebook.GetByteSpanInSource(field.Value)
 					if byteRange.IsValid() {
 						description = append(description, field.String())
+					} else {
+						// description = append(description, field.String())
 					}
+
 					// TODO: slog invalid byte ranges?
 				}
 

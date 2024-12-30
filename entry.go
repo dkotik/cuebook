@@ -56,7 +56,7 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 			}
 			titleFound = true
 		}
-		entry.Fields = append(entry.Details, Field{
+		entry.Fields = append(entry.Fields, Field{
 			Name:  iterator.Selector().String(),
 			Value: value,
 		})
