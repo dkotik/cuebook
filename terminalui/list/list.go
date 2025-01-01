@@ -40,10 +40,22 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
-		case tea.KeyEnter:
-			event := applySelectionEvent{Index: l.SelectedIndex}
-			return l, func() tea.Msg {
-				return event
+		// case tea.KeyEnter:
+		// 	event := applySelectionEvent{Index: l.SelectedIndex}
+		// 	return l, func() tea.Msg {
+		// 		return event
+		// 	}
+		case tea.KeyTab:
+			if msg.Key().Mod == tea.ModShift {
+				if len(l.Items) > 1 {
+					if l.SelectedIndex > 0 {
+						return l.applySelection(l.SelectedIndex - 1)
+					}
+				}
+			} else {
+				if l.SelectedIndex < len(l.Items)-1 {
+					return l.applySelection(l.SelectedIndex + 1)
+				}
 			}
 		case tea.KeyDown, 'j':
 			if l.IsFullscreen() && !l.fullScreenView.AtBottom() {
@@ -86,5 +98,9 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := terminalui.Propagate(msg, l.Items)
 		return l, cmd
 	}
-	return l, nil
+
+	// any other message goes to the selected node
+	var cmd tea.Cmd
+	l.Items[l.SelectedIndex], cmd = l.Items[l.SelectedIndex].Update(msg)
+	return l, cmd
 }

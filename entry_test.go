@@ -20,7 +20,6 @@ func TestRemainingFieldComposition(t *testing.T) {
 			two: "ok"
 		}
 	`))
-
 	if err := value.Err(); err != nil {
 		t.Fatal(err)
 	}

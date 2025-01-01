@@ -45,41 +45,33 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 	return terminalui.NewDomainAdaptor(ctx,
 		func(ctx context.Context, content file.ContentEvent) (tea.Msg, error) {
 			book, err := cuebook.New(content)
-			cards := make([]tea.Model, 0, book.Len()+1)
-			// cards := make([]tea.Model, 0)
 			if err != nil {
 				return nil, err
 			}
+			cards := make([]tea.Model, 0, book.Len()+1)
 			cards = append(cards, list.Title{
-				Text:  "skdjflkadksafkl ajs;jsadfadsjhsadkf sadjfas nsbdfjasdkf skjfhasjsdjkfbaisdasdhf ajsdlkjalkfadsl haskfhsafn saf 98-06458-6983-684356 3459843986-436-09358 035-0436093456-45869348-643568345683546834968-43560-4604564  9450684 90684036-03456",
+				Text:  book.Metadata().Title(),
 				Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 			})
 			for entry, err := range book.EachEntry() {
 				if err != nil {
 					return nil, err
 				}
-				var description []string
-				var byteRange cuebook.SourceByteRange
-				for _, field := range entry.Fields {
-					byteRange = cuebook.GetByteSpanInSource(field.Value)
-					if byteRange.IsValid() {
-						description = append(description, field.String())
-					} else {
-						// description = append(description, field.String())
-					}
-
-					// TODO: slog invalid byte ranges?
-				}
-
+				// index := len(cards)
 				cards = append(cards,
-					terminalui.NewCached(
-						card.New(entry.Title, description...),
-					),
+					terminalui.NewDomainAdaptor(ctx,
+						func(ctx context.Context, keyPress tea.KeyMsg) (tea.Msg, error) {
+							if keyPress.Key().Code == tea.KeyEnter {
+								return terminalui.SwitchTo(
+									card.New(">>" + entry.GetTitle()),
+								), nil
+							}
+							return nil, nil
+						},
+						card.New(entry.GetTitle(), entry.GetDescription()...)),
 				)
 			}
-
 			return terminalui.SwitchTo(list.New(cards...)), nil
 		},
 		window)
-
 }

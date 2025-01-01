@@ -55,9 +55,6 @@ func (b CueBook) EachEntry() iter.Seq2[Entry, error] {
 
 	return func(yield func(Entry, error) bool) {
 		for next.Next() {
-			// if err = next.Err(); err != nil {
-			// 	return yield(Entry{}, err)
-			// }
 			entry, err := NewEntry(next.Value())
 			if !yield(entry, errors.Join(
 				err,

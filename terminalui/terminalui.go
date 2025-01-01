@@ -35,11 +35,13 @@ func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
 }
 
 func (w window) back() (tea.Model, tea.Cmd) {
-	if l := len(w.stack); l > 0 {
-		l -= 2
-		w.current = w.stack[l]
+	if l := len(w.stack); l > 1 {
+		l -= 1
+		w.current = w.stack[l-1]
 		w.stack = w.stack[:l]
-		return w, nil
+		var cmd tea.Cmd
+		w.current, cmd = w.current.Update(w.size)
+		return w, cmd
 	}
 	return w, tea.Quit
 }
@@ -77,7 +79,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		return w, nil
 	case IsBusyEvent:
 		w.current, cmd = w.current.Update(IsBusyEvent(w.busy != 0))
-	case tea.KeyMsg:
+	case tea.KeyMsg: // TODO: deal with KeyReleaseMsg and KeyPressMsg?
 		switch msg.Key().Code {
 		case tea.KeyEscape:
 			return w.back()

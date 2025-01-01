@@ -17,7 +17,6 @@ const (
 var _ io.WriterTo = (*Entry)(nil)
 
 type Entry struct {
-	Title   string
 	Fields  []Field
 	Details []Field
 }
@@ -34,9 +33,12 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 	if err != nil {
 		return entry, fmt.Errorf("unable to iterate through fields of a structured object: %w", err)
 	}
-	var titleFound bool
 	for iterator.Next() {
-		attr := iterator.Value().Attribute("detail")
+		value := iterator.Value()
+		if !value.IsConcrete() {
+			continue // skip abstract fields
+		}
+		attr := value.Attribute("detail")
 		isDetail, _ := attr.Flag(0, attrDetail)
 		// if err != nil {
 		// 	return entry, fmt.Errorf("unable to read `detail` attribute on structed object field %q: %w", iterator.Selector().String(), err)
@@ -44,27 +46,32 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 		if isDetail {
 			entry.Details = append(entry.Details, Field{
 				Name:  iterator.Selector().String(),
-				Value: iterator.Value(),
+				Value: value,
 			})
 			continue
-		}
-		value := iterator.Value()
-		if !titleFound && value.Kind() == cue.StringKind {
-			entry.Title, err = value.String()
-			if err != nil {
-				return entry, fmt.Errorf("unable to read %q field on structed object: %w", iterator.Selector().String(), err)
-			}
-			titleFound = true
 		}
 		entry.Fields = append(entry.Fields, Field{
 			Name:  iterator.Selector().String(),
 			Value: value,
 		})
 	}
-	if !titleFound {
-		entry.Title = informationUnavailable
-	}
 	return entry, nil
+}
+
+func (e Entry) GetTitle() string {
+	if len(e.Fields) > 0 {
+		return e.Fields[0].String()
+	}
+	return informationUnavailable
+}
+
+func (e Entry) GetDescription() (description []string) {
+	if len(e.Fields) > 1 {
+		for _, field := range e.Fields[1:] {
+			description = append(description, field.String())
+		}
+	}
+	return description
 }
 
 func (e *Entry) WriteTo(w io.Writer) (n int64, err error) {
