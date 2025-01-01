@@ -26,7 +26,7 @@ type List struct {
 }
 
 func (l List) Init() (m tea.Model, cmd tea.Cmd) {
-	m, cmd = l.applySelection(0)
+	m, cmd = l.applySelection(l.SelectedIndex)
 	return m, tea.Batch(terminalui.PropagateInit(l.Items), cmd)
 }
 

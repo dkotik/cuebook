@@ -13,6 +13,9 @@ import (
 )
 
 func New(initial tea.Model, logger *slog.Logger) tea.Model {
+	if initial == nil {
+		panic("initial model is nil")
+	}
 	return window{
 		current: initial,
 		logger:  cmp.Or(logger, slog.Default()),
@@ -28,16 +31,15 @@ type window struct {
 }
 
 func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
-	w.current, cmd = w.current.Init()
 	w.stack = make([]tea.Model, 0, 5)
-	w.stack = append(w.stack, w.current)
+	w.current, cmd = w.current.Init()
 	return w, WithBusySignal(cmd)
 }
 
 func (w window) back() (tea.Model, tea.Cmd) {
-	if l := len(w.stack); l > 1 {
+	if l := len(w.stack); l > 0 {
 		l -= 1
-		w.current = w.stack[l-1]
+		w.current = w.stack[l]
 		w.stack = w.stack[:l]
 		var cmd tea.Cmd
 		w.current, cmd = w.current.Update(w.size)
@@ -53,7 +55,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		w.size = msg
 		w.current, cmd = w.current.Update(msg)
 	case SwitchTo:
-		w.stack = append(w.stack, msg)
+		w.stack = append(w.stack, w.current)
 		var cmdInit tea.Cmd
 		w.current, cmdInit = msg.Init()
 		w.current, cmd = msg.Update(w.size)
@@ -79,7 +81,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		return w, nil
 	case IsBusyEvent:
 		w.current, cmd = w.current.Update(IsBusyEvent(w.busy != 0))
-	case tea.KeyMsg: // TODO: deal with KeyReleaseMsg and KeyPressMsg?
+	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case tea.KeyEscape:
 			return w.back()
@@ -89,6 +91,8 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				w.current, cmd = w.current.Update(msg)
 			}
 		}
+	// TODO: deal with KeyReleaseMsg and KeyPressMsg?
+	// better yet: reject all events unless they are wrapped
 	default:
 		w.current, cmd = w.current.Update(msg)
 	}
