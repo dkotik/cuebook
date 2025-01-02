@@ -18,12 +18,12 @@ func WithBusySignal(cmd tea.Cmd) tea.Cmd {
 }
 
 func Propagate(
-	cmd tea.Msg,
+	msg tea.Msg,
 	children []tea.Model,
 ) (out tea.Cmd) {
 	commands := make([]tea.Cmd, 0, len(children))
 	for i, child := range children {
-		children[i], out = child.Update(cmd)
+		children[i], out = child.Update(msg)
 		if out != nil {
 			commands = append(commands, out)
 		}

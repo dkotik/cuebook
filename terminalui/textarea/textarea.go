@@ -74,6 +74,7 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if key.Matches(msg, t.saveKey) {
 			return t, terminalui.WithBusySignal(func() tea.Msg {
 				time.Sleep(time.Second * 3)
+				// panic("ran")
 				return nil
 			})
 		}

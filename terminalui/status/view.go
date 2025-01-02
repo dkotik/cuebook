@@ -1,6 +1,7 @@
 package status
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -14,6 +15,8 @@ func (m model) View() string {
 
 	_, _ = s.WriteRune(' ')
 	_, _ = s.WriteString(m.Help.ShortHelpView(m.KeyBindings))
+
+	_, _ = s.WriteString(fmt.Sprintf(" %v", m.Busy))
 
 	return s.String()
 }

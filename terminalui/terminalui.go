@@ -53,20 +53,20 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		w.size = msg
-		w.current, cmd = w.current.Update(msg)
 	case SwitchTo:
 		w.stack = append(w.stack, w.current)
 		var cmdInit tea.Cmd
 		w.current, cmdInit = msg.Init()
 		w.current, cmd = msg.Update(w.size)
-		cmd = tea.Batch(cmd, cmdInit)
+		return w, tea.Batch(cmd, cmdInit)
 	case BackEvent:
 		return w.back()
 	case setBusyEvent:
 		if bool(msg) {
 			w.busy++
-			w.current, cmd = w.current.Update(IsBusyEvent(true))
-			return w, cmd
+			return w, func() tea.Msg {
+				return IsBusyEvent(true)
+			}
 		} else {
 			w.busy--
 			if w.busy == 0 {
@@ -79,22 +79,27 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			}
 		}
 		return w, nil
-	case IsBusyEvent:
-		w.current, cmd = w.current.Update(IsBusyEvent(w.busy != 0))
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case tea.KeyEscape:
 			return w.back()
-		default:
-			if w.busy == 0 {
-				// forward key events only if not busy
-				w.current, cmd = w.current.Update(msg)
-			}
 		}
-	// TODO: deal with KeyReleaseMsg and KeyPressMsg?
-	// better yet: reject all events unless they are wrapped
-	default:
+		if w.busy != 0 {
+			return w, nil // drop event if busy
+		}
+		// fallthrough
 		w.current, cmd = w.current.Update(msg)
+		return w, cmd
+	case tea.MouseMsg, tea.CursorPositionMsg, tea.PasteStartMsg, tea.PasteEndMsg, tea.PasteMsg: // input events go to current model only
+		if w.busy != 0 {
+			return w, nil // drop event if busy
+		}
+		w.current, cmd = w.current.Update(msg)
+		return w, cmd
+	}
+	w.current, cmd = w.current.Update(msg)
+	if len(w.stack) > 0 {
+		cmd = tea.Batch(cmd, Propagate(msg, w.stack))
 	}
 	return w, cmd
 }

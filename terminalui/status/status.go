@@ -46,11 +46,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.Spinner.Tick
 		}
 	case spinner.TickMsg:
-		if m.Busy {
-			var cmd tea.Cmd
-			m.Spinner, cmd = m.Spinner.Update(msg)
-			return m, cmd
-		}
+		// if m.Busy {
+		var cmd tea.Cmd
+		m.Spinner, cmd = m.Spinner.Update(msg)
+		return m, cmd
+		// }
 	}
 	return m, nil
 }
