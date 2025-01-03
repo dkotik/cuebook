@@ -57,7 +57,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		w.stack = append(w.stack, w.current)
 		var cmdInit tea.Cmd
 		w.current, cmdInit = msg.Init()
-		w.current, cmd = msg.Update(w.size)
+		w.current, cmd = w.current.Update(w.size)
 		return w, tea.Batch(cmd, cmdInit)
 	case BackEvent:
 		return w.back()

@@ -34,11 +34,11 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 	})
 
 	window := terminalui.New(
-		// file.New(filePath),
-		textarea.Textarea{
-			Label:    "Enter field",
-			Required: true,
-		},
+		file.New(filePath),
+		// textarea.Textarea{
+		// 	Label:    "Enter field",
+		// 	Required: true,
+		// },
 		// list.New(card1, card2),
 		// terminalui.NewSwitch(card1, card2, false),
 		// card1,
@@ -65,14 +65,14 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 					return nil, err
 				}
 				index++
-				cards = append(cards, newCard(ctx, title.View()+fmt.Sprintf(" › %d/%d", index, total), entry))
+				cards = append(cards, newCardView(ctx, title.View()+fmt.Sprintf(" › %d/%d", index, total), entry))
 			}
 			return terminalui.SwitchTo(list.New(cards...)), nil
 		},
 		window)
 }
 
-func newCard(
+func newCardView(
 	ctx context.Context,
 	title string,
 	entry cuebook.Entry,
@@ -81,7 +81,7 @@ func newCard(
 		func(ctx context.Context, keyPress tea.KeyMsg) (tea.Msg, error) {
 			if keyPress.Key().Code == tea.KeyEnter {
 				return terminalui.SwitchTo(
-					newFieldList(list.Title{
+					newFieldListView(list.Title{
 						Text:  title,
 						Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 					}, entry),
@@ -92,17 +92,42 @@ func newCard(
 		card.New(entry.GetTitle(), entry.GetDescription()...))
 }
 
-func newFieldList(
+func newFieldListView(
 	title tea.Model,
 	entry cuebook.Entry,
 ) tea.Model {
 	fields := make([]tea.Model, 0, len(entry.Fields)+len(entry.Details)+1)
 	fields = append(fields, title)
 	for _, f := range entry.Fields {
-		fields = append(fields, field.New(f.Name, f.String()))
+		fields = append(fields, newFieldView(f))
 	}
 	for _, f := range entry.Details {
-		fields = append(fields, field.New(f.Name, f.String()))
+		fields = append(fields, newFieldView(f))
 	}
 	return list.New(fields...)
+}
+
+func newFieldView(f cuebook.Field) tea.Model {
+	return terminalui.NewDomainAdaptor(
+		context.Background(),
+		func(ctx context.Context, keyPress tea.KeyMsg) (tea.Msg, error) {
+			if keyPress.Key().Code == tea.KeyEnter {
+				return terminalui.SwitchTo(terminalui.NewDomainAdaptor(
+					context.Background(),
+					func(ctx context.Context, update textarea.OnChangeEvent) (tea.Msg, error) {
+						// TODO: check if required?
+						return cuebook.SourceUpdate{
+							SourceByteRange: cuebook.GetByteSpanInSource(f.Value),
+							ReplaceWith:     []byte(update),
+						}, nil
+					},
+					textarea.Textarea{
+						Label:    f.Name,
+						Required: true,
+					},
+				)), nil
+			}
+			return nil, nil
+		},
+		field.New(f.Name, f.String()))
 }

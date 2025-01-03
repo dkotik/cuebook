@@ -3,8 +3,11 @@ package cuebook
 import (
 	"bytes"
 	"encoding"
+	"errors"
 	"fmt"
+	"io"
 	"strconv"
+	"unicode"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/literal"
@@ -54,14 +57,69 @@ func (f Field) MarshallText() ([]byte, error) {
 		return b.Bytes(), err // TODO: test this
 	case cue.StringKind:
 		value, err := f.Value.String()
-		return []byte(value), err
+		return []byte(literal.String.WithOptionalTabIndent(1).Quote(value)), err
 	case cue.BytesKind, cue.ListKind, cue.StructKind:
 		return f.Value.MarshalJSON()
-	case cue.NullKind, cue.BottomKind:
+	case cue.NullKind:
+		return []byte(`null`), nil
+	case cue.BottomKind:
 		return nil, nil
 	default:
-		panic(fmt.Errorf("unknown data type: %s", k))
+		return nil, fmt.Errorf("unknown data type: %s", k)
 	}
+}
+
+func (f Field) substituteWithValue(w io.Writer, source, quotedValue []byte) error {
+	at := GetByteSpanInSource(f.Value)
+	if !at.IsValid() {
+		return fmt.Errorf("unable to determine field bounds") // TODO: implement error
+	}
+	labelEnds := at.BeginsAt + len(f.Name)
+	if f.Name+":" != string(source[at.BeginsAt:labelEnds+1]) {
+		return fmt.Errorf("field name mismatch: %q vs %q", f.Name, string(source[at.BeginsAt:labelEnds]))
+	}
+
+	var err error
+	for labelEnds++; labelEnds < at.EndsAt; labelEnds++ {
+		if !unicode.IsSpace(rune(source[labelEnds])) {
+			labelEnds--
+			// quotedValue, err := f.MarshallText()
+			// if err != nil {
+			// 	return err
+			// }
+			if _, err = io.Copy(w, bytes.NewReader(source[:labelEnds])); err != nil {
+				return err
+			}
+			if _, err = w.Write([]byte(" ")); err != nil {
+				return err
+			}
+			if bytes.HasPrefix(quotedValue, []byte("\"\"\"\n")) {
+				lines := bytes.Split(quotedValue, []byte("\n"))
+				if _, err = w.Write(lines[0]); err != nil {
+					return err
+				}
+				tabs := []byte("\n")
+				for range getTabulationRecommendationFromTail(source[:at.BeginsAt]) {
+					tabs = append(tabs, '\t')
+				}
+				for _, line := range lines[1:] {
+					if _, err = w.Write(tabs); err != nil {
+						return err
+					}
+					if _, err = w.Write(line); err != nil {
+						return err
+					}
+				}
+			} else {
+				if _, err = w.Write(quotedValue); err != nil {
+					return err
+				}
+			}
+			_, err = io.Copy(w, bytes.NewReader(source[at.EndsAt:]))
+			return err
+		}
+	}
+	return errors.New("unable to find label end") // TODO: implement error
 }
 
 // DEPRECATED

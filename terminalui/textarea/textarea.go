@@ -1,8 +1,6 @@
 package textarea
 
 import (
-	"time"
-
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/textarea"
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -16,7 +14,6 @@ import (
 type Textarea struct {
 	Label    string
 	Required bool
-	Save     func(string) tea.Cmd
 
 	status    tea.Model
 	saveKey   key.Binding
@@ -25,24 +22,9 @@ type Textarea struct {
 }
 
 func (t Textarea) Init() (tea.Model, tea.Cmd) {
-	if t.Label == "" {
-		t.Label = "???"
-	}
-	if t.Save == nil {
-		t.Save = func(_ string) tea.Cmd {
-			return func() tea.Msg {
-				return terminalui.BackEvent{}
-			}
-		}
-	}
-
 	lc := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
 	t.saveKey = terminalui.NewSaveKey(lc)
 	t.escapeKey = terminalui.NewCancelKey(lc)
-	t.status = status.New(
-		terminalui.NewSaveKey(lc),
-		terminalui.NewCancelKey(lc),
-	)
 
 	ta := textarea.New()
 	ta.Placeholder = "..."
@@ -65,18 +47,27 @@ func (t Textarea) Init() (tea.Model, tea.Cmd) {
 
 	// ta.KeyMap.InsertNewline.SetEnabled(false)
 	t.textarea = ta
-	return t, nil
+	t.status = status.New(
+		terminalui.NewSaveKey(lc),
+		terminalui.NewCancelKey(lc),
+	)
+	var cmdInitStatus tea.Cmd
+	t.status, cmdInitStatus = t.status.Init()
+	// t.textarea, cmdInitTextarea = t.textarea.Init()
+	return t, cmdInitStatus
 }
 
 func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// if t.status == nil {
+	// 	return t, nil
+	// }
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(msg, t.saveKey) {
-			return t, terminalui.WithBusySignal(func() tea.Msg {
-				time.Sleep(time.Second * 3)
-				// panic("ran")
-				return nil
-			})
+			return t, func() tea.Msg {
+				return OnChangeEvent(t.textarea.Value())
+			}
 		}
 	}
 	var statusCmd, textareaCmd tea.Cmd
