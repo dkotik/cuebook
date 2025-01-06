@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -38,14 +39,14 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 			return m, terminalui.WithBusySignal(func() tea.Msg {
 				source, err := os.ReadFile(filePath) // TODO: get the path from component
 				if err != nil {
-					panic(err)
+					return err
 				}
 				result, err := patch.Apply(source)
 				if err != nil {
-					panic(err)
+					return err
 				}
 				if err = os.WriteFile(filePath, result.Source, os.FileMode(os.O_CREATE)); err != nil {
-					panic(err)
+					return err
 				}
 				return result
 			})
@@ -53,35 +54,75 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 		slog.New(logger).With("component", "bubbletea"),
 	)
 
-	return terminalui.NewDomainAdaptor(ctx,
-		func(ctx context.Context, source file.ContentEvent) (tea.Msg, error) {
-			book, err := cuebook.New(source)
-			if err != nil {
-				return nil, err
-			}
-			total := book.Len()
-			cards := make([]tea.Model, 0, total+1)
-			title := list.Title{
-				Text:  book.Metadata().Title(),
-				Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
-			}
-			cards = append(cards, title)
-
-			index := 0
-			for entry, err := range book.EachEntry() {
+	return terminalui.NewEventAdaptor(
+		func(m tea.Model, source file.ContentEvent) (tea.Model, tea.Cmd) {
+			return m, func() tea.Msg {
+				book, err := cuebook.New(source)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				index++
-				cards = append(cards, newCardView(ctx, title.View()+fmt.Sprintf(" › %d/%d", index, total), entry, source))
+				list, err := newEntryList(cuebook.SourcePatchResult{
+					Book:   book,
+					Source: source,
+				})
+				if err != nil {
+					return err
+				}
+				return list
 			}
-			return terminalui.SwitchTo(list.New(cards...)), nil
-		},
-		window)
+		})(window)
+}
+
+func newEntryList(r cuebook.SourcePatchResult) (tea.Model, error) {
+	total := r.Book.Len()
+	cards := make([]tea.Model, 0, total+1)
+	title := list.Title{
+		Text:  r.Book.Metadata().Title(),
+		Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
+	}
+	cards = append(cards, title)
+
+	index := 0
+	for entry, err := range r.Book.EachEntry() {
+		if err != nil {
+			return nil, err
+		}
+		index++
+		cards = append(cards, newCardView(title.View()+fmt.Sprintf(" › %d/%d", index, total), entry, r.Source))
+	}
+	return terminalui.SwitchTo(
+		terminalui.NewEventAdaptor(
+			func(m tea.Model, r cuebook.SourcePatchResult) (tea.Model, tea.Cmd) {
+				newList, err := newEntryList(r)
+				if err != nil {
+					return m, func() tea.Msg { return err }
+				}
+				if r.ReplaceWith != nil {
+					selectIndex := 0
+					index := 0
+					for entry := range r.Book.EachValue() {
+						index++
+						at := cuebook.GetByteSpanInSource(entry)
+						if !at.IsValid() {
+							continue // TODO: handle
+						}
+						if bytes.Equal(r.ReplaceWith, r.Source[at.BeginsAt:at.EndsAt]) {
+							selectIndex = index
+							r.PrecedingDuplicates--
+							if r.PrecedingDuplicates < 0 {
+								break
+							}
+						}
+					}
+					return newList, list.ApplySelection(selectIndex)
+				}
+				// TODO: pull out index out of `m` and update new list with it
+				return newList, nil
+			})(list.New(cards...)),
+	), nil
 }
 
 func newCardView(
-	ctx context.Context,
 	title string,
 	entry cuebook.Entry,
 	source []byte,
@@ -109,21 +150,19 @@ func newFieldListView(
 	for _, f := range entry.Details {
 		fields = append(fields, newFieldView(f, source))
 	}
+	// return list.New(fields...)
 	return terminalui.NewEventAdaptor(
-		func(m tea.Model, source file.ContentEvent) (tea.Model, tea.Cmd) {
-
-			// type entryUpdate struct {
-			// 	Field  cuebook.Field
-			// 	Range  cuebook.SourceByteRange
-			// 	Source []byte
-			// }
-			type fileUpdate struct {
-				Book   cuebook.CueBook
-				Source []byte
+		func(m tea.Model, r cuebook.SourcePatchResult) (tea.Model, tea.Cmd) {
+			for entry, err := range r.Book.EachEntry() {
+				if err != nil {
+					continue // TODO: handle
+				}
+				if r.SourceByteRange.IsTouching(cuebook.GetByteSpanInSource(entry.Value)) { // TODO: locate instead?
+					// TODO: title is not updated use r.Book.Metadata()...
+					return newFieldListView(title, entry, r.Source), nil
+				}
 			}
-
-			// TODO: detect intersection with changed range?
-			return m, nil
+			return m.Update(r)
 		})(list.New(fields...))
 }
 
@@ -132,16 +171,16 @@ func newFieldView(
 	source []byte,
 ) tea.Model {
 	closeOnMatchingSourcePatch := terminalui.NewEventAdaptor(func(m tea.Model, r cuebook.SourcePatchResult) (tea.Model, tea.Cmd) {
-		if !r.SourceByteRange.IsTouching(cuebook.GetByteSpanInSource(f.Value)) {
-			return m, nil
-		}
+		// if !r.SourceByteRange.IsTouching(cuebook.GetByteSpanInSource(f.Value)) { // TODO: locate instead?
+		// 	return m, nil
+		// }
 		return m, func() tea.Msg { return terminalui.BackEvent{} }
 	})
 
-	return closeOnMatchingSourcePatch(terminalui.NewKeySwitchAdaptor(
+	return terminalui.NewKeySwitchAdaptor(
 		tea.Key{Code: tea.KeyEnter},
 		func() tea.Model {
-			return terminalui.NewEventAdaptor(
+			return closeOnMatchingSourcePatch(terminalui.NewEventAdaptor(
 				func(m tea.Model, value textarea.OnChangeEvent) (tea.Model, tea.Cmd) {
 					patch, err := f.WithStringValue(source, string(value))
 					if err != nil {
@@ -164,6 +203,6 @@ func newFieldView(
 					// 		return terminalui.BackEvent{}
 					// 	},
 					// ))
-				})(textarea.New(f.Name, f.String(), true))
-		})(field.New(f.Name, f.String())))
+				})(textarea.New(f.Name, f.String(), true)))
+		})(field.New(f.Name, f.String()))
 }

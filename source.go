@@ -98,7 +98,7 @@ func (r SourceByteRange) IsTouching(other SourceByteRange) bool {
 
 func getTabulationRecommendationFromTail(b []byte) int {
 	spaces := 0
-	tabs := 0
+	tabs := 1
 
 loop:
 	for i := len(b) - 1; i >= 0; i-- {
