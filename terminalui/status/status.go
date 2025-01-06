@@ -1,6 +1,8 @@
 package status
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/v2/help"
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/spinner"
@@ -30,16 +32,13 @@ type model struct {
 }
 
 func (m model) Init() (tea.Model, tea.Cmd) {
-	return m, tea.Batch(
-		m.Spinner.Tick,
-		func() tea.Msg {
-			return terminalui.IsBusyEvent(true)
-		},
-	)
+	return m, nil // m.Spinner.Tick
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case error:
+		panic(fmt.Errorf("caught error: %w", msg))
 	case terminalui.IsBusyEvent:
 		m.Busy = bool(msg)
 		if m.Busy {

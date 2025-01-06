@@ -33,7 +33,7 @@ type window struct {
 func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
 	w.stack = make([]tea.Model, 0, 5)
 	w.current, cmd = w.current.Init()
-	return w, WithBusySignal(cmd)
+	return w, cmd
 }
 
 func (w window) back() (tea.Model, tea.Cmd) {
@@ -49,7 +49,7 @@ func (w window) back() (tea.Model, tea.Cmd) {
 }
 
 func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
-	w.logger.Debug(spew.Sdump(msg))
+	go w.logger.Debug(spew.Sdump(msg))
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		w.size = msg
@@ -80,12 +80,12 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 		return w, nil
 	case tea.KeyMsg:
+		if w.busy != 0 {
+			return w, nil // drop event if busy
+		}
 		switch msg.Key().Code {
 		case tea.KeyEscape:
 			return w.back()
-		}
-		if w.busy != 0 {
-			return w, nil // drop event if busy
 		}
 		// fallthrough
 		w.current, cmd = w.current.Update(msg)

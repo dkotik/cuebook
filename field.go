@@ -2,11 +2,8 @@ package cuebook
 
 import (
 	"bytes"
-	"encoding"
 	"errors"
 	"fmt"
-	"io"
-	"strconv"
 	"unicode"
 
 	"cuelang.org/go/cue"
@@ -14,8 +11,9 @@ import (
 )
 
 type Field struct {
-	Name  string
-	Value cue.Value
+	Parent Entry
+	Name   string
+	Value  cue.Value
 }
 
 func (f Field) String() string {
@@ -39,7 +37,7 @@ func (f Field) String() string {
 	case cue.NullKind, cue.BottomKind:
 		fallthrough
 	default:
-		return informationUnavailable
+		return ""
 	}
 }
 
@@ -69,141 +67,96 @@ func (f Field) MarshallText() ([]byte, error) {
 	}
 }
 
-func (f Field) substituteWithValue(w io.Writer, source, quotedValue []byte) error {
+func (f Field) WithStringValue(source []byte, value string) (p SourcePatch, err error) {
+	quotedValue := literal.String.WithOptionalTabIndent(0).Quote(value)
+	return f.newValuePatch(source, []byte(quotedValue))
+}
+
+func (f Field) newValuePatch(source, quotedValue []byte) (p SourcePatch, err error) {
 	at := GetByteSpanInSource(f.Value)
 	if !at.IsValid() {
-		return fmt.Errorf("unable to determine field bounds") // TODO: implement error
+		return p, fmt.Errorf("unable to determine field bounds") // TODO: implement error
 	}
-	labelEnds := at.BeginsAt + len(f.Name)
-	if f.Name+":" != string(source[at.BeginsAt:labelEnds+1]) {
-		return fmt.Errorf("field name mismatch: %q vs %q", f.Name, string(source[at.BeginsAt:labelEnds]))
+	labelEnds := at.BeginsAt + len(f.Name) + 1
+	if f.Name+":" != string(source[at.BeginsAt:labelEnds]) {
+		return p, fmt.Errorf("field name mismatch: %q vs %q", f.Name, string(source[p.SourceByteRange.BeginsAt:labelEnds-1]))
 	}
 
-	var err error
-	for labelEnds++; labelEnds < at.EndsAt; labelEnds++ {
+	for ; labelEnds < at.EndsAt; labelEnds++ {
 		if !unicode.IsSpace(rune(source[labelEnds])) {
-			labelEnds--
-			// quotedValue, err := f.MarshallText()
-			// if err != nil {
-			// 	return err
-			// }
-			if _, err = io.Copy(w, bytes.NewReader(source[:labelEnds])); err != nil {
-				return err
-			}
-			if _, err = w.Write([]byte(" ")); err != nil {
-				return err
-			}
 			if bytes.HasPrefix(quotedValue, []byte("\"\"\"\n")) {
+				b := &bytes.Buffer{}
 				lines := bytes.Split(quotedValue, []byte("\n"))
-				if _, err = w.Write(lines[0]); err != nil {
-					return err
-				}
+				_, _ = b.Write(lines[0])
 				tabs := []byte("\n")
 				for range getTabulationRecommendationFromTail(source[:at.BeginsAt]) {
 					tabs = append(tabs, '\t')
 				}
 				for _, line := range lines[1:] {
-					if _, err = w.Write(tabs); err != nil {
-						return err
-					}
-					if _, err = w.Write(line); err != nil {
-						return err
-					}
+					_, _ = b.Write(tabs)
+					_, _ = b.Write(line)
 				}
-			} else {
-				if _, err = w.Write(quotedValue); err != nil {
-					return err
-				}
+				quotedValue = b.Bytes()
 			}
-			_, err = io.Copy(w, bytes.NewReader(source[at.EndsAt:]))
-			return err
+			parentSpan := GetByteSpanInSource(f.Parent.Value)
+			if !parentSpan.IsValid() {
+				return p, fmt.Errorf("unable to determine parent entry bounds") // TODO: implement error
+			}
+			p.SourceByteRange = parentSpan
+			p.ReplaceWith = bytes.Join([][]byte{
+				source[parentSpan.BeginsAt:labelEnds],
+				quotedValue,
+				source[at.EndsAt:parentSpan.EndsAt],
+			}, nil)
+			p.Original = source[parentSpan.BeginsAt:parentSpan.EndsAt]
+			p.PrecedingDuplicates = bytes.Count(source[:at.EndsAt], p.Original)
+			return p, nil
 		}
 	}
-	return errors.New("unable to find label end") // TODO: implement error
+	return p, errors.New("unable to find entry field label end") // TODO: implement error
 }
 
-// DEPRECATED
-type FieldType interface {
-	GetName() string
-	encoding.TextMarshaler
-	// WithValue(string) (Field, error)
-	String() string
-}
-
-var (
-	_ FieldType = (*stringField)(nil)
-	_ FieldType = (*integerField)(nil)
-	_ FieldType = (*floatField)(nil)
-	_ FieldType = (*booleanField)(nil)
-)
-
-type stringField struct {
-	Name  string
-	Value string
-}
-
-func (s stringField) GetName() string {
-	return s.Name
-}
-
-func (s stringField) String() string {
-	return s.Value
-}
-
-func (s stringField) MarshalText() (text []byte, err error) {
-	return []byte(literal.String.WithOptionalTabIndent(2).Quote(s.Value)), nil
-}
-
-type integerField struct {
-	Name  string
-	Value int64
-}
-
-func (i integerField) GetName() string {
-	return i.Name
-}
-
-func (i integerField) String() string {
-	return strconv.Itoa(int(i.Value))
-}
-
-func (i integerField) MarshalText() (text []byte, err error) {
-	return []byte(i.String()), nil
-}
-
-type floatField struct {
-	Name  string
-	Value float64
-}
-
-func (f floatField) GetName() string {
-	return f.Name
-}
-
-func (f floatField) String() string {
-	return strconv.Itoa(int(f.Value))
-}
-
-func (f floatField) MarshalText() (text []byte, err error) {
-	return []byte(f.String()), nil
-}
-
-type booleanField struct {
-	Name  string
-	Value bool
-}
-
-func (b booleanField) GetName() string {
-	return b.Name
-}
-
-func (b booleanField) String() string {
-	if b.Value {
-		return "true"
+func (f Field) RemoveFromSource(source []byte) []byte {
+	at := GetByteSpanInSource(f.Value)
+	if !at.IsValid() {
+		return nil
 	}
-	return "false"
+
+	return append(
+		chopLeadingWhiteSpace(source[:at.BeginsAt]),
+		chopFieldClosingCommaWithNewLine(source[at.EndsAt:])...,
+	)
 }
 
-func (b booleanField) MarshalText() (text []byte, err error) {
-	return []byte(b.String()), nil
+func chopLeadingWhiteSpace(source []byte) []byte {
+	for i := len(source) - 1; i >= 0; i-- {
+		if !unicode.IsSpace(rune(source[i])) {
+			return source[:i+1]
+		}
+		if source[i] == '\n' {
+			return source[:i+1]
+		}
+	}
+	return source
+}
+
+func chopFieldClosingCommaWithNewLine(source []byte) []byte {
+	for i, c := range source {
+		if unicode.IsSpace(rune(c)) {
+			continue
+		}
+		if c == ',' {
+			source = source[i+1:]
+		}
+		break
+	}
+	for i, c := range source {
+		if c == '\n' {
+			return source[i+1:]
+		}
+		if !unicode.IsSpace(rune(c)) {
+			break
+		}
+	}
+	return source
 }

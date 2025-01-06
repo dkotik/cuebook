@@ -9,7 +9,7 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 )
 
-// CueBook holds a list of maps.
+// CueBook holds a list of structured data entries.
 type CueBook struct {
 	cue.Value
 }

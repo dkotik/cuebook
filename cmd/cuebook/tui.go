@@ -34,20 +34,28 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 	})
 
 	window := terminalui.New(
-		file.New(filePath),
-		// textarea.Textarea{
-		// 	Label:    "Enter field",
-		// 	Required: true,
-		// },
-		// list.New(card1, card2),
-		// terminalui.NewSwitch(card1, card2, false),
-		// card1,
+		terminalui.NewEventAdaptor(func(m tea.Model, patch cuebook.SourcePatch) (tea.Model, tea.Cmd) {
+			return m, terminalui.WithBusySignal(func() tea.Msg {
+				source, err := os.ReadFile(filePath) // TODO: get the path from component
+				if err != nil {
+					panic(err)
+				}
+				result, err := patch.Apply(source)
+				if err != nil {
+					panic(err)
+				}
+				if err = os.WriteFile(filePath, result.Source, os.FileMode(os.O_CREATE)); err != nil {
+					panic(err)
+				}
+				return result
+			})
+		})(file.New(filePath)),
 		slog.New(logger).With("component", "bubbletea"),
 	)
 
 	return terminalui.NewDomainAdaptor(ctx,
-		func(ctx context.Context, content file.ContentEvent) (tea.Msg, error) {
-			book, err := cuebook.New(content)
+		func(ctx context.Context, source file.ContentEvent) (tea.Msg, error) {
+			book, err := cuebook.New(source)
 			if err != nil {
 				return nil, err
 			}
@@ -65,7 +73,7 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 					return nil, err
 				}
 				index++
-				cards = append(cards, newCardView(ctx, title.View()+fmt.Sprintf(" › %d/%d", index, total), entry))
+				cards = append(cards, newCardView(ctx, title.View()+fmt.Sprintf(" › %d/%d", index, total), entry, source))
 			}
 			return terminalui.SwitchTo(list.New(cards...)), nil
 		},
@@ -76,58 +84,86 @@ func newCardView(
 	ctx context.Context,
 	title string,
 	entry cuebook.Entry,
+	source []byte,
 ) tea.Model {
-	return terminalui.NewDomainAdaptor(ctx,
-		func(ctx context.Context, keyPress tea.KeyMsg) (tea.Msg, error) {
-			if keyPress.Key().Code == tea.KeyEnter {
-				return terminalui.SwitchTo(
-					newFieldListView(list.Title{
-						Text:  title,
-						Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
-					}, entry),
-				), nil
-			}
-			return nil, nil
-		},
-		card.New(entry.GetTitle(), entry.GetDescription()...))
+	return terminalui.NewKeySwitchAdaptor(
+		tea.Key{Code: tea.KeyEnter},
+		func() tea.Model {
+			return newFieldListView(list.Title{
+				Text:  title,
+				Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
+			}, entry, source)
+		})(card.New(entry.GetTitle(), entry.GetDescription()...))
 }
 
 func newFieldListView(
 	title tea.Model,
 	entry cuebook.Entry,
+	source []byte,
 ) tea.Model {
 	fields := make([]tea.Model, 0, len(entry.Fields)+len(entry.Details)+1)
 	fields = append(fields, title)
 	for _, f := range entry.Fields {
-		fields = append(fields, newFieldView(f))
+		fields = append(fields, newFieldView(f, source))
 	}
 	for _, f := range entry.Details {
-		fields = append(fields, newFieldView(f))
+		fields = append(fields, newFieldView(f, source))
 	}
-	return list.New(fields...)
+	return terminalui.NewEventAdaptor(
+		func(m tea.Model, source file.ContentEvent) (tea.Model, tea.Cmd) {
+
+			// type entryUpdate struct {
+			// 	Field  cuebook.Field
+			// 	Range  cuebook.SourceByteRange
+			// 	Source []byte
+			// }
+			type fileUpdate struct {
+				Book   cuebook.CueBook
+				Source []byte
+			}
+
+			// TODO: detect intersection with changed range?
+			return m, nil
+		})(list.New(fields...))
 }
 
-func newFieldView(f cuebook.Field) tea.Model {
-	return terminalui.NewDomainAdaptor(
-		context.Background(),
-		func(ctx context.Context, keyPress tea.KeyMsg) (tea.Msg, error) {
-			if keyPress.Key().Code == tea.KeyEnter {
-				return terminalui.SwitchTo(terminalui.NewDomainAdaptor(
-					context.Background(),
-					func(ctx context.Context, update textarea.OnChangeEvent) (tea.Msg, error) {
-						// TODO: check if required?
-						return cuebook.SourceUpdate{
-							SourceByteRange: cuebook.GetByteSpanInSource(f.Value),
-							ReplaceWith:     []byte(update),
-						}, nil
-					},
-					textarea.Textarea{
-						Label:    f.Name,
-						Required: true,
-					},
-				)), nil
-			}
-			return nil, nil
-		},
-		field.New(f.Name, f.String()))
+func newFieldView(
+	f cuebook.Field,
+	source []byte,
+) tea.Model {
+	closeOnMatchingSourcePatch := terminalui.NewEventAdaptor(func(m tea.Model, r cuebook.SourcePatchResult) (tea.Model, tea.Cmd) {
+		if !r.SourceByteRange.IsTouching(cuebook.GetByteSpanInSource(f.Value)) {
+			return m, nil
+		}
+		return m, func() tea.Msg { return terminalui.BackEvent{} }
+	})
+
+	return closeOnMatchingSourcePatch(terminalui.NewKeySwitchAdaptor(
+		tea.Key{Code: tea.KeyEnter},
+		func() tea.Model {
+			return terminalui.NewEventAdaptor(
+				func(m tea.Model, value textarea.OnChangeEvent) (tea.Model, tea.Cmd) {
+					patch, err := f.WithStringValue(source, string(value))
+					if err != nil {
+						return m, func() tea.Msg { return err }
+					}
+					return m, func() tea.Msg {
+						return patch
+					}
+					// var crossCommandError error
+					// return m, terminalui.WithBusySignal(tea.Sequence(
+					// 	func() tea.Msg {
+					// 		time.Sleep(time.Second * 4)
+					// 		// crossCommandError = errors.New("file operation failed")
+					// 		return nil
+					// 	},
+					// 	func() tea.Msg {
+					// 		if crossCommandError != nil {
+					// 			return crossCommandError
+					// 		}
+					// 		return terminalui.BackEvent{}
+					// 	},
+					// ))
+				})(textarea.New(f.Name, f.String(), true))
+		})(field.New(f.Name, f.String())))
 }

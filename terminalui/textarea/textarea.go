@@ -21,48 +21,47 @@ type Textarea struct {
 	textarea  textarea.Model
 }
 
-func (t Textarea) Init() (tea.Model, tea.Cmd) {
-	lc := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
-	t.saveKey = terminalui.NewSaveKey(lc)
-	t.escapeKey = terminalui.NewCancelKey(lc)
-
-	ta := textarea.New()
-	ta.Placeholder = "..."
-	ta.Focus()
-
-	ta.Prompt = "  "
+func New(label, value string, required bool) tea.Model {
+	m := Textarea{
+		Label:    label,
+		Required: required,
+		textarea: textarea.New(),
+	}
+	m.textarea.SetValue(value)
 	// ta.Prompt = lipgloss.NewStyle().
 	// 	Foreground(lipgloss.Color("243")).
 	// 	Render(lipgloss.NormalBorder().Left + " ")
-	ta.CharLimit = 280
-
-	ta.SetWidth(46)
-	ta.SetHeight(6)
-
-	// Remove cursor line styling
-	// ta.Styles.Focused.CursorLine = lipgloss.NewStyle()
-	ta.Styles.Focused.Text = ta.Styles.Focused.Text.Border(lipgloss.NormalBorder(), true, true, true, true)
-
-	ta.ShowLineNumbers = false
-
+	m.textarea.Prompt = "  "
+	m.textarea.Placeholder = "..."
+	m.textarea.ShowLineNumbers = false
+	// ta.CharLimit = 280
 	// ta.KeyMap.InsertNewline.SetEnabled(false)
-	t.textarea = ta
-	t.status = status.New(
+	// 	// Remove cursor line styling
+	// ta.Styles.Focused.CursorLine = lipgloss.NewStyle()
+	m.textarea.Styles.Focused.Text = m.textarea.Styles.Focused.Text.Border(lipgloss.NormalBorder(), true, true, true, true)
+
+	lc := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
+	m.saveKey = terminalui.NewSaveKey(lc)
+	m.escapeKey = terminalui.NewCancelKey(lc)
+	m.status = status.New(
 		terminalui.NewSaveKey(lc),
 		terminalui.NewCancelKey(lc),
 	)
+	return m
+}
+
+func (t Textarea) Init() (tea.Model, tea.Cmd) {
 	var cmdInitStatus tea.Cmd
 	t.status, cmdInitStatus = t.status.Init()
-	// t.textarea, cmdInitTextarea = t.textarea.Init()
+	t.textarea.Focus()
 	return t, cmdInitStatus
 }
 
 func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// if t.status == nil {
-	// 	return t, nil
-	// }
-
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		t.textarea.SetWidth(msg.Width*3/4 - 2)
+		t.textarea.SetHeight(msg.Height*3/4 - 2)
 	case tea.KeyMsg:
 		if key.Matches(msg, t.saveKey) {
 			return t, func() tea.Msg {

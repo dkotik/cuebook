@@ -17,11 +17,13 @@ const (
 var _ io.WriterTo = (*Entry)(nil)
 
 type Entry struct {
+	Value   cue.Value
 	Fields  []Field
 	Details []Field
 }
 
 func NewEntry(v cue.Value) (entry Entry, err error) {
+	entry.Value = v
 	if !v.IsConcrete() || v.IsNull() {
 		return entry, errors.New("cannot load an abstract value as structured object")
 	}
@@ -45,14 +47,16 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 		// }
 		if isDetail {
 			entry.Details = append(entry.Details, Field{
-				Name:  iterator.Selector().String(),
-				Value: value,
+				Parent: entry,
+				Name:   iterator.Selector().String(),
+				Value:  value,
 			})
 			continue
 		}
 		entry.Fields = append(entry.Fields, Field{
-			Name:  iterator.Selector().String(),
-			Value: value,
+			Parent: entry,
+			Name:   iterator.Selector().String(),
+			Value:  value,
 		})
 	}
 	return entry, nil
