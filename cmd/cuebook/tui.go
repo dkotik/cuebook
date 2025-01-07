@@ -48,6 +48,7 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 				if err = os.WriteFile(filePath, result.Source, os.FileMode(os.O_CREATE)); err != nil {
 					return err
 				}
+				// tea.BatchMsg
 				return result
 			})
 		})(file.New(filePath)),
@@ -61,65 +62,66 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 				if err != nil {
 					return err
 				}
-				list, err := newEntryList(cuebook.SourcePatchResult{
-					Book:   book,
-					Source: source,
-				})
-				if err != nil {
-					return err
+				const entryListName = "entryList"
+				return tea.BatchMsg{
+					tea.Sequence(
+						func() tea.Msg {
+							return terminalui.SwitchTo(
+								terminalui.NewEventAdaptor(
+									func(m tea.Model, r cuebook.SourcePatchResult) (tea.Model, tea.Cmd) {
+										total := r.Book.Len() // TODO: catch error
+										cards := make([]tea.Model, 0, total+1)
+										title := list.Title{
+											Text:  r.Book.Metadata().Title(),
+											Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
+										}
+										cards = append(cards, title)
+
+										index := 0
+										selectIndex := -1
+										for entry, err := range r.Book.EachEntry() {
+											if err != nil {
+												return m, func() tea.Msg { return err }
+											}
+											index++
+											if r.ReplaceWith != nil && r.PrecedingDuplicates >= 0 {
+												at := cuebook.GetByteSpanInSource(entry.Value)
+												if !at.IsValid() {
+													continue // TODO: handle
+												}
+												if bytes.Equal(r.ReplaceWith, r.Source[at.BeginsAt:at.EndsAt]) {
+													selectIndex = index
+													r.PrecedingDuplicates--
+												}
+											}
+											cards = append(cards, newCardView(title.View()+fmt.Sprintf(" › %d/%d", index, total), entry, r.Source))
+										}
+										return m, tea.Sequence(
+											list.Reset(entryListName),
+											list.AddItems(entryListName, cards...),
+											func() tea.Msg {
+												if selectIndex == -1 {
+													return nil
+												}
+												return list.ApplySelection(entryListName, selectIndex)
+											},
+											tea.RequestWindowSize(),
+										)
+									},
+								)(list.New(entryListName)),
+							)
+						},
+						// tea.RequestWindowSize(),
+						func() tea.Msg {
+							return cuebook.SourcePatchResult{
+								Book:   book,
+								Source: source,
+							}
+						},
+					),
 				}
-				return list
 			}
 		})(window)
-}
-
-func newEntryList(r cuebook.SourcePatchResult) (tea.Model, error) {
-	total := r.Book.Len()
-	cards := make([]tea.Model, 0, total+1)
-	title := list.Title{
-		Text:  r.Book.Metadata().Title(),
-		Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
-	}
-	cards = append(cards, title)
-
-	index := 0
-	for entry, err := range r.Book.EachEntry() {
-		if err != nil {
-			return nil, err
-		}
-		index++
-		cards = append(cards, newCardView(title.View()+fmt.Sprintf(" › %d/%d", index, total), entry, r.Source))
-	}
-	return terminalui.SwitchTo(
-		terminalui.NewEventAdaptor(
-			func(m tea.Model, r cuebook.SourcePatchResult) (tea.Model, tea.Cmd) {
-				newList, err := newEntryList(r)
-				if err != nil {
-					return m, func() tea.Msg { return err }
-				}
-				if r.ReplaceWith != nil {
-					selectIndex := 0
-					index := 0
-					for entry := range r.Book.EachValue() {
-						index++
-						at := cuebook.GetByteSpanInSource(entry)
-						if !at.IsValid() {
-							continue // TODO: handle
-						}
-						if bytes.Equal(r.ReplaceWith, r.Source[at.BeginsAt:at.EndsAt]) {
-							selectIndex = index
-							r.PrecedingDuplicates--
-							if r.PrecedingDuplicates < 0 {
-								break
-							}
-						}
-					}
-					return newList, list.ApplySelection(selectIndex)
-				}
-				// TODO: pull out index out of `m` and update new list with it
-				return newList, nil
-			})(list.New(cards...)),
-	), nil
 }
 
 func newCardView(
@@ -151,6 +153,7 @@ func newFieldListView(
 		fields = append(fields, newFieldView(f, source))
 	}
 	// return list.New(fields...)
+	const fieldListName = "fieldList"
 	return terminalui.NewEventAdaptor(
 		func(m tea.Model, r cuebook.SourcePatchResult) (tea.Model, tea.Cmd) {
 			for entry, err := range r.Book.EachEntry() {
@@ -163,7 +166,7 @@ func newFieldListView(
 				}
 			}
 			return m.Update(r)
-		})(list.New(fields...))
+		})(list.New(fieldListName, fields...))
 }
 
 func newFieldView(

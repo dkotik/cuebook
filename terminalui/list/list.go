@@ -7,9 +7,10 @@ import (
 	"github.com/dkotik/cuebook/terminalui"
 )
 
-func New(items ...tea.Model) tea.Model {
+func New(name string, items ...tea.Model) tea.Model {
 	fs := viewport.New()
 	return List{
+		Name:  name,
 		Items: items,
 		// SelectedIndex: -1,
 		fullScreenView: &fs,
@@ -17,6 +18,7 @@ func New(items ...tea.Model) tea.Model {
 }
 
 type List struct {
+	Name          string
 	Filter        string
 	SelectedIndex int
 	Items         []tea.Model
@@ -83,8 +85,20 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+	case resetEvent:
+		if msg.ListName == l.Name {
+			l.SelectedIndex = 0
+			l.Items = nil
+			return l, nil
+		}
+	case addItemsEvent:
+		if msg.ListName == l.Name {
+			l.Items = append(l.Items, msg.Items...)
+			return l, nil
+		}
 	case applySelectionEvent:
-		if l.SelectedIndex != msg.Index && msg.Index >= 0 && msg.Index < len(l.Items) {
+		// && l.SelectedIndex != msg.Index
+		if msg.ListName == l.Name && msg.Index >= 0 && msg.Index < len(l.Items) {
 			return l.applySelection(msg.Index)
 		}
 	case tea.WindowSizeMsg:
@@ -101,6 +115,8 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// any other message goes to the selected node
 	var cmd tea.Cmd
-	l.Items[l.SelectedIndex], cmd = l.Items[l.SelectedIndex].Update(msg)
+	if len(l.Items) > 0 {
+		l.Items[l.SelectedIndex], cmd = l.Items[l.SelectedIndex].Update(msg)
+	}
 	return l, cmd
 }
