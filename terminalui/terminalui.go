@@ -10,6 +10,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/dkotik/cuebook/terminalui/event"
+	"github.com/dkotik/cuebook/terminalui/internal"
 )
 
 func New(initial tea.Model, logger *slog.Logger) tea.Model {
@@ -20,6 +22,13 @@ func New(initial tea.Model, logger *slog.Logger) tea.Model {
 		current: initial,
 		logger:  cmp.Or(logger, slog.Default()),
 	}
+}
+
+func NewWithCueState(wrap tea.Model) tea.Model {
+	if wrap == nil {
+		panic("initial model is nil")
+	}
+	return internal.New(wrap)
 }
 
 type window struct {
@@ -59,13 +68,13 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		w.current, cmdInit = msg.Init()
 		w.current, cmd = w.current.Update(w.size)
 		return w, tea.Batch(cmd, cmdInit)
-	case BackEvent:
+	case event.BackEvent:
 		return w.back()
-	case setBusyEvent:
+	case event.SetBusyEvent:
 		if bool(msg) {
 			w.busy++
 			return w, func() tea.Msg {
-				return IsBusyEvent(true)
+				return event.IsBusyEvent(true)
 			}
 		} else {
 			w.busy--
@@ -74,7 +83,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 					// delay busy reset
 					// to allow the animation to play longer
 					time.Sleep(time.Second)
-					return IsBusyEvent(false)
+					return event.IsBusyEvent(false)
 				}
 			}
 		}
@@ -99,7 +108,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	}
 	w.current, cmd = w.current.Update(msg)
 	if len(w.stack) > 0 {
-		cmd = tea.Batch(cmd, Propagate(msg, w.stack))
+		cmd = tea.Batch(cmd, event.Propagate(msg, w.stack))
 	}
 	return w, cmd
 }

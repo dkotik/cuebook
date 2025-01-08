@@ -13,6 +13,7 @@ import (
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui"
 	"github.com/dkotik/cuebook/terminalui/card"
+	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/field"
 	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/list"
@@ -34,9 +35,9 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 		Level: slog.LevelDebug,
 	})
 
-	window := terminalui.New(
+	window := terminalui.NewWithCueState(terminalui.New(
 		terminalui.NewEventAdaptor(func(m tea.Model, patch cuebook.SourcePatch) (tea.Model, tea.Cmd) {
-			return m, terminalui.WithBusySignal(func() tea.Msg {
+			return m, event.WithBusySignal(func() tea.Msg {
 				source, err := os.ReadFile(filePath) // TODO: get the path from component
 				if err != nil {
 					return err
@@ -53,7 +54,7 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 			})
 		})(file.New(filePath)),
 		slog.New(logger).With("component", "bubbletea"),
-	)
+	))
 
 	return terminalui.NewEventAdaptor(
 		func(m tea.Model, source file.ContentEvent) (tea.Model, tea.Cmd) {
@@ -91,21 +92,22 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 												}
 												if bytes.Equal(r.ReplaceWith, r.Source[at.BeginsAt:at.EndsAt]) {
 													selectIndex = index
+													// panic(index)
 													r.PrecedingDuplicates--
 												}
 											}
 											cards = append(cards, newCardView(title.View()+fmt.Sprintf(" › %d/%d", index, total), entry, r.Source))
 										}
+
+										var selectionCommand tea.Cmd
+										if selectIndex >= 0 {
+											selectionCommand = list.ApplySelection(entryListName, selectIndex)
+										}
 										return m, tea.Sequence(
 											list.Reset(entryListName),
 											list.AddItems(entryListName, cards...),
-											func() tea.Msg {
-												if selectIndex == -1 {
-													return nil
-												}
-												return list.ApplySelection(entryListName, selectIndex)
-											},
 											tea.RequestWindowSize(),
+											selectionCommand,
 										)
 									},
 								)(list.New(entryListName)),
@@ -177,7 +179,7 @@ func newFieldView(
 		// if !r.SourceByteRange.IsTouching(cuebook.GetByteSpanInSource(f.Value)) { // TODO: locate instead?
 		// 	return m, nil
 		// }
-		return m, func() tea.Msg { return terminalui.BackEvent{} }
+		return m, func() tea.Msg { return event.BackEvent{} }
 	})
 
 	return terminalui.NewKeySwitchAdaptor(

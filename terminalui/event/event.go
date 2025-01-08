@@ -1,19 +1,18 @@
-package terminalui
+package event
 
 import tea "github.com/charmbracelet/bubbletea/v2"
 
 type (
-	ErrorEvent   error
 	BackEvent    struct{}
 	IsBusyEvent  bool
-	setBusyEvent bool
+	SetBusyEvent bool
 )
 
 func WithBusySignal(cmd tea.Cmd) tea.Cmd {
 	return tea.Sequence(
-		func() tea.Msg { return setBusyEvent(true) },
+		func() tea.Msg { return SetBusyEvent(true) },
 		cmd,
-		func() tea.Msg { return setBusyEvent(false) },
+		func() tea.Msg { return SetBusyEvent(false) },
 	)
 }
 

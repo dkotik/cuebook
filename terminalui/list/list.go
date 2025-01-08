@@ -4,7 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/v2/viewport"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/dkotik/cuebook/terminalui"
+	"github.com/dkotik/cuebook/terminalui/event"
 )
 
 func New(name string, items ...tea.Model) tea.Model {
@@ -29,10 +29,13 @@ type List struct {
 
 func (l List) Init() (m tea.Model, cmd tea.Cmd) {
 	m, cmd = l.applySelection(l.SelectedIndex)
-	return m, tea.Batch(terminalui.PropagateInit(l.Items), cmd)
+	return m, tea.Batch(event.PropagateInit(l.Items), cmd)
 }
 
 func (l List) IsFullscreen() bool {
+	if len(l.Items) == 0 {
+		return false
+	}
 	view := l.Items[l.SelectedIndex].View()
 	// l.fullScreenView.SetContent(view)
 	return lipgloss.Height(view) > l.Size.Height
@@ -42,11 +45,13 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
-		// case tea.KeyEnter:
-		// 	event := applySelectionEvent{Index: l.SelectedIndex}
-		// 	return l, func() tea.Msg {
-		// 		return event
-		// 	}
+		case tea.KeyEnter:
+			return l, func() tea.Msg {
+				return SelectionMadeEvent{
+					ListName: l.Name,
+					Index:    l.SelectedIndex,
+				}
+			}
 		case tea.KeyTab:
 			if msg.Key().Mod == tea.ModShift {
 				if len(l.Items) > 1 {
@@ -85,6 +90,15 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+	case countRequestEvent:
+		if msg.ListName == l.Name {
+			return l, func() tea.Msg {
+				return CountEvent{
+					ListName: l.Name,
+					Count:    len(l.Items),
+				}
+			}
+		}
 	case resetEvent:
 		if msg.ListName == l.Name {
 			l.SelectedIndex = 0
@@ -109,7 +123,7 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		l.fullScreenView.SetWidth(msg.Width)
 		l.fullScreenView.SetHeight(msg.Height)
-		cmd := terminalui.Propagate(msg, l.Items)
+		cmd := event.Propagate(msg, l.Items)
 		return l, cmd
 	}
 

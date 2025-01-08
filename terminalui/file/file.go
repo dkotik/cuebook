@@ -7,7 +7,6 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/terminalui"
 )
 
 type file struct {
@@ -24,7 +23,7 @@ func (f file) Load() (tea.Model, tea.Cmd) {
 	content, err := os.ReadFile(f.Path)
 	if err != nil {
 		return f, func() tea.Msg {
-			return terminalui.ErrorEvent(err)
+			return err
 		}
 	}
 	return f, func() tea.Msg {
@@ -51,7 +50,7 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return f, func() tea.Msg {
 			content, err := os.ReadFile(string(msg))
 			if err != nil {
-				return terminalui.ErrorEvent(err)
+				return err
 			}
 			return ContentEvent(content)
 		}
@@ -60,13 +59,13 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// TODO: first create a hashed file, then overwrite the target
 			handle, err := os.Create(string(msg))
 			if err != nil {
-				return terminalui.ErrorEvent(err)
+				return err
 			}
 			if _, err = io.Copy(handle, bytes.NewReader([]byte(msg))); err != nil {
-				return errors.Join(terminalui.ErrorEvent(err), handle.Close())
+				return errors.Join(err, handle.Close())
 			}
 			if err = handle.Close(); err != nil {
-				return terminalui.ErrorEvent(err)
+				return err
 			}
 			return nil
 		}

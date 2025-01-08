@@ -1,4 +1,4 @@
-package terminalui
+package line
 
 import (
 	"bytes"
