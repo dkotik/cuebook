@@ -5,8 +5,8 @@ import (
 	"github.com/charmbracelet/bubbles/v2/textarea"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/dkotik/cuebook/terminalui"
 	"github.com/dkotik/cuebook/terminalui/status"
+	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 )
@@ -41,11 +41,11 @@ func New(label, value string, required bool) tea.Model {
 	m.textarea.Styles.Focused.Text = m.textarea.Styles.Focused.Text.Border(lipgloss.NormalBorder(), true, true, true, true)
 
 	lc := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
-	m.saveKey = terminalui.NewSaveKey(lc)
-	m.escapeKey = terminalui.NewCancelKey(lc)
+	m.saveKey = window.NewSaveKey(lc)
+	m.escapeKey = window.NewCancelKey(lc)
 	m.status = status.New(
-		terminalui.NewSaveKey(lc),
-		terminalui.NewCancelKey(lc),
+		window.NewSaveKey(lc),
+		window.NewCancelKey(lc),
 	)
 	return m
 }

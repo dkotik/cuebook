@@ -27,7 +27,7 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 		Level: slog.LevelDebug,
 	})
 
-	return terminalui.NewWithCueState(window.New(file.New(filePath),
+	return terminalui.NewWithCueState(ctx, window.New(file.New(filePath),
 		slog.New(logger).With("component", "bubbletea"),
 	))
 }

@@ -66,6 +66,23 @@ func (b CueBook) EachEntry() iter.Seq2[Entry, error] {
 	}
 }
 
+func (b CueBook) GetValue(atIndex int) (cue.Value, error) {
+	value := b.LookupPath(cue.MakePath(cue.Index(atIndex)))
+	return value, value.Err()
+}
+
+func (b CueBook) GetField(atIndex, fieldIndex int) (f Field, err error) {
+	value, err := b.GetValue(atIndex)
+	if err != nil {
+		return
+	}
+	entry, err := NewEntry(value)
+	if err != nil {
+		return
+	}
+	return entry.GetField(fieldIndex)
+}
+
 func (b CueBook) Len() int {
 	length, err := b.Value.Len().Int64()
 	if err != nil {

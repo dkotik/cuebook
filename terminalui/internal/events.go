@@ -5,6 +5,7 @@ import (
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/list"
+	"github.com/dkotik/cuebook/terminalui/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
@@ -29,10 +30,21 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			},
 			parseBook(msg),
 		)
-	// case cuebook.SourcePatchResult:
-	// 	s.Book = msg.Book
-	// 	s.Source = msg.Source
-	// 	return s, nil
+	case cuebook.SourcePatchResult:
+		s.Book = msg.Book
+		s.Source = msg.Source
+		return s, tea.Batch(
+			// TODO: adjust selection after patch
+			// LoadEntries(s.Book, s.SelectedEntryIndex-1),
+			tea.Sequence(
+				LoadFields(s.Book, s.SelectedFieldIndex-1),
+				func() tea.Msg { return window.BackEvent{} },
+			),
+		)
+	case textarea.OnChangeEvent:
+		if s.IsFieldListAvailable() {
+			return s, IssueFieldPatch(s.Book, s.Source, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1, string(msg))
+		}
 	case parsedBook:
 		s.Book = msg.Book
 		s.Source = msg.Source
@@ -63,6 +75,9 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			)
 		case entryFieldListName:
 			s.SelectedFieldIndex = msg.Index
+			s.Model, cmd = s.Model.Update(msg)
+			return s, tea.Batch(cmd,
+				SwitchToFieldForm(s.Book, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1))
 		}
 	case list.SelectedIndexEvent:
 		switch msg.ListName {

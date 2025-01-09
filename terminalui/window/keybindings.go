@@ -1,4 +1,4 @@
-package terminalui
+package window
 
 import (
 	"github.com/charmbracelet/bubbles/v2/key"

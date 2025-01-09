@@ -1,22 +1,26 @@
 package internal
 
 import (
+	"cmp"
+	"context"
+
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 )
 
-func NewWithCueState(model tea.Model) tea.Model {
+func NewWithCueState(ctx context.Context, model tea.Model) tea.Model {
 	if model == nil {
 		panic("state cannot track a nil model")
 	}
-	return state{Model: model}
+	return state{
+		Model:   model,
+		Context: cmp.Or(ctx, context.Background()),
+	}
 }
 
 type state struct {
 	tea.Model
-
-	// EntryCount         int
-	// FieldCount         int
+	Context            context.Context
 	SelectedEntryIndex int
 	SelectedFieldIndex int
 	Book               cuebook.CueBook

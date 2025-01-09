@@ -3,7 +3,6 @@ package cuebook
 import (
 	"errors"
 	"fmt"
-	"io"
 
 	"cuelang.org/go/cue"
 )
@@ -13,8 +12,6 @@ const (
 	booleanTrue            = "✓"
 	attrDetail             = "detail"
 )
-
-var _ io.WriterTo = (*Entry)(nil)
 
 type Entry struct {
 	Value   cue.Value
@@ -78,45 +75,17 @@ func (e Entry) GetDescription() (description []string) {
 	return description
 }
 
-func (e *Entry) WriteTo(w io.Writer) (n int64, err error) {
-	var written int
-	written, err = w.Write([]byte(`  {`))
-	n += int64(written)
-	if err != nil {
-		return n, err
+func (e Entry) GetField(atIndex int) (f Field, err error) {
+	if atIndex < 0 {
+		return f, errors.New("not found: index out of range") // TODO: model
 	}
-
-	// for _, field := range e.Fields {
-	// 	// TODO: quote name using Cue call
-	// 	written, err = fmt.Fprintf(w, "\n    %s: ", field.GetName())
-	// 	n += int64(written)
-	// 	if err != nil {
-	// 		return n, err
-	// 	}
-
-	// 	b, err := field.MarshalText()
-	// 	if err != nil {
-	// 		return n, err
-	// 	}
-	// 	if len(b) == 0 {
-	// 		written, err = w.Write([]byte(`null`))
-	// 		n += int64(written)
-	// 		if err != nil {
-	// 			return n, err
-	// 		}
-	// 		continue
-	// 	}
-	// 	written, err = w.Write(b)
-	// 	n += int64(written)
-	// 	if err != nil {
-	// 		return n, err
-	// 	}
-	// }
-
-	written, err = w.Write([]byte("\n  },\n"))
-	n += int64(written)
-	if err != nil {
-		return n, err
+	fieldCount := len(e.Fields)
+	if atIndex < fieldCount {
+		return e.Fields[atIndex], nil
 	}
-	return 0, nil
+	atIndex -= fieldCount
+	if atIndex >= len(e.Details) {
+		return f, errors.New("not found: index out of range") // TODO: model
+	}
+	return e.Details[atIndex], nil
 }

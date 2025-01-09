@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"fmt"
-
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
@@ -42,14 +40,14 @@ func LoadEntries(book cuebook.CueBook, currentSelection int) tea.Cmd {
 			// 		r.PrecedingDuplicates--
 			// 	}
 			// }
-			cards = append(cards, card.New(title.View()+fmt.Sprintf(" › %d/%d", index, total), entry.GetDescription()...))
+			cards = append(cards, card.New(entry.GetTitle(), entry.GetDescription()...))
 		}
 		return tea.BatchMsg{
 			tea.Sequence(
 				list.Reset(entryListName),
 				list.AddItems(entryListName, cards...),
 				tea.RequestWindowSize(),
-				list.ApplySelection(entryListName, currentSelection),
+				list.ApplySelection(entryListName, currentSelection+1), // +1 for title
 			),
 		}
 	}
