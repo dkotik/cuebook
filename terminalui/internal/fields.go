@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/field"
+	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -29,7 +30,7 @@ func IssueFieldPatch(book cuebook.CueBook, source []byte, entryIndex, fieldIndex
 		if err != nil {
 			return err
 		}
-		return result
+		return file.SaveEvent(result.Source)
 	}
 }
 
@@ -50,11 +51,15 @@ func LoadFields(book cuebook.CueBook, index int) tea.Cmd {
 	return func() tea.Msg {
 		entry, err := cuebook.NewEntry(book.Value.LookupPath(cue.MakePath(cue.Index(index))))
 		if err != nil {
-			panic(err) // TODO: handle
+			return err
+		}
+		total, err := book.Len()
+		if err != nil {
+			return err
 		}
 		fields := make([]tea.Model, 0, len(entry.Fields)+len(entry.Details)+1)
 		fields = append(fields, list.Title{
-			Text:  entry.GetTitle() + fmt.Sprintf(" › %d/%d", index+1, 9999),
+			Text:  entry.GetTitle() + fmt.Sprintf(" › %d/%d", index+1, total),
 			Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		})
 		for _, f := range entry.Fields {

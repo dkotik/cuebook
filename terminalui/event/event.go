@@ -2,6 +2,13 @@ package event
 
 import tea "github.com/charmbracelet/bubbletea/v2"
 
+func If(condition bool, then tea.Cmd) tea.Cmd {
+	if condition {
+		return then
+	}
+	return nil
+}
+
 func Propagate(
 	msg tea.Msg,
 	children []tea.Model,

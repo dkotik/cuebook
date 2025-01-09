@@ -75,6 +75,7 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if l.SelectedIndex < len(l.Items)-1 {
 					return l.applySelection(l.SelectedIndex + 1)
 				}
+				return l.applySelection(0)
 			}
 		case tea.KeyUp, 'k':
 			if l.IsFullscreen() && !l.fullScreenView.AtTop() {
@@ -85,9 +86,10 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			if len(l.Items) > 1 {
-				if l.SelectedIndex > 0 {
-					return l.applySelection(l.SelectedIndex - 1)
+				if l.SelectedIndex < 1 {
+					return l.applySelection(len(l.Items) - 1)
 				}
+				return l.applySelection(l.SelectedIndex - 1)
 			}
 		}
 	case countRequestEvent:

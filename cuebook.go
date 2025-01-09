@@ -83,12 +83,12 @@ func (b CueBook) GetField(atIndex, fieldIndex int) (f Field, err error) {
 	return entry.GetField(fieldIndex)
 }
 
-func (b CueBook) Len() int {
+func (b CueBook) Len() (int, error) {
 	length, err := b.Value.Len().Int64()
 	if err != nil {
 		panic(fmt.Errorf("unable to get the length of the Cue list: %w", err))
 	}
-	return int(length)
+	return int(length), nil
 }
 
 func GetByteSpanInSource(v cue.Value) (byteRange SourceByteRange) {

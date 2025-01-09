@@ -3,6 +3,7 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/textarea"
@@ -30,28 +31,32 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			},
 			parseBook(msg),
 		)
-	case cuebook.SourcePatchResult:
-		s.Book = msg.Book
-		s.Source = msg.Source
-		return s, tea.Batch(
-			// TODO: adjust selection after patch
-			// LoadEntries(s.Book, s.SelectedEntryIndex-1),
-			tea.Sequence(
-				LoadFields(s.Book, s.SelectedFieldIndex-1),
-				func() tea.Msg { return window.BackEvent{} },
-			),
-		)
-	case textarea.OnChangeEvent:
-		if s.IsFieldListAvailable() {
-			return s, IssueFieldPatch(s.Book, s.Source, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1, string(msg))
-		}
 	case parsedBook:
 		s.Book = msg.Book
 		s.Source = msg.Source
 		return s, tea.Batch(
 			LoadEntries(s.Book, s.SelectedEntryIndex-1),
 			LoadFields(s.Book, s.SelectedEntryIndex-1),
+			event.If(s.IsFieldListAvailable(), func() tea.Msg {
+				return window.BackEvent{}
+			}),
 		)
+	case textarea.OnChangeEvent:
+		if s.IsFieldListAvailable() {
+			return s, IssueFieldPatch(s.Book, s.Source, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1, string(msg))
+		}
+	// case cuebook.SourcePatchResult:
+	// 	s.Book = msg.Book
+	// 	s.Source = msg.Source
+	// 	return s, window.WithBusySignal(tea.Batch(
+	// 		// TODO: adjust selection after patch
+	// 		// LoadEntries(s.Book, s.SelectedEntryIndex-1),
+	// 		tea.Sequence(
+	// 			LoadFields(s.Book, s.SelectedEntryIndex-1),
+	// 			LoadEntries(s.Book, s.SelectedEntryIndex-1),
+	// 			func() tea.Msg { return window.BackEvent{} },
+	// 		),
+	// 	))
 	case window.BackEvent:
 		s.SelectedEntryIndex = -2
 		s.SelectedFieldIndex = -2
@@ -64,6 +69,9 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case list.SelectionMadeEvent:
 		switch msg.ListName {
 		case entryListName:
+			if msg.Index == 0 {
+				msg.Index = 1 // TODO: allow viewing and editing frontmatter
+			}
 			s.SelectedEntryIndex = msg.Index
 			s.Model, cmd = s.Model.Update(msg)
 			return s, tea.Sequence(
@@ -74,6 +82,9 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				LoadFields(s.Book, s.SelectedEntryIndex-1),
 			)
 		case entryFieldListName:
+			if msg.Index == 0 { // selecting title jumps to field
+				return s, list.ApplySelection(entryFieldListName, 1)
+			}
 			s.SelectedFieldIndex = msg.Index
 			s.Model, cmd = s.Model.Update(msg)
 			return s, tea.Batch(cmd,
@@ -86,6 +97,8 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		case entryFieldListName:
 			s.SelectedFieldIndex = msg.Index
 		}
+	case error:
+		panic(msg) // TODO: handle with care
 	}
 	s.Model, cmd = s.Model.Update(msg)
 	return s, cmd

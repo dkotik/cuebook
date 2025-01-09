@@ -14,7 +14,10 @@ const (
 
 func LoadEntries(book cuebook.CueBook, currentSelection int) tea.Cmd {
 	return func() tea.Msg {
-		total := book.Len() // TODO: catch error
+		total, err := book.Len()
+		if err != nil {
+			return err
+		}
 		cards := make([]tea.Model, 0, total+1)
 		title := list.Title{
 			Text:  book.Metadata().Title(),
