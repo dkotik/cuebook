@@ -12,6 +12,7 @@ import (
 )
 
 type Textarea struct {
+	Name     string
 	Label    string
 	Required bool
 
@@ -21,8 +22,9 @@ type Textarea struct {
 	textarea  textarea.Model
 }
 
-func New(label, value string, required bool) tea.Model {
+func New(name, label, value string, required bool) tea.Model {
 	m := Textarea{
+		Name:     name,
 		Label:    label,
 		Required: required,
 		textarea: textarea.New(),
@@ -65,7 +67,10 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if key.Matches(msg, t.saveKey) {
 			return t, func() tea.Msg {
-				return OnChangeEvent(t.textarea.Value())
+				return OnChangeEvent{
+					TextAreaName: t.Name,
+					Value:        t.textarea.Value(),
+				}
 			}
 		}
 	}

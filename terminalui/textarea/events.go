@@ -1,3 +1,6 @@
 package textarea
 
-type OnChangeEvent string
+type OnChangeEvent struct {
+	TextAreaName string
+	Value        string
+}

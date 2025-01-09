@@ -16,7 +16,7 @@ type (
 		Source []byte
 	}
 
-	updateLists struct{}
+	// updateLists struct{}
 )
 
 func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
@@ -42,21 +42,12 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			}),
 		)
 	case textarea.OnChangeEvent:
-		if s.IsFieldListAvailable() {
-			return s, IssueFieldPatch(s.Book, s.Source, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1, string(msg))
+		if s.IsFieldListAvailable() && msg.TextAreaName == fieldEditingTextAreaName {
+			return s, IssueFieldPatch(s.Book, s.Source, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1, msg.Value)
 		}
-	// case cuebook.SourcePatchResult:
-	// 	s.Book = msg.Book
-	// 	s.Source = msg.Source
-	// 	return s, window.WithBusySignal(tea.Batch(
-	// 		// TODO: adjust selection after patch
-	// 		// LoadEntries(s.Book, s.SelectedEntryIndex-1),
-	// 		tea.Sequence(
-	// 			LoadFields(s.Book, s.SelectedEntryIndex-1),
-	// 			LoadEntries(s.Book, s.SelectedEntryIndex-1),
-	// 			func() tea.Msg { return window.BackEvent{} },
-	// 		),
-	// 	))
+		if msg.TextAreaName == fieldAddingTextAreaName {
+			// TODO: create patch using a list of field: value line pairs
+		}
 	case window.BackEvent:
 		s.SelectedEntryIndex = -2
 		s.SelectedFieldIndex = -2

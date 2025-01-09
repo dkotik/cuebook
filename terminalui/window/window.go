@@ -7,6 +7,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/dkotik/cuebook/terminalui/event"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
@@ -22,11 +23,12 @@ func New(initial tea.Model, logger *slog.Logger) tea.Model {
 }
 
 type window struct {
-	current tea.Model
-	stack   []tea.Model
-	size    tea.WindowSizeMsg
-	busy    uint8
-	logger  *slog.Logger
+	current   tea.Model
+	stack     []tea.Model
+	size      tea.WindowSizeMsg
+	busy      uint8
+	localizer *i18n.Localizer
+	logger    *slog.Logger
 }
 
 func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -52,11 +54,19 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		w.size = msg
+	case *i18n.Localizer:
+		if msg == nil {
+			panic("nil localizer")
+		}
+		w.localizer = msg
+	case localizerRequestEvent:
+		localizer := w.localizer
+		return w, func() tea.Msg { return localizer }
 	case SwitchTo:
 		w.stack = append(w.stack, w.current)
 		var cmdInit tea.Cmd
 		w.current, cmdInit = msg.Init()
-		w.current, cmd = w.current.Update(w.size)
+		w.current, cmd = w.current.Update(w.size) // TODO: should be requested instead of fed, like localizer
 		return w, tea.Batch(cmd, cmdInit)
 	case BackEvent:
 		return w.back()

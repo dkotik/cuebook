@@ -14,7 +14,11 @@ import (
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
-const entryFieldListName = "cuebookEntryFieldList"
+const (
+	entryFieldListName       = "cuebookEntryFieldList"
+	fieldEditingTextAreaName = "fieldEditingTextArea"
+	fieldAddingTextAreaName  = "fieldAddingTextArea"
+)
 
 func IssueFieldPatch(book cuebook.CueBook, source []byte, entryIndex, fieldIndex int, value string) tea.Cmd {
 	return func() tea.Msg {
@@ -40,7 +44,7 @@ func SwitchToFieldForm(book cuebook.CueBook, entryIndex, fieldIndex int) tea.Cmd
 		if err != nil {
 			return err
 		}
-		return window.SwitchTo(textarea.New(f.Name, f.String(), true))
+		return window.SwitchTo(textarea.New(fieldEditingTextAreaName, f.Name, f.String(), true))
 	}
 }
 
