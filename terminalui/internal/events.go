@@ -3,7 +3,6 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -41,7 +40,7 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			LoadEntries(s.Book, s.SelectedEntryIndex-1),
 			LoadFields(s.Book, s.SelectedEntryIndex-1),
 		)
-	case event.BackEvent:
+	case window.BackEvent:
 		s.SelectedEntryIndex = -2
 		s.SelectedFieldIndex = -2
 		s.Model, cmd = s.Model.Update(msg)

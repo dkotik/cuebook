@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/v2/spinner"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/dkotik/cuebook/terminalui/event"
+	"github.com/dkotik/cuebook/terminalui/window"
 )
 
 func New(bindings ...key.Binding) tea.Model {
@@ -39,7 +39,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case error:
 		panic(fmt.Errorf("caught error: %w", msg))
-	case event.IsBusyEvent:
+	case window.IsBusyEvent:
 		m.Busy = bool(msg)
 		if m.Busy {
 			return m, m.Spinner.Tick

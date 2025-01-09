@@ -58,13 +58,13 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		w.current, cmdInit = msg.Init()
 		w.current, cmd = w.current.Update(w.size)
 		return w, tea.Batch(cmd, cmdInit)
-	case event.BackEvent:
+	case BackEvent:
 		return w.back()
-	case event.SetBusyEvent:
+	case SetBusyEvent:
 		if bool(msg) {
 			w.busy++
 			return w, func() tea.Msg {
-				return event.IsBusyEvent(true)
+				return IsBusyEvent(true)
 			}
 		} else {
 			w.busy--
@@ -73,7 +73,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 					// delay busy reset
 					// to allow the animation to play longer
 					time.Sleep(time.Second)
-					return event.IsBusyEvent(false)
+					return IsBusyEvent(false)
 				}
 			}
 		}
