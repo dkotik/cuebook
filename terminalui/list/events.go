@@ -51,6 +51,21 @@ type applySelectionEvent struct {
 	Index    int
 }
 
+type selectedIndexRequestEvent struct {
+	ListName string
+}
+
+type SelectedIndexEvent struct {
+	ListName string
+	Index    int
+}
+
+func SelectedIndex(listName string) tea.Cmd {
+	return func() tea.Msg {
+		return selectedIndexRequestEvent{ListName: listName}
+	}
+}
+
 func ApplySelection(listName string, index int) tea.Cmd {
 	return func() tea.Msg {
 		return applySelectionEvent{

@@ -28,8 +28,8 @@ type List struct {
 }
 
 func (l List) Init() (m tea.Model, cmd tea.Cmd) {
-	m, cmd = l.applySelection(l.SelectedIndex)
-	return m, tea.Batch(event.PropagateInit(l.Items), cmd)
+	m, cmd = l.applySelection(l.SelectedIndex) // TODO: deprecate?
+	return m, tea.Batch(event.PropagateInit(l.Items), cmd, tea.RequestWindowSize())
 }
 
 func (l List) IsFullscreen() bool {
@@ -93,9 +93,10 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case countRequestEvent:
 		if msg.ListName == l.Name {
 			return l, func() tea.Msg {
+				count := len(l.Items)
 				return CountEvent{
 					ListName: l.Name,
-					Count:    len(l.Items),
+					Count:    count,
 				}
 			}
 		}
@@ -109,6 +110,15 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.ListName == l.Name {
 			l.Items = append(l.Items, msg.Items...)
 			return l, nil
+		}
+	case selectedIndexRequestEvent:
+		if msg.ListName == l.Name {
+			return l, func() tea.Msg {
+				return SelectedIndexEvent{
+					ListName: l.Name,
+					Index:    l.SelectedIndex,
+				}
+			}
 		}
 	case applySelectionEvent:
 		// && l.SelectedIndex != msg.Index

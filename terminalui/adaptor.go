@@ -46,11 +46,11 @@ func NewKeySwitchAdaptor(
 	constructor func() tea.Model,
 ) func(tea.Model) tea.Model {
 	return NewEventAdaptor(func(m tea.Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-		if msg.Key() == key {
-			return m, func() tea.Msg {
-				return SwitchTo(constructor())
-			}
-		}
+		// if msg.Key() == key {
+		// 	return m, func() tea.Msg {
+		// 		return SwitchTo(constructor())
+		// 	}
+		// }
 		return m.Update(msg)
 	})
 }
