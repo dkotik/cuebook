@@ -1,4 +1,4 @@
-package terminalui
+package event
 
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -24,7 +24,7 @@ func (u eventAdaptor[T]) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return u, cmd
 }
 
-func NewEventAdaptor[T any](
+func NewAdaptor[T any](
 	update func(tea.Model, T) (tea.Model, tea.Cmd),
 ) func(next tea.Model) tea.Model {
 	if update == nil {
@@ -45,7 +45,7 @@ func NewKeySwitchAdaptor(
 	key tea.Key,
 	constructor func() tea.Model,
 ) func(tea.Model) tea.Model {
-	return NewEventAdaptor(func(m tea.Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return NewAdaptor(func(m tea.Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// if msg.Key() == key {
 		// 	return m, func() tea.Msg {
 		// 		return SwitchTo(constructor())

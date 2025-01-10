@@ -9,8 +9,6 @@ import (
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/field"
 	"github.com/dkotik/cuebook/terminalui/list"
-	"github.com/dkotik/cuebook/terminalui/textarea"
-	"github.com/dkotik/cuebook/terminalui/window"
 )
 
 const (
@@ -34,16 +32,6 @@ func IssueFieldPatch(book cuebook.Document, source []byte, entryIndex, fieldInde
 			return err
 		}
 		return result
-	}
-}
-
-func SwitchToFieldForm(book cuebook.Document, entryIndex, fieldIndex int) tea.Cmd {
-	return func() tea.Msg {
-		f, err := book.GetField(entryIndex, fieldIndex)
-		if err != nil {
-			return err
-		}
-		return window.SwitchTo(textarea.New(fieldEditingTextAreaName, f.Name, f.String(), true))
 	}
 }
 

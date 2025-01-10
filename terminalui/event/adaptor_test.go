@@ -1,18 +1,18 @@
-package terminalui_test
+package event_test
 
 import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/terminalui"
 	"github.com/dkotik/cuebook/terminalui/card"
+	"github.com/dkotik/cuebook/terminalui/event"
 )
 
 func TestUpdateAdaptor(t *testing.T) {
 	type testEvent string
 
 	card := card.New("title")
-	adapted := terminalui.NewEventAdaptor(func(m tea.Model, e testEvent) (tea.Model, tea.Cmd) {
+	adapted := event.NewAdaptor(func(m tea.Model, e testEvent) (tea.Model, tea.Cmd) {
 		return m, func() tea.Msg {
 			return 7
 		}

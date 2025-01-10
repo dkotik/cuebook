@@ -15,15 +15,14 @@ type (
 		Book   cuebook.Document
 		Source []byte
 	}
-
-	// updateLists struct{}
 )
 
 func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case file.ContentEvent:
+		s.Model, cmd = s.Model.Update(msg)
 		if s.IsEntryListAvailable() {
-			return s, parseBook(msg)
+			return s, tea.Batch(parseBook(msg), cmd)
 		}
 		return s, tea.Sequence(
 			func() tea.Msg {
@@ -31,6 +30,7 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			},
 			list.SelectedIndex(entryListName),
 			parseBook(msg),
+			cmd,
 		)
 	case cuebook.SourcePatchResult:
 		s.LastSourcePatch = &msg
@@ -52,7 +52,7 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			),
 		)
 	case textarea.OnChangeEvent:
-		if s.IsFieldListAvailable() && msg.TextAreaName == fieldEditingTextAreaName {
+		if msg.TextAreaName == fieldEditingTextAreaName {
 			return s, IssueFieldPatch(s.Document, s.Source, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1, msg.Value)
 		}
 		if msg.TextAreaName == fieldAddingTextAreaName {
