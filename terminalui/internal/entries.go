@@ -14,7 +14,7 @@ const (
 	entryListName = "cuebookEntryList"
 )
 
-func LoadEntries(book cuebook.CueBook, currentSelection int, r *cuebook.SourcePatchResult) tea.Cmd {
+func LoadEntries(book cuebook.Document, currentSelection int, r *cuebook.SourcePatchResult) tea.Cmd {
 	return func() tea.Msg {
 		total, err := book.Len()
 		if err != nil {

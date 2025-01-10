@@ -22,7 +22,7 @@ type SourcePatch struct {
 
 type SourcePatchResult struct {
 	SourcePatch
-	Book   CueBook
+	Book   Document
 	Source []byte
 }
 
@@ -115,4 +115,39 @@ loop:
 		tabs += int(math.Ceil(float64(spaces) / 4.0))
 	}
 	return max(tabs, 2)
+}
+
+func SwapBytes(source []byte, original, swapWith cue.Value) (r SourcePatchResult, err error) {
+	first := GetByteSpanInSource(original)
+	if !first.IsValid() {
+		return r, errors.New("invalid range") // TODO: model
+	}
+	r.SourceByteRange = first
+	r.ReplaceWith = source[first.BeginsAt:first.EndsAt]
+	second := GetByteSpanInSource(swapWith)
+	if !second.IsValid() {
+		return r, errors.New("invalid range") // TODO: model
+	}
+	r.Original = source[second.BeginsAt:second.EndsAt]
+	// TODO: issue errors if first and second overlap?
+
+	b := &bytes.Buffer{}
+	b.Grow(len(source))
+	if first.BeginsAt > second.BeginsAt {
+		_, _ = io.Copy(b, bytes.NewReader(source[:second.BeginsAt]))
+		_, _ = io.Copy(b, bytes.NewReader(source[first.BeginsAt:first.EndsAt]))
+		_, _ = io.Copy(b, bytes.NewReader(source[second.EndsAt:first.BeginsAt]))
+		_, _ = io.Copy(b, bytes.NewReader(source[second.BeginsAt:second.EndsAt]))
+		_, _ = io.Copy(b, bytes.NewReader(source[first.EndsAt:]))
+	} else {
+		_, _ = io.Copy(b, bytes.NewReader(source[:first.BeginsAt]))
+		_, _ = io.Copy(b, bytes.NewReader(source[second.BeginsAt:second.EndsAt]))
+		_, _ = io.Copy(b, bytes.NewReader(source[first.EndsAt:second.BeginsAt]))
+		_, _ = io.Copy(b, bytes.NewReader(source[first.BeginsAt:first.EndsAt]))
+		_, _ = io.Copy(b, bytes.NewReader(source[second.EndsAt:]))
+	}
+	r.Source = b.Bytes()
+	r.Book, err = New(r.Source)
+	r.PrecedingDuplicates = bytes.Count(source[:first.EndsAt], r.Original)
+	return r, err
 }

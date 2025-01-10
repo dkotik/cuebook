@@ -15,7 +15,7 @@
 
 [...#contact] & [
 	{
-		Name:  "First11111"
+		Name:  "First"
 		Email: "test@testdomain.com"
 	},
 	{
@@ -39,15 +39,11 @@
 		Email: "test@testdomain.com"
 	},
 	{
-		Name:  " fjsld fjsld kfjsdl fjsdlk fjsl kfjsld f sdf  sdf kjslk jfsldk fjsdlk fjsdl fkjsdl fjsdlk fjsdl fkjslk fjsdl fkjsdlfkjsdl fkjsdlkfj 6"
-		Email: "test@testdomain.com"
-	},
-	{
 		Name:  "7"
 		Email: "test@testdomain.com"
 	},
 	{
-		Name:  """
+		Name: """
 			8
 			888888
 			8
@@ -65,6 +61,10 @@
 	},
 	{
 		Name:  "11aaaaaz"
+		Email: "test@testdomain.com"
+	},
+	{
+		Name:  " fjsld fjsld kfjsdl fjsdlk fjsl kfjsld f sdf  sdf kjslk jfsldk fjsdlk fjsdl fkjsdl fjsdlk fjsdl fkjslk fjsdl fkjsdlfkjsdl fkjsdlkfj 6"
 		Email: "test@testdomain.com"
 	},
 ]

@@ -9,12 +9,12 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 )
 
-// CueBook holds a list of structured data entries.
-type CueBook struct {
+// Document holds a list of structured data entries.
+type Document struct {
 	cue.Value
 }
 
-func New(source []byte) (book CueBook, err error) {
+func New(source []byte) (book Document, err error) {
 	book.Value = cuecontext.New().CompileBytes(source)
 	if err = book.Err(); err != nil {
 		return book, fmt.Errorf("unable to parse Cue list: %w", err)
@@ -32,8 +32,8 @@ func New(source []byte) (book CueBook, err error) {
 	return book, nil
 }
 
-func (b CueBook) EachValue() iter.Seq[cue.Value] {
-	next, err := b.List()
+func (d Document) EachValue() iter.Seq[cue.Value] {
+	next, err := d.List()
 	if err != nil {
 		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
 	}
@@ -47,8 +47,8 @@ func (b CueBook) EachValue() iter.Seq[cue.Value] {
 	}
 }
 
-func (b CueBook) EachEntry() iter.Seq2[Entry, error] {
-	next, err := b.List()
+func (d Document) EachEntry() iter.Seq2[Entry, error] {
+	next, err := d.List()
 	if err != nil {
 		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
 	}
@@ -66,13 +66,13 @@ func (b CueBook) EachEntry() iter.Seq2[Entry, error] {
 	}
 }
 
-func (b CueBook) GetValue(atIndex int) (cue.Value, error) {
-	value := b.LookupPath(cue.MakePath(cue.Index(atIndex)))
+func (d Document) GetValue(atIndex int) (cue.Value, error) {
+	value := d.LookupPath(cue.MakePath(cue.Index(atIndex)))
 	return value, value.Err()
 }
 
-func (b CueBook) GetField(atIndex, fieldIndex int) (f Field, err error) {
-	value, err := b.GetValue(atIndex)
+func (d Document) GetField(atIndex, fieldIndex int) (f Field, err error) {
+	value, err := d.GetValue(atIndex)
 	if err != nil {
 		return
 	}
@@ -83,8 +83,8 @@ func (b CueBook) GetField(atIndex, fieldIndex int) (f Field, err error) {
 	return entry.GetField(fieldIndex)
 }
 
-func (b CueBook) Len() (int, error) {
-	length, err := b.Value.Len().Int64()
+func (d Document) Len() (int, error) {
+	length, err := d.Value.Len().Int64()
 	if err != nil {
 		panic(fmt.Errorf("unable to get the length of the Cue list: %w", err))
 	}

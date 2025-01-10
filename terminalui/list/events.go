@@ -60,6 +60,12 @@ type SelectedIndexEvent struct {
 	Index    int
 }
 
+type SwapOrderEvent struct {
+	ListName     string
+	CurrentIndex int
+	DesiredIndex int
+}
+
 func SelectedIndex(listName string) tea.Cmd {
 	return func() tea.Msg {
 		return selectedIndexRequestEvent{ListName: listName}

@@ -23,7 +23,7 @@ type state struct {
 	Context            context.Context
 	SelectedEntryIndex int
 	SelectedFieldIndex int
-	Book               cuebook.CueBook
+	Document           cuebook.Document
 	Source             []byte
 	LastSourcePatch    *cuebook.SourcePatchResult
 }

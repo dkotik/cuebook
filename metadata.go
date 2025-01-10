@@ -48,7 +48,7 @@ func (m Metadata) Get(frontMatterFieldName string) any {
 	// return value
 }
 
-func (b CueBook) Metadata() Metadata {
+func (b Document) Metadata() Metadata {
 	for _, comment := range b.Doc() {
 		source := []byte(comment.Text())
 		return Metadata{

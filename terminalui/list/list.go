@@ -65,6 +65,20 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case tea.KeyDown, 'j':
+			if msg.Key().Mod == tea.ModCtrl {
+				maximum := len(l.Items) - 1
+				return l, func() tea.Msg {
+					if l.SelectedIndex >= maximum {
+						return nil
+					}
+					return SwapOrderEvent{
+						ListName:     l.Name,
+						CurrentIndex: l.SelectedIndex,
+						DesiredIndex: l.SelectedIndex + 1,
+					}
+				}
+			}
+
 			if l.IsFullscreen() && !l.fullScreenView.AtBottom() {
 				var cmd tea.Cmd
 				l.fullScreenView.HalfViewDown()
@@ -78,6 +92,19 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return l.applySelection(0)
 			}
 		case tea.KeyUp, 'k':
+			if msg.Key().Mod == tea.ModCtrl {
+				return l, func() tea.Msg {
+					if l.SelectedIndex <= 1 {
+						return nil
+					}
+					return SwapOrderEvent{
+						ListName:     l.Name,
+						CurrentIndex: l.SelectedIndex,
+						DesiredIndex: l.SelectedIndex - 1,
+					}
+				}
+			}
+
 			if l.IsFullscreen() && !l.fullScreenView.AtTop() {
 				var cmd tea.Cmd
 				*l.fullScreenView, cmd = l.fullScreenView.Update(msg)

@@ -19,7 +19,7 @@ const (
 	fieldAddingTextAreaName  = "fieldAddingTextArea"
 )
 
-func IssueFieldPatch(book cuebook.CueBook, source []byte, entryIndex, fieldIndex int, value string) tea.Cmd {
+func IssueFieldPatch(book cuebook.Document, source []byte, entryIndex, fieldIndex int, value string) tea.Cmd {
 	return func() tea.Msg {
 		f, err := book.GetField(entryIndex, fieldIndex)
 		if err != nil {
@@ -37,7 +37,7 @@ func IssueFieldPatch(book cuebook.CueBook, source []byte, entryIndex, fieldIndex
 	}
 }
 
-func SwitchToFieldForm(book cuebook.CueBook, entryIndex, fieldIndex int) tea.Cmd {
+func SwitchToFieldForm(book cuebook.Document, entryIndex, fieldIndex int) tea.Cmd {
 	return func() tea.Msg {
 		f, err := book.GetField(entryIndex, fieldIndex)
 		if err != nil {
@@ -47,7 +47,7 @@ func SwitchToFieldForm(book cuebook.CueBook, entryIndex, fieldIndex int) tea.Cmd
 	}
 }
 
-func LoadFields(book cuebook.CueBook, index int) tea.Cmd {
+func LoadFields(book cuebook.Document, index int) tea.Cmd {
 	if index < 0 {
 		return nil
 	}
