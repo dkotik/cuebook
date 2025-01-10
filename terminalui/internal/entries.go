@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"bytes"
+
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
@@ -12,7 +14,7 @@ const (
 	entryListName = "cuebookEntryList"
 )
 
-func LoadEntries(book cuebook.CueBook, currentSelection int) tea.Cmd {
+func LoadEntries(book cuebook.CueBook, currentSelection int, r *cuebook.SourcePatchResult) tea.Cmd {
 	return func() tea.Msg {
 		total, err := book.Len()
 		if err != nil {
@@ -26,24 +28,26 @@ func LoadEntries(book cuebook.CueBook, currentSelection int) tea.Cmd {
 		cards = append(cards, title)
 
 		index := 0
-		// selectIndex := -1
+		selectIndex := -1
 		for entry, err := range book.EachEntry() {
 			if err != nil {
 				return err
 			}
-			index++
-			// if r.ReplaceWith != nil && r.PrecedingDuplicates >= 0 {
-			// 	at := cuebook.GetByteSpanInSource(entry.Value)
-			// 	if !at.IsValid() {
-			// 		continue // TODO: handle
-			// 	}
-			// 	if bytes.Equal(r.ReplaceWith, r.Source[at.BeginsAt:at.EndsAt]) {
-			// 		selectIndex = index
-			// 		// panic(index)
-			// 		r.PrecedingDuplicates--
-			// 	}
-			// }
+			if r != nil && r.PrecedingDuplicates >= 0 {
+				at := cuebook.GetByteSpanInSource(entry.Value)
+				if !at.IsValid() {
+					continue // TODO: handle
+				}
+				if bytes.Equal(r.ReplaceWith, r.Source[at.BeginsAt:at.EndsAt]) {
+					selectIndex = index
+					r.PrecedingDuplicates--
+				}
+				index++
+			}
 			cards = append(cards, card.New(entry.GetTitle(), entry.GetDescription()...))
+		}
+		if selectIndex >= 0 { // found matching bytes
+			currentSelection = selectIndex // TODO: write a test for it
 		}
 		return tea.BatchMsg{
 			tea.Sequence(

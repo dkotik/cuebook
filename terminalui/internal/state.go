@@ -25,6 +25,7 @@ type state struct {
 	SelectedFieldIndex int
 	Book               cuebook.CueBook
 	Source             []byte
+	LastSourcePatch    *cuebook.SourcePatchResult
 }
 
 func (s state) IsReady() bool {

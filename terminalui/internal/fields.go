@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/field"
-	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -34,7 +33,7 @@ func IssueFieldPatch(book cuebook.CueBook, source []byte, entryIndex, fieldIndex
 		if err != nil {
 			return err
 		}
-		return file.SaveEvent(result.Source)
+		return result
 	}
 }
 

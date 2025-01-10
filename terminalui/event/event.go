@@ -2,9 +2,9 @@ package event
 
 import tea "github.com/charmbracelet/bubbletea/v2"
 
-func If(condition bool, then tea.Cmd) tea.Cmd {
+func If(condition bool, then ...tea.Cmd) tea.Cmd {
 	if condition {
-		return then
+		return tea.Batch(then...)
 	}
 	return nil
 }

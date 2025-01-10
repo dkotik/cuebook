@@ -54,7 +54,7 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return ContentEvent(content)
 		}
-	case SaveEvent:
+	case saveEvent:
 		return f, func() tea.Msg {
 			// TODO: first create a hashed file, then overwrite the target
 			handle, err := os.Create(f.Path)

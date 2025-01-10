@@ -31,15 +31,23 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			},
 			parseBook(msg),
 		)
+	case cuebook.SourcePatchResult:
+		s.LastSourcePatch = &msg
+		return s, file.Save(msg.Source)
 	case parsedBook:
 		s.Book = msg.Book
 		s.Source = msg.Source
+		lastSourcePatch := s.LastSourcePatch
+		s.LastSourcePatch = nil
 		return s, tea.Batch(
-			LoadEntries(s.Book, s.SelectedEntryIndex-1),
-			LoadFields(s.Book, s.SelectedEntryIndex-1),
-			event.If(s.IsFieldListAvailable(), func() tea.Msg {
-				return window.BackEvent{}
-			}),
+			LoadEntries(s.Book, s.SelectedEntryIndex-1, lastSourcePatch),
+			event.If(
+				s.IsFieldListAvailable(),
+				LoadFields(s.Book, s.SelectedEntryIndex-1),
+				func() tea.Msg {
+					return window.BackEvent{}
+				},
+			),
 		)
 	case textarea.OnChangeEvent:
 		if s.IsFieldListAvailable() && msg.TextAreaName == fieldEditingTextAreaName {
@@ -52,7 +60,7 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		s.SelectedEntryIndex = -2
 		s.SelectedFieldIndex = -2
 		s.Model, cmd = s.Model.Update(msg)
-		return s, tea.Batch(
+		return s, tea.Sequence(
 			list.SelectedIndex(entryListName),
 			list.SelectedIndex(entryFieldListName),
 			cmd,
