@@ -16,6 +16,12 @@ type Field struct {
 	Value  cue.Value
 }
 
+// FieldDefinition lists are composed into [SourcePatch]s for new [Entry]s.
+type FieldDefinition struct {
+	Name         string
+	EncodedValue string
+}
+
 func (f Field) String() string {
 	switch k := f.Value.Kind(); k {
 	case cue.BoolKind:

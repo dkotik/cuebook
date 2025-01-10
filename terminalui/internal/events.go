@@ -156,6 +156,28 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				// LoadEntries(s.Document, s.SelectedEntryIndex-1, nil),
 			)
 		}
+	case tea.KeyMsg:
+		if msg.Key().Code == 'x' && msg.Key().Mod == tea.ModCtrl {
+			return s, func() tea.Msg {
+				value, err := s.Document.GetValue(s.SelectedEntryIndex - 1)
+				if err != nil {
+					panic("out of range?") // TODO: handle
+				}
+				entry, err := cuebook.NewEntry(value)
+				if err != nil {
+					return err
+				}
+				patch, err := entry.Delete(s.Source)
+				if err != nil {
+					return err
+				}
+				result, err := patch.Apply(s.Source)
+				if err != nil {
+					return err
+				}
+				panic(string(result.Source))
+			}
+		}
 	case error:
 		panic(msg) // TODO: handle with care
 	}

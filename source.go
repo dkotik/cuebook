@@ -3,8 +3,10 @@ package cuebook
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"math"
+	"unicode"
 
 	"cuelang.org/go/cue"
 )
@@ -20,6 +22,58 @@ type SourcePatch struct {
 	PrecedingDuplicates int
 }
 
+func NewEntryFromDefinition(
+	source []byte,
+	fields []FieldDefinition,
+) (p SourcePatch, err error) {
+	insertAt, commaFound, err := locateRootListEnd(source)
+	if err != nil {
+		return p, err
+	}
+	b := &bytes.Buffer{}
+	if !commaFound {
+		_, _ = b.WriteRune(',')
+	}
+	_, _ = b.WriteString("\n{\n")
+	for _, field := range fields {
+		_, _ = fmt.Fprintf(b, "    %s: %s\n", field.Name, field.EncodedValue)
+	}
+	_, _ = b.WriteString("\n}\n")
+	p.BeginsAt = insertAt
+	p.EndsAt = insertAt
+	p.ReplaceWith = b.Bytes()
+	p.PrecedingDuplicates = bytes.Count(source[:insertAt], b.Bytes())
+	return p, nil
+}
+
+func locateRootListEnd(source []byte) (i int, commaFound bool, err error) {
+	listEndFound := false
+
+loop:
+	for i := len(source) - 1; i >= min(0, len(source)-1000); i-- {
+		switch c := source[i]; c {
+		case '}':
+			return i + 2, commaFound, nil
+		case ',':
+			if commaFound {
+				return 0, commaFound, errors.New("double comma at list end") // TODO: model
+			}
+			commaFound = true
+		case ']':
+			if listEndFound {
+				return 0, commaFound, errors.New("not a list of structs") // TODO: model error
+			}
+			listEndFound = true
+		default:
+			if unicode.IsSpace(rune(c)) {
+				continue
+			}
+			break loop
+		}
+	}
+	return 0, commaFound, errors.New("root list end not found") // TODO: model error
+}
+
 type SourcePatchResult struct {
 	SourcePatch
 	Book   Document
@@ -31,6 +85,9 @@ func (r SourcePatchResult) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (p SourcePatch) FindOriginal(source []byte) (r SourceByteRange, err error) {
+	if len(p.Original) == 0 { // insert patch that replaces nothing
+		return p.SourceByteRange, nil
+	}
 loop:
 	for i := p.PrecedingDuplicates + 1; i > 0; i-- {
 		switch index := bytes.Index(source, p.Original); index {
@@ -67,6 +124,7 @@ func (p SourcePatch) Apply(source []byte) (r SourcePatchResult, err error) {
 	r.Source = b.Bytes()
 	r.Book, err = New(r.Source) // parse the entire book after the patch
 	if err != nil {
+		// panic(string(r.Source))
 		return r, err
 	}
 	return r, nil
