@@ -54,19 +54,23 @@ type ByteAnchor struct {
 	// ApproximateHead      int
 }
 
+// Match locates the [ByteRange] that
+// correponds to [ByteAnchor.Content]
+// by finding the exact bytes and skipping
+// likely identical duplicates from the
+// beginning of the Cue source.
 func (a ByteAnchor) Match(source []byte) (r ByteRange, err error) {
 	index, length := -1, len(a.Content)
 	for i := range a.PreceedingDuplicates + 1 {
-		index = bytes.Index(source, a.Content)
+		index = bytes.Index(source[r.Tail:], a.Content)
 		if index == -1 {
 			if i == 0 {
 				return r, ErrByteRangeNotFound
 			}
 			break
 		}
-		r.Head = index
-		r.Tail = index + length
-		source = source[r.Tail:]
+		r.Head = r.Tail + index
+		r.Tail = r.Head + length
 	}
 	return r, nil
 }

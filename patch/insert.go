@@ -17,7 +17,6 @@ func (p insertAfter) ApplyToCueSource(source []byte) (result []byte, err error) 
 	if err != nil {
 		return nil, err
 	}
-	// spew.Dump(string(source[r.Head:r.Tail]))
 	b := &bytes.Buffer{}
 	_, _ = io.Copy(b, bytes.NewReader(source[:r.Tail]))
 	_, _ = io.Copy(b, bytes.NewReader(p.Target.Content))

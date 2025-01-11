@@ -3,6 +3,7 @@ package patch
 import (
 	"bytes"
 	"io"
+	"unicode"
 
 	"cuelang.org/go/cue"
 )
@@ -32,6 +33,29 @@ func DeleteFromStructList(source []byte, value cue.Value) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// extend range to list comma
+	limit := min(len(source), r.Tail+100)
+	for i, c := range source[r.Tail:limit] {
+		if unicode.IsSpace(rune(c)) {
+			continue
+		}
+		if c == ',' {
+			r.Tail += i + 1
+			for i, c = range source[r.Tail:limit] {
+				if unicode.IsSpace(rune(c)) {
+					if c != '\n' { // until end of line
+						continue
+					}
+					i++ // take new line
+				}
+				r.Tail += i
+				break
+			}
+		}
+		break
+	}
+
 	return delete{
 		Preceeding: r.PreceedingEntryAnchor(source),
 		Target:     r.Anchor(source),
