@@ -15,7 +15,7 @@
 
 [...#contact] & [
 	{
-		Name:  "First12"
+		Name:  "First12z"
 		Email: "test@testdomain.com"
 	},
 	{
