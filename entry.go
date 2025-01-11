@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"iter"
 	"unicode"
 
 	"cuelang.org/go/cue"
@@ -135,4 +136,19 @@ func (e Entry) Delete(source []byte) (p SourcePatch, err error) {
 
 	p.Original = source[p.BeginsAt:p.EndsAt]
 	return p, nil
+}
+
+func EachValue(value cue.Value) iter.Seq[cue.Value] {
+	next, err := value.List()
+	if err != nil {
+		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
+	}
+
+	return func(yield func(cue.Value) bool) {
+		for next.Next() {
+			if !yield(next.Value()) {
+				break
+			}
+		}
+	}
 }

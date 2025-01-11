@@ -32,6 +32,7 @@ func New(source []byte) (book Document, err error) {
 	return book, nil
 }
 
+// TODO: deprecate in favor of cuebook.EachValue
 func (d Document) EachValue() iter.Seq[cue.Value] {
 	next, err := d.List()
 	if err != nil {

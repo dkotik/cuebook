@@ -9,6 +9,7 @@ Manage lists of structured data stored in [Cuelang](https://cuelang.org/) files.
 - [ ] add `@cuebook(multiline)` attribute support
 - [ ] add `@cuebook(deleteTo=file)` attribute support
 - [ ] add Markdown metadata loading and editing
+- [ ] saving should merge the state on disk with the state in memory?
 - [x] Ctrl+J and Ctrl+K entry reordering of entries
 - [x] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] responsive color scheme: lipgloss.HasDarkBackground() at initialization
