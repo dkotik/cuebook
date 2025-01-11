@@ -12,9 +12,11 @@ func NewWithCueState(ctx context.Context, model tea.Model) tea.Model {
 	if model == nil {
 		panic("state cannot track a nil model")
 	}
-	return state{
-		Model:   model,
-		Context: cmp.Or(ctx, context.Background()),
+	return patchHistoryTracker{
+		Model: state{
+			Model:   model,
+			Context: cmp.Or(ctx, context.Background()),
+		},
 	}
 }
 
