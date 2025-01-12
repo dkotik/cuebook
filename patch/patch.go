@@ -15,6 +15,20 @@ type Patch interface {
 	Invert() Patch
 }
 
+type nothingPatch struct{}
+
+func (p nothingPatch) ApplyToCueSource(source []byte) ([]byte, error) {
+	return source, nil
+}
+
+func (p nothingPatch) Invert() Patch {
+	return p
+}
+
+func Nothing() Patch {
+	return nothingPatch{}
+}
+
 func Validated(p Patch) Patch {
 	return validatedPatch{Patch: p}
 }

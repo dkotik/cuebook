@@ -52,8 +52,14 @@ func SwapEntries(source []byte, a, b cue.Value) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
+	if bytes.Equal(source[aRange.Head:aRange.Tail], source[bRange.Head:bRange.Tail]) {
+		return Nothing(), nil
+	}
 	if aRange.Head > bRange.Head {
 		aRange, bRange = bRange, aRange
+	}
+	if aRange.Tail > bRange.Head {
+		return nil, ErrByteRangesOverlap
 	}
 	p := swapPatch{
 		Earlier: aRange.Anchor(source),

@@ -8,6 +8,7 @@ const (
 	ErrUnknown Error = iota
 	ErrSourceIsNotList
 	ErrByteRangeNotFound
+	ErrByteRangesOverlap
 )
 
 func (e Error) Error() string {
