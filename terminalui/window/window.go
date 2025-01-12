@@ -2,33 +2,51 @@ package window
 
 import (
 	"cmp"
+	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 
-func New(initial tea.Model, logger *slog.Logger) tea.Model {
-	if initial == nil {
-		panic("initial model is nil")
+func New(withOptions ...Option) (_ tea.Model, err error) {
+	o := &options{}
+	for _, option := range append(
+		withOptions,
+		requireAtLeastOneModelInStack,
+	) {
+		if err = option(o); err != nil {
+			return nil, fmt.Errorf("unable to create terminal window component: %w", err)
+		}
 	}
+
+	lastModel := len(o.stack) - 1
 	return window{
-		current: initial,
-		logger:  cmp.Or(logger, slog.Default()),
-	}
+		commandContext: cmp.Or(o.commandContext, context.Background()),
+		current:        o.stack[lastModel],
+		stack:          o.stack[:lastModel],
+		watchers:       o.watchers,
+		lcBundle:       cmp.Or(o.lcBundle, i18n.NewBundle(language.AmericanEnglish)),
+		logger:         cmp.Or(o.logger, slog.Default()),
+	}, nil
 }
 
 type window struct {
-	current   tea.Model
-	stack     []tea.Model
-	size      tea.WindowSizeMsg
-	busy      uint8
-	localizer *i18n.Localizer
-	logger    *slog.Logger
+	commandContext context.Context
+	current        tea.Model
+	stack          []tea.Model
+	watchers       []tea.Model
+	size           tea.WindowSizeMsg
+	busy           uint8
+	lcBundle       *i18n.Bundle
+	localizer      *i18n.Localizer
+	logger         *slog.Logger
 }
 
 func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -59,6 +77,8 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			panic("nil localizer")
 		}
 		w.localizer = msg
+	case commandContextRequestEvent:
+		return w, func() tea.Msg { return w.commandContext }
 	case localizerRequestEvent:
 		localizer := w.localizer
 		return w, func() tea.Msg { return localizer }

@@ -1,21 +1,19 @@
 package internal
 
 import (
-	"cmp"
 	"context"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 )
 
-func NewWithCueState(ctx context.Context, model tea.Model) tea.Model {
+func NewWithCueState(model tea.Model) tea.Model {
 	if model == nil {
 		panic("state cannot track a nil model")
 	}
 	return patchHistoryTracker{
 		Model: state{
-			Model:   model,
-			Context: cmp.Or(ctx, context.Background()),
+			Model: model,
 		},
 	}
 }

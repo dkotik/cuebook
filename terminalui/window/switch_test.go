@@ -10,7 +10,10 @@ import (
 
 func TestStatePreservationWhenSwitching(t *testing.T) {
 	t.Skip("impl")
-	w := window.New(card.New("test"), nil)
+	w, err := window.New(window.WithInitialModels(card.New("test")))
+	if err != nil {
+		t.Fatal(err)
+	}
 	var cmd tea.Cmd
 
 	w, cmd = w.Init()
