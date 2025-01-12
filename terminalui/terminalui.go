@@ -7,4 +7,4 @@ import (
 	"github.com/dkotik/cuebook/terminalui/internal"
 )
 
-var NewWithCueState = internal.NewWithCueState
+var WithStateEventTransformers = internal.WithStateEventTransformers

@@ -17,12 +17,12 @@ type (
 	}
 )
 
-func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
+func (s state) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case file.ContentEvent:
-		s.Model, cmd = s.Model.Update(msg)
+		// panic("w")
 		if s.IsEntryListAvailable() {
-			return s, tea.Batch(parseBook(msg), cmd)
+			return s, parseBook(msg)
 		}
 		return s, tea.Sequence(
 			func() tea.Msg {
@@ -30,7 +30,6 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			},
 			list.SelectedIndex(entryListName),
 			parseBook(msg),
-			cmd,
 		)
 	case cuebook.SourcePatchResult:
 		s.LastSourcePatch = &msg
@@ -61,11 +60,9 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case window.BackEvent:
 		s.SelectedEntryIndex = -2
 		s.SelectedFieldIndex = -2
-		s.Model, cmd = s.Model.Update(msg)
 		return s, tea.Sequence(
 			list.SelectedIndex(entryListName),
 			list.SelectedIndex(entryFieldListName),
-			cmd,
 		)
 	case list.SelectionMadeEvent:
 		switch msg.ListName {
@@ -74,9 +71,7 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				msg.Index = 1 // TODO: allow viewing and editing frontmatter
 			}
 			s.SelectedEntryIndex = msg.Index
-			s.Model, cmd = s.Model.Update(msg)
 			return s, tea.Sequence(
-				cmd,
 				func() tea.Msg {
 					return window.SwitchTo(list.New(entryFieldListName))
 				},
@@ -87,9 +82,7 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				return s, list.ApplySelection(entryFieldListName, 1)
 			}
 			s.SelectedFieldIndex = msg.Index
-			s.Model, cmd = s.Model.Update(msg)
-			return s, tea.Batch(cmd,
-				SwitchToFieldForm(s.Document, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1))
+			return s, SwitchToFieldForm(s.Document, s.SelectedEntryIndex-1, s.SelectedFieldIndex-1)
 		}
 	case list.SelectedIndexEvent:
 		switch msg.ListName {
@@ -103,9 +96,7 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		case entryListName:
 			msg.CurrentIndex--
 			msg.DesiredIndex--
-			s.Model, cmd = s.Model.Update(msg)
 			return s, tea.Batch(
-				cmd,
 				func() tea.Msg {
 					original, err := s.Document.GetValue(msg.CurrentIndex)
 					if err != nil {
@@ -126,9 +117,7 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			msg.CurrentIndex--
 			msg.DesiredIndex--
 			s.SelectedFieldIndex = msg.CurrentIndex // to trigger s.IsFieldListAvailable()
-			s.Model, cmd = s.Model.Update(msg)
 			return s, tea.Batch(
-				cmd,
 				func() tea.Msg {
 					value, err := s.Document.GetValue(s.SelectedEntryIndex - 1)
 					if err != nil {
@@ -181,6 +170,5 @@ func (s state) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case error:
 		panic(msg) // TODO: handle with care
 	}
-	s.Model, cmd = s.Model.Update(msg)
-	return s, cmd
+	return s, nil
 }

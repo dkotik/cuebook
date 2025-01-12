@@ -2,7 +2,6 @@ package window
 
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
@@ -35,10 +34,14 @@ func SetLocalizer(lc *i18n.Localizer) tea.Cmd {
 	return func() tea.Msg { return lc }
 }
 
-func (w window) Propagate(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
-	w.current, cmd = w.current.Update(msg)
-	// if len(w.stack) > 0 {
-	// 	cmd = tea.Batch(cmd, event.Propagate(msg, w.stack))
-	// }
-	return w, tea.Batch(cmd, event.Propagate(msg, w.stack), event.Propagate(msg, w.watchers))
-}
+// func (w window) Propagate(msg tea.Msg) (_ tea.Msg, cmd tea.Cmd) {
+// 	w.current, cmd = w.current.Update(msg)
+// 	// if len(w.stack) > 0 {
+// 	// 	cmd = tea.Batch(cmd, event.Propagate(msg, w.stack))
+// 	// }
+// 	return w, tea.Batch(
+// 		cmd,
+// 		event.Propagate(msg, w.stack),
+// 		event.Propagate(msg, w.watchers),
+// 	)
+// }

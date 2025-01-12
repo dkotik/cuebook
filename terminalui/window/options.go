@@ -83,10 +83,3 @@ func WithLogger(logger *slog.Logger) Option {
 		return nil
 	}
 }
-
-func requireAtLeastOneModelInStack(o *options) error {
-	if len(o.stack) == 0 {
-		return errors.New("cannot create a window without any initial models")
-	}
-	return nil
-}

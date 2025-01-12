@@ -12,19 +12,14 @@ func main() {
 	cmd := &cli.Command{
 		Name:  "cuebook",
 		Usage: "edit lists of structured data items",
-		Action: func(ctx context.Context, cmd *cli.Command) (err error) {
-			// card1, err := card.New("Title", "sdf sdf sdf", "sdf sdfsdf sdf")
-			// if err != nil {
-			// 	return err
-			// }
-
-			// card2, err := card.New("Title2", "?????", "????")
-			// if err != nil {
-			// 	return err
-			// }
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			ui, err := NewTerminalUI(ctx, "test/testdata/simple.cue")
+			if err != nil {
+				return err
+			}
 
 			_, err = tea.NewProgram(
-				NewTerminalUI(ctx, "test/testdata/simple.cue"),
+				ui,
 				tea.WithContext(ctx),
 				tea.WithAltScreen(),
 				tea.WithMouseCellMotion(),

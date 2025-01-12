@@ -12,10 +12,10 @@ import (
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
-func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
+func NewTerminalUI(ctx context.Context, filePath string) (tea.Model, error) {
 	logFile, err := os.OpenFile("test/testdata/debug.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	go func() {
 		<-ctx.Done()
@@ -27,14 +27,11 @@ func NewTerminalUI(ctx context.Context, filePath string) tea.Model {
 		Level: slog.LevelDebug,
 	})
 
-	w, err := window.New(
+	return window.New(
 		window.WithCommandContext(ctx),
 		window.WithInitialModels(file.New(filePath)),
-		window.WithLogger(slog.New(logger).With("component", "bubbletea")),
+		window.WithLogger(
+			slog.New(logger).With("component", "bubbletea")),
+		terminalui.WithStateEventTransformers(),
 	)
-	if err != nil {
-		panic(err)
-	}
-
-	return terminalui.NewWithCueState(w)
 }

@@ -17,7 +17,6 @@ type snapShot struct {
 }
 
 type patchHistoryTracker struct {
-	tea.Model
 	history    []snapShot
 	cursor     int
 	entryIndex int
@@ -52,9 +51,7 @@ func (h patchHistoryTracker) redo() (tea.Model, tea.Cmd) {
 }
 
 func (h patchHistoryTracker) Init() (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	h.Model, cmd = h.Model.Init()
-	return h, cmd
+	return h, nil
 }
 
 func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -86,7 +83,7 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			h.fieldIndex = msg.Index
 		}
 	}
-	var cmd tea.Cmd
-	h.Model, cmd = h.Model.Update(msg)
-	return h, cmd
+	return h, nil
 }
+
+func (h patchHistoryTracker) View() string { return "" }

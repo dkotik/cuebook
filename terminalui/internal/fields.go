@@ -64,6 +64,7 @@ func LoadFields(book cuebook.Document, index int) tea.Cmd {
 			tea.Sequence(
 				list.Reset(entryFieldListName),
 				list.AddItems(entryFieldListName, fields...),
+				tea.RequestWindowSize(),
 				list.ApplySelection(entryFieldListName, index+1), // +1 for title
 			),
 		}
