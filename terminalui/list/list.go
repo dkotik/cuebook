@@ -7,10 +7,9 @@ import (
 	"github.com/dkotik/cuebook/terminalui/event"
 )
 
-func New(name string, items ...tea.Model) tea.Model {
+func New(items ...tea.Model) tea.Model {
 	fs := viewport.New()
 	return List{
-		Name:  name,
 		Items: items,
 		// SelectedIndex: -1,
 		fullScreenView: &fs,
@@ -18,7 +17,6 @@ func New(name string, items ...tea.Model) tea.Model {
 }
 
 type List struct {
-	Name          string
 	Filter        string
 	SelectedIndex int
 	Items         []tea.Model
@@ -48,8 +46,7 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			return l, func() tea.Msg {
 				return SelectionMadeEvent{
-					ListName: l.Name,
-					Index:    l.SelectedIndex,
+					Index: l.SelectedIndex,
 				}
 			}
 		case tea.KeyTab:
@@ -72,7 +69,6 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return nil
 					}
 					return SwapOrderEvent{
-						ListName:     l.Name,
 						CurrentIndex: l.SelectedIndex,
 						DesiredIndex: l.SelectedIndex + 1,
 					}
@@ -98,7 +94,6 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return nil
 					}
 					return SwapOrderEvent{
-						ListName:     l.Name,
 						CurrentIndex: l.SelectedIndex,
 						DesiredIndex: l.SelectedIndex - 1,
 					}
@@ -120,38 +115,36 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case countRequestEvent:
-		if msg.ListName == l.Name {
-			return l, func() tea.Msg {
-				count := len(l.Items)
-				return CountEvent{
-					ListName: l.Name,
-					Count:    count,
-				}
+		return l, func() tea.Msg {
+			count := len(l.Items)
+			return CountEvent{
+				Count: count,
 			}
 		}
 	case resetEvent:
-		if msg.ListName == l.Name {
+		l.SelectedIndex = 0
+		l.Items = nil
+		return l, nil
+	case setItemsEvent:
+		l.Items = msg
+		if l.SelectedIndex > len(msg) {
 			l.SelectedIndex = 0
-			l.Items = nil
-			return l, nil
+		} else {
+			return l.applySelection(l.SelectedIndex)
 		}
+		return l, nil
 	case addItemsEvent:
-		if msg.ListName == l.Name {
-			l.Items = append(l.Items, msg.Items...)
-			return l, nil
-		}
+		l.Items = append(l.Items, msg.Items...)
+		return l, nil
 	case selectedIndexRequestEvent:
-		if msg.ListName == l.Name {
-			return l, func() tea.Msg {
-				return SelectedIndexEvent{
-					ListName: l.Name,
-					Index:    l.SelectedIndex,
-				}
+		return l, func() tea.Msg {
+			return SelectedIndexEvent{
+				Index: l.SelectedIndex,
 			}
 		}
 	case applySelectionEvent:
 		// && l.SelectedIndex != msg.Index
-		if msg.ListName == l.Name && msg.Index >= 0 && msg.Index < len(l.Items) {
+		if msg.Index >= 0 && msg.Index < len(l.Items) {
 			return l.applySelection(msg.Index)
 		}
 	case tea.WindowSizeMsg:

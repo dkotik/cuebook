@@ -7,11 +7,10 @@ import (
 )
 
 type addItemsEvent struct {
-	ListName string
-	Items    []tea.Model
+	Items []tea.Model
 }
 
-func AddItems(listName string, items ...tea.Model) tea.Cmd {
+func AddItems(items ...tea.Model) tea.Cmd {
 	return func() tea.Msg {
 		for i, item := range items {
 			if item == nil {
@@ -19,9 +18,21 @@ func AddItems(listName string, items ...tea.Model) tea.Cmd {
 			}
 		}
 		return addItemsEvent{
-			ListName: listName,
-			Items:    items,
+			Items: items,
 		}
+	}
+}
+
+type setItemsEvent []tea.Model
+
+func SetItems(items ...tea.Model) tea.Cmd {
+	return func() tea.Msg {
+		for i, item := range items {
+			if item == nil {
+				return fmt.Errorf("list item #%d is nil", i)
+			}
+		}
+		return setItemsEvent(items)
 	}
 }
 
@@ -29,17 +40,16 @@ type resetEvent struct {
 	ListName string
 }
 
-func Reset(listName string) tea.Cmd {
+func Reset() tea.Cmd {
 	return func() tea.Msg {
-		return resetEvent{ListName: listName}
+		return resetEvent{}
 	}
 }
 
 type SelectionHighlightEvent bool
 
 type SelectionMadeEvent struct {
-	ListName string
-	Index    int
+	Index int
 }
 
 type filterEvent struct {
@@ -47,36 +57,31 @@ type filterEvent struct {
 }
 
 type applySelectionEvent struct {
-	ListName string
-	Index    int
+	Index int
 }
 
 type selectedIndexRequestEvent struct {
-	ListName string
 }
 
 type SelectedIndexEvent struct {
-	ListName string
-	Index    int
+	Index int
 }
 
 type SwapOrderEvent struct {
-	ListName     string
 	CurrentIndex int
 	DesiredIndex int
 }
 
 func SelectedIndex(listName string) tea.Cmd {
 	return func() tea.Msg {
-		return selectedIndexRequestEvent{ListName: listName}
+		return selectedIndexRequestEvent{}
 	}
 }
 
-func ApplySelection(listName string, index int) tea.Cmd {
+func ApplySelection(index int) tea.Cmd {
 	return func() tea.Msg {
 		return applySelectionEvent{
-			ListName: listName,
-			Index:    index,
+			Index: index,
 		}
 	}
 }
@@ -99,18 +104,14 @@ func ApplyFilter(searchQuery string) tea.Cmd {
 }
 
 type countRequestEvent struct {
-	ListName string
 }
 
 type CountEvent struct {
-	ListName string
-	Count    int
+	Count int
 }
 
 func Count(listName string) tea.Cmd {
 	return func() tea.Msg {
-		return countRequestEvent{
-			ListName: listName,
-		}
+		return countRequestEvent{}
 	}
 }

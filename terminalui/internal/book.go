@@ -13,6 +13,8 @@ type Book struct {
 	Source   []byte
 }
 
+// func (b Book) LastDifferentEntry()
+
 func parseBook(source []byte) tea.Cmd {
 	return func() tea.Msg {
 		document, err := cuebook.New(source)

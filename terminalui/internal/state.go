@@ -5,8 +5,26 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
+
+func NewSelectionAdapter[T ~int](cmd tea.Cmd) tea.Cmd {
+	if cmd == nil {
+		return nil
+	}
+	switch msg := cmd().(type) {
+	case list.SelectionMadeEvent:
+		if msg.Index == 0 {
+			return nil // TODO: launch front matter form
+		} else if msg.Index < 0 {
+			return nil
+		}
+		return func() tea.Msg { return T(msg.Index - 1) }
+	default:
+		return func() tea.Msg { return msg }
+	}
+}
 
 func WithStateEventTransformers() window.Option {
 	return window.WithWatchers(

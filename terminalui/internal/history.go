@@ -31,8 +31,8 @@ func (h patchHistoryTracker) undo() (tea.Model, tea.Cmd) {
 	h.cursor--
 	return h, tea.Sequence(
 		func() tea.Msg { return historyPatch{patch.Patch.Invert()} },
-		list.ApplySelection(entryFieldListName, h.fieldIndex),
-		list.ApplySelection(entryListName, h.entryIndex),
+		// list.ApplySelection(entryFieldListName, h.fieldIndex),
+		// list.ApplySelection(entryListName, h.entryIndex),
 	)
 }
 
@@ -45,8 +45,8 @@ func (h patchHistoryTracker) redo() (tea.Model, tea.Cmd) {
 	h.cursor++
 	return h, tea.Sequence(
 		func() tea.Msg { return historyPatch{patch.Patch} },
-		list.ApplySelection(entryFieldListName, h.fieldIndex),
-		list.ApplySelection(entryListName, h.entryIndex),
+		// list.ApplySelection(entryFieldListName, h.fieldIndex),
+		// list.ApplySelection(entryListName, h.entryIndex),
 	)
 }
 
@@ -76,12 +76,12 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			SelectedFieldIndex: h.fieldIndex,
 		})
 	case list.SelectedIndexEvent:
-		switch msg.ListName {
-		case entryListName:
-			h.entryIndex = msg.Index
-		case entryFieldListName:
-			h.fieldIndex = msg.Index
-		}
+		// switch msg.ListName {
+		// case entryListName:
+		// 	h.entryIndex = msg.Index
+		// case entryFieldListName:
+		// 	h.fieldIndex = msg.Index
+		// }
 	}
 	return h, nil
 }
