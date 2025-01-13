@@ -67,7 +67,7 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err = handle.Close(); err != nil {
 				return err
 			}
-			return ContentEvent(msg)
+			return UpdateEvent(msg)
 		}
 	}
 	return f, nil

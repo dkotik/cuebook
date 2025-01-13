@@ -29,7 +29,7 @@ type List struct {
 
 func (l List) Init() (m tea.Model, cmd tea.Cmd) {
 	m, cmd = l.applySelection(l.SelectedIndex) // TODO: deprecate?
-	return m, tea.Batch(event.PropagateInit(l.Items), cmd, tea.RequestWindowSize())
+	return m, tea.Batch(event.PropagateInit(l.Items), cmd)
 }
 
 func (l List) IsFullscreen() bool {

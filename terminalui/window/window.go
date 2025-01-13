@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
@@ -50,11 +49,11 @@ type window struct {
 	current        tea.Model
 	stack          []tea.Model
 	watchers       []tea.Model
-	size           tea.WindowSizeMsg
-	busy           uint8
-	lcBundle       *i18n.Bundle
-	localizer      *i18n.Localizer
-	logger         *slog.Logger
+	// size           tea.WindowSizeMsg
+	busy      uint8
+	lcBundle  *i18n.Bundle
+	localizer *i18n.Localizer
+	logger    *slog.Logger
 }
 
 func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -77,18 +76,25 @@ func (w window) back() (tea.Model, tea.Cmd) {
 		l -= 1
 		w.current = w.stack[l]
 		w.stack = w.stack[:l]
-		var cmd tea.Cmd
-		w.current, cmd = w.current.Update(w.size)
-		return w, cmd
+		// var cmd tea.Cmd
+		// w.current, cmd = w.current.Update(w.size)
+		return w, nil
 	}
 	return w, tea.Quit
 }
 
 func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
-	w.logger.Debug(spew.Sdump(msg))
+	// adapted, ok := msg.(slog.LogValuer)
+	// if ok {
+	// 	w.logger.Debug("window", slog.Any("message", msg))
+	// } else {
+	// // w.logger.Debug(spew.Sdump(msg))
+	// }
+	w.logger.Debug(fmt.Sprintf("%T", msg), slog.Any("payload", msg))
+
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		w.size = msg
+	// case tea.WindowSizeMsg:
+	// 	w.size = msg
 	case *i18n.Localizer:
 		if msg == nil {
 			panic("nil localizer")
@@ -103,8 +109,8 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		w.stack = append(w.stack, w.current)
 		var cmdInit tea.Cmd
 		w.current, cmdInit = msg.Init()
-		w.current, cmd = w.current.Update(w.size) // TODO: should be requested instead of fed, like localizer
-		return w, tea.Batch(cmd, cmdInit)
+		// w.current, cmd = w.current.Update(w.size) // TODO: should be requested instead of fed, like localizer
+		return w, cmdInit
 	case BackEvent:
 		return w.back()
 	case SetBusyEvent:

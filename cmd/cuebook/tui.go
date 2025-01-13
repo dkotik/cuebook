@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui"
+	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
@@ -29,9 +30,10 @@ func NewTerminalUI(ctx context.Context, filePath string) (tea.Model, error) {
 
 	return window.New(
 		window.WithCommandContext(ctx),
-		window.WithInitialModels(file.New(filePath)),
+		window.WithInitialModels(
+			event.NewDecorator(terminalui.ParseFileToBookAndCreateEntryListIfNeeded)(file.New(filePath))),
 		window.WithLogger(
 			slog.New(logger).With("component", "bubbletea")),
-		terminalui.WithStateEventTransformers(),
+		// terminalui.WithStateEventTransformers(),
 	)
 }

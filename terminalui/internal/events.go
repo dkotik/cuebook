@@ -21,16 +21,6 @@ func (s state) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case file.ContentEvent:
 		// panic("w")
-		if s.IsEntryListAvailable() {
-			return s, parseBook(msg)
-		}
-		return s, tea.Sequence(
-			func() tea.Msg {
-				return window.SwitchTo(list.New(entryListName))
-			},
-			list.SelectedIndex(entryListName),
-			parseBook(msg),
-		)
 	case cuebook.SourcePatchResult:
 		s.LastSourcePatch = &msg
 		return s, file.Save(msg.Source)

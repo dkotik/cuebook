@@ -3,17 +3,39 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/terminalui/file"
+	"github.com/dkotik/cuebook/terminalui/window"
 )
+
+type Book struct {
+	// FromFilePicker bool
+	Document cuebook.Document
+	Source   []byte
+}
 
 func parseBook(source []byte) tea.Cmd {
 	return func() tea.Msg {
-		book, err := cuebook.New(source)
+		document, err := cuebook.New(source)
 		if err != nil {
 			return err
 		}
-		return parsedBook{
-			Book:   book,
-			Source: source,
+		return Book{
+			Document: document,
+			Source:   source,
 		}
+	}
+}
+
+func ParseFileToBookAndCreateEntryListIfNeeded(cmd tea.Cmd) tea.Cmd {
+	switch msg := cmd().(type) {
+	case file.UpdateEvent:
+		return parseBook(msg)
+	case file.ContentEvent:
+		return tea.Sequence(
+			func() tea.Msg { return window.SwitchTo(EntryList{}) },
+			parseBook(msg),
+		)
+	default:
+		return func() tea.Msg { return msg }
 	}
 }

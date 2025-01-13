@@ -1,10 +1,20 @@
 package file
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import (
+	"log/slog"
+
+	tea "github.com/charmbracelet/bubbletea/v2"
+)
 
 type LoadEvent string
 
 type ContentEvent []byte
+
+type UpdateEvent []byte
+
+func (c ContentEvent) LogValue() slog.Value {
+	return slog.StringValue("data:" + string(c[:min(len(c), 30)]) + "...")
+}
 
 type saveEvent []byte
 

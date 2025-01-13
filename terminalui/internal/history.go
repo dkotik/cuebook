@@ -86,4 +86,4 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return h, nil
 }
 
-func (h patchHistoryTracker) View() string { return "" }
+func (h patchHistoryTracker) View() string { return "<patch history>" }

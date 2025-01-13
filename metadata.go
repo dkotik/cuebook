@@ -48,8 +48,8 @@ func (m Metadata) Get(frontMatterFieldName string) any {
 	// return value
 }
 
-func (b Document) Metadata() Metadata {
-	for _, comment := range b.Doc() {
+func (d Document) Metadata() Metadata {
+	for _, comment := range d.Doc() {
 		source := []byte(comment.Text())
 		return Metadata{
 			Node:   goldmark.New().Parser().Parse(text.NewReader(source)),

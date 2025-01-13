@@ -8,3 +8,5 @@ import (
 )
 
 var WithStateEventTransformers = internal.WithStateEventTransformers
+
+var ParseFileToBookAndCreateEntryListIfNeeded = internal.ParseFileToBookAndCreateEntryListIfNeeded

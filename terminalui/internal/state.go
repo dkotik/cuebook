@@ -10,8 +10,9 @@ import (
 
 func WithStateEventTransformers() window.Option {
 	return window.WithWatchers(
-		patchHistoryTracker{},
-		state{},
+	// patchHistoryTracker{},
+	// bookTracker{},
+	// state{},
 	)
 }
 

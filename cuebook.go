@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"log/slog"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
@@ -90,6 +91,14 @@ func (d Document) Len() (int, error) {
 		panic(fmt.Errorf("unable to get the length of the Cue list: %w", err))
 	}
 	return int(length), nil
+}
+
+func (d Document) LogValue() slog.Value {
+	length, _ := d.Len()
+	return slog.GroupValue(
+		slog.String("title", d.Metadata().Title()),
+		slog.Int("entries", length),
+	)
 }
 
 func GetByteSpanInSource(v cue.Value) (byteRange SourceByteRange) {
