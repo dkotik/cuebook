@@ -66,8 +66,11 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case historyPatch:
 		// ignore all patches issued by this component
 	case patch.Patch:
-		if len(h.history) > 5 {
-			h.history = h.history[1:]
+		total := len(h.history)
+		if total > 5 {
+			h.history = h.history[1 : h.cursor+1]
+		} else if total > 0 {
+			h.history = h.history[:h.cursor+1]
 		}
 		h.cursor = len(h.history) - 1
 		h.history = append(h.history, snapShot{

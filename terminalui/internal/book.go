@@ -3,17 +3,10 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
-
-type Book struct {
-	// FromFilePicker bool
-	Document cuebook.Document
-	Source   []byte
-}
-
-// func (b Book) LastDifferentEntry()
 
 func parseBook(source []byte) tea.Cmd {
 	return func() tea.Msg {
@@ -21,7 +14,7 @@ func parseBook(source []byte) tea.Cmd {
 		if err != nil {
 			return err
 		}
-		return Book{
+		return patch.Result{
 			Document: document,
 			Source:   source,
 		}

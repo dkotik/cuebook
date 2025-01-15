@@ -18,17 +18,18 @@ import (
 type (
 	entrySelected int
 
-	entryAdded struct {
-		patch.Patch
-		UpdatedSource []byte
-	}
+	// entryAdded struct {
+	// 	patch.Patch
+	// 	UpdatedSource []byte
+	// }
 )
 
 type EntryList struct {
 	tea.Model
 
-	book     Book
-	selected int // *patch.ByteAnchor
+	book        patch.Result
+	selected    int // *patch.ByteAnchor
+	highlighted int
 }
 
 func (l EntryList) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -38,8 +39,6 @@ func (l EntryList) Init() (_ tea.Model, cmd tea.Cmd) {
 }
 
 type entryListCards []tea.Model
-
-// func (l EntryList)
 
 func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
@@ -63,7 +62,8 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				),
 			}
 		}
-	case Book:
+	case patch.Result:
+		// bottomChange, ok := msg.BottomChangeSince(l.book)
 		l.book = msg
 		return l, LoadEntries(msg.Document, l.selected, nil) // TODO: track patch changes
 	case entryListCards:
@@ -76,6 +76,41 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		case tea.KeyEnter:
 			l.Model, cmd = l.Model.Update(msg)
 			return l, NewSelectionAdapter[entrySelected](cmd)
+		case 'x':
+			if msg.Key().Mod != tea.ModCtrl {
+				break
+			}
+			index, err := l.book.Document.Len()
+			if err != nil {
+				panic(err)
+			}
+			index -= 1
+			l.selected--
+			return l, func() tea.Msg {
+				// index := l.selected // -1
+				entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(index))))
+
+				// defer func() {
+				// 	if err != nil {
+				// 		panic(err)
+				// 	}
+				// }()
+
+				if err != nil {
+					// panic(err)
+					return err
+				}
+				p, err := patch.DeleteFromStructList(
+					l.book.Source, entry.Value)
+				if err != nil {
+					return err
+				}
+				result, err := patch.Commit("test/testdata/simple.cue", "test/testdata", p)
+				if err != nil {
+					return err
+				}
+				return result
+			}
 		case 'n':
 			if msg.Key().Mod != tea.ModCtrl {
 				break
@@ -97,14 +132,11 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				if err != nil {
 					return err
 				}
-				result, err := p.ApplyToCueSource(l.book.Source)
+				result, err := patch.Commit("test/testdata/simple.cue", "test/testdata", p)
 				if err != nil {
 					return err
 				}
-				return entryAdded{
-					Patch:         p,
-					UpdatedSource: result,
-				}
+				return result
 			}
 		}
 	}
@@ -142,7 +174,10 @@ func LoadEntries(book cuebook.Document, currentSelection int, r *cuebook.SourceP
 				}
 				index++
 			}
-			cards = append(cards, card.New(entry.GetTitle(), entry.GetDescription()...))
+			cards = append(
+				cards,
+				card.New(entry.GetTitle(), entry.GetDescription()...),
+			)
 		}
 		if selectIndex >= 0 { // found matching bytes
 			currentSelection = selectIndex // TODO: write a test for it

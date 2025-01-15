@@ -39,7 +39,7 @@ func TestPatchApplication(t *testing.T) {
 		t.Fatal(err)
 	}
 	// time.Sleep(time.Second * 2)
-	if err = Commit(target, filepath.Dir(target), p); err != nil {
+	if _, err = Commit(target, filepath.Dir(target), p); err != nil {
 		t.Fatal(err)
 	}
 

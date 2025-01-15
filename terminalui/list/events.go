@@ -87,9 +87,14 @@ func ApplySelection(index int) tea.Cmd {
 }
 
 func (l List) applySelection(index int) (tea.Model, tea.Cmd) {
-	if len(l.Items) == 0 {
+	total := len(l.Items)
+	if total == 0 {
 		return l, nil
 	}
+	// if index+1 > total {
+	// 	index = total - 1
+	// }
+
 	var cmdPrevious, cmdNext tea.Cmd
 	l.Items[l.SelectedIndex], cmdPrevious = l.Items[l.SelectedIndex].Update(SelectionHighlightEvent(false))
 	l.Items[index], cmdNext = l.Items[index].Update(SelectionHighlightEvent(true))

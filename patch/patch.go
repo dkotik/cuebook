@@ -9,18 +9,56 @@ ranges before carrying out the intended operation.
 package patch
 
 import (
+	"bytes"
 	"fmt"
 	"hash/fnv"
+	"iter"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"cuelang.org/go/cue/cuecontext"
+	"cuelang.org/go/cue"
+	"github.com/dkotik/cuebook"
 )
 
 type Patch interface {
 	ApplyToCueSource([]byte) ([]byte, error)
 	Invert() Patch
+}
+
+type Result struct {
+	Document cuebook.Document
+	Source   []byte
+}
+
+func (r Result) BottomChangeIndex(since Result) (i int) {
+	nextOlder, close := iter.Pull[cue.Value](since.Document.EachValue())
+	defer close()
+	index := -1
+	for entry, err := range r.Document.EachEntry() {
+		index++
+		if err != nil {
+			continue
+		}
+		olderValue, ok := nextOlder()
+		if !ok {
+			return index
+		}
+		current, err := NewByteRange(entry.Value)
+		if err != nil {
+			continue
+		}
+		older, err := NewByteRange(olderValue)
+		if err != nil {
+			continue
+		}
+		rawCurrent := r.Source[current.Head:current.Tail]
+		rawOlder := since.Source[older.Head:older.Tail]
+		if !bytes.Equal(rawCurrent, rawOlder) {
+			return index
+		}
+	}
+	return -1
 }
 
 // Commit applies a [Patch] to fresh contents of the source file after validating the changes.
@@ -31,33 +69,30 @@ func Commit(
 	targetPath string,
 	swapPath string,
 	p Patch,
-) (err error) {
+) (r Result, err error) {
 	source, err := os.ReadFile(targetPath)
 	if err != nil {
-		return err
+		return
 	}
-	source, err = p.ApplyToCueSource(source)
+	r.Source, err = p.ApplyToCueSource(source)
 	if err != nil {
-		return err
+		return
 	}
-	value := cuecontext.New().CompileBytes(source) // TODO: add options cuecontext...
-	if err = value.Err(); err != nil {
-		return err
-	}
-	if err = value.Validate(); err != nil {
-		return err
+	r.Document, err = cuebook.New(r.Source)
+	if err != nil {
+		return
 	}
 	temp := filepath.Join(
 		swapPath,
 		temporaryName(
 			filepath.Base(targetPath),
-			source,
+			r.Source,
 		),
 	)
-	if err = os.WriteFile(temp, source, 0700); err != nil {
-		return err
+	if err = os.WriteFile(temp, r.Source, 0700); err != nil {
+		return
 	}
-	return os.Rename(temp, targetPath)
+	return r, os.Rename(temp, targetPath)
 }
 
 func temporaryName(name string, source []byte) string {

@@ -28,9 +28,9 @@ func NewSelectionAdapter[T ~int](cmd tea.Cmd) tea.Cmd {
 
 func WithStateEventTransformers() window.Option {
 	return window.WithWatchers(
-	// patchHistoryTracker{},
-	// bookTracker{},
-	// state{},
+		patchHistoryTracker{},
+		// bookTracker{},
+		state{},
 	)
 }
 

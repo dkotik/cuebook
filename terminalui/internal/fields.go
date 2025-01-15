@@ -3,6 +3,7 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/field"
 	"github.com/dkotik/cuebook/terminalui/list"
 )
@@ -15,7 +16,7 @@ type (
 type FieldList struct {
 	tea.Model
 
-	book Book
+	book patch.Result
 	// selected int // *patch.ByteAnchor
 }
 

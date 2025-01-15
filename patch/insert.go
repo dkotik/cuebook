@@ -49,9 +49,9 @@ func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 		return nil, err
 	}
 	if !commaFound {
-		content = append([]byte(",\n    "), content...)
+		content = append([]byte(",\n  "), content...)
 	} else {
-		content = append([]byte("\n    "), content...)
+		content = append([]byte("\n  "), content...)
 	}
 	return insertAfter{
 		Preceeding: ByteRange{

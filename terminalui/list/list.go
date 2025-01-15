@@ -127,12 +127,11 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return l, nil
 	case setItemsEvent:
 		l.Items = msg
-		if l.SelectedIndex > len(msg) {
-			l.SelectedIndex = 0
-		} else {
-			return l.applySelection(l.SelectedIndex)
+		if l.SelectedIndex >= len(msg) {
+			l.SelectedIndex = len(msg) - 1
+			// return l.applySelection(l.SelectedIndex)
 		}
-		return l, nil
+		return l.applySelection(l.SelectedIndex)
 	case addItemsEvent:
 		l.Items = append(l.Items, msg.Items...)
 		return l, nil
