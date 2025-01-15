@@ -16,7 +16,7 @@ import (
 )
 
 type (
-	entrySelected int
+	entryHighlighted int
 
 	// entryAdded struct {
 	// 	patch.Patch
@@ -42,26 +42,9 @@ type entryListCards []tea.Model
 
 func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
-	case entrySelected:
+	case entryHighlighted:
 		l.selected = int(msg)
-		return l, func() tea.Msg {
-			return tea.BatchMsg{
-				tea.Sequence(
-					func() tea.Msg {
-						return window.SwitchTo(FieldList{
-							book: l.book,
-						})
-					},
-					func() tea.Msg {
-						entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(l.selected))))
-						if err != nil {
-							return err
-						}
-						return entry
-					},
-				),
-			}
-		}
+		return l, nil
 	case patch.Result:
 		// bottomChange, ok := msg.BottomChangeSince(l.book)
 		l.book = msg
@@ -74,8 +57,24 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case tea.KeyEnter:
-			l.Model, cmd = l.Model.Update(msg)
-			return l, NewSelectionAdapter[entrySelected](cmd)
+			return l, func() tea.Msg {
+				return tea.BatchMsg{
+					tea.Sequence(
+						func() tea.Msg {
+							return window.SwitchTo(FieldList{
+								book: l.book,
+							})
+						},
+						func() tea.Msg {
+							entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(l.selected - 1))))
+							if err != nil {
+								return err
+							}
+							return entry
+						},
+					),
+				}
+			}
 		case 'x':
 			if msg.Key().Mod != tea.ModCtrl {
 				break
@@ -87,17 +86,8 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			index -= 1
 			l.selected--
 			return l, func() tea.Msg {
-				// index := l.selected // -1
 				entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(index))))
-
-				// defer func() {
-				// 	if err != nil {
-				// 		panic(err)
-				// 	}
-				// }()
-
 				if err != nil {
-					// panic(err)
 					return err
 				}
 				p, err := patch.DeleteFromStructList(
@@ -136,9 +126,16 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				if err != nil {
 					return err
 				}
-				return result
+				return tea.BatchMsg{
+					tea.Sequence(
+						func() tea.Msg { return result },
+						// list.ApplySelection(l.selected+2), // TODO: fix selection after change
+					),
+				}
 			}
 		}
+		l.Model, cmd = l.Model.Update(msg)
+		return l, NewListItemHighlightAdaptor[entryHighlighted](cmd)
 	}
 	l.Model, cmd = l.Model.Update(msg)
 	return l, cmd

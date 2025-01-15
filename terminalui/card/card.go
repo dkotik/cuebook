@@ -25,7 +25,7 @@ func (c card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		c.width = msg.Width
-	case list.SelectionHighlightEvent:
+	case list.HighlightHintEvent:
 		c.Selected = bool(msg)
 	}
 	return c, nil

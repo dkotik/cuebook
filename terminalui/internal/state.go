@@ -9,18 +9,13 @@ import (
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
-func NewSelectionAdapter[T ~int](cmd tea.Cmd) tea.Cmd {
+func NewListItemHighlightAdaptor[T ~int](cmd tea.Cmd) tea.Cmd {
 	if cmd == nil {
 		return nil
 	}
 	switch msg := cmd().(type) {
-	case list.SelectionMadeEvent:
-		if msg.Index == 0 {
-			return nil // TODO: launch front matter form
-		} else if msg.Index < 0 {
-			return nil
-		}
-		return func() tea.Msg { return T(msg.Index - 1) }
+	case list.HighlightEvent:
+		return func() tea.Msg { return T(msg) }
 	default:
 		return func() tea.Msg { return msg }
 	}

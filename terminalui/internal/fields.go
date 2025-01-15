@@ -9,8 +9,8 @@ import (
 )
 
 type (
-	fieldSelected  int
-	fieldListCards []tea.Model
+	fieldHighlighted int
+	fieldListCards   []tea.Model
 )
 
 type FieldList struct {
@@ -28,7 +28,7 @@ func (l FieldList) Init() (_ tea.Model, cmd tea.Cmd) {
 
 func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
-	case fieldSelected:
+	case fieldHighlighted:
 		// l.selected = int(msg)
 		return l, nil
 	case cuebook.Entry:
@@ -45,9 +45,9 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case tea.KeyMsg:
 		l.Model, cmd = l.Model.Update(msg)
 		if msg.Key().Code == tea.KeyEnter {
-			return l, NewSelectionAdapter[fieldSelected](cmd)
+			return l, nil // TODO: open form
 		}
-		return l, cmd
+		return l, NewListItemHighlightAdaptor[fieldHighlighted](cmd)
 	default:
 		l.Model, cmd = l.Model.Update(msg)
 		return l, cmd

@@ -3,7 +3,6 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook/patch"
-	"github.com/dkotik/cuebook/terminalui/list"
 )
 
 type historyPatch struct {
@@ -78,13 +77,6 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			SelectedEntryIndex: h.entryIndex,
 			SelectedFieldIndex: h.fieldIndex,
 		})
-	case list.SelectedIndexEvent:
-		// switch msg.ListName {
-		// case entryListName:
-		// 	h.entryIndex = msg.Index
-		// case entryFieldListName:
-		// 	h.fieldIndex = msg.Index
-		// }
 	}
 	return h, nil
 }

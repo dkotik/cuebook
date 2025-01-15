@@ -43,12 +43,6 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
-		case tea.KeyEnter:
-			return l, func() tea.Msg {
-				return SelectionMadeEvent{
-					Index: l.SelectedIndex,
-				}
-			}
 		case tea.KeyTab:
 			if msg.Key().Mod == tea.ModShift {
 				if len(l.Items) > 1 {
@@ -133,18 +127,13 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return l.applySelection(l.SelectedIndex)
 	case addItemsEvent:
-		l.Items = append(l.Items, msg.Items...)
+		l.Items = append(l.Items, msg...)
 		return l, nil
-	case selectedIndexRequestEvent:
-		return l, func() tea.Msg {
-			return SelectedIndexEvent{
-				Index: l.SelectedIndex,
-			}
-		}
 	case applySelectionEvent:
 		// && l.SelectedIndex != msg.Index
-		if msg.Index >= 0 && msg.Index < len(l.Items) {
-			return l.applySelection(msg.Index)
+		index := int(msg)
+		if index >= 0 && index < len(l.Items) {
+			return l.applySelection(index)
 		}
 	case tea.WindowSizeMsg:
 		l.Size = msg

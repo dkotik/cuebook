@@ -6,9 +6,15 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 
-type addItemsEvent struct {
-	Items []tea.Model
-}
+type (
+	applySelectionEvent int
+	HighlightEvent      int
+	HighlightHintEvent  bool
+
+	setItemsEvent []tea.Model
+	addItemsEvent []tea.Model
+	resetEvent    struct{}
+)
 
 func AddItems(items ...tea.Model) tea.Cmd {
 	return func() tea.Msg {
@@ -17,13 +23,9 @@ func AddItems(items ...tea.Model) tea.Cmd {
 				return fmt.Errorf("list item #%d is nil", i)
 			}
 		}
-		return addItemsEvent{
-			Items: items,
-		}
+		return addItemsEvent(items)
 	}
 }
-
-type setItemsEvent []tea.Model
 
 func SetItems(items ...tea.Model) tea.Cmd {
 	return func() tea.Msg {
@@ -36,35 +38,14 @@ func SetItems(items ...tea.Model) tea.Cmd {
 	}
 }
 
-type resetEvent struct {
-	ListName string
-}
-
 func Reset() tea.Cmd {
 	return func() tea.Msg {
 		return resetEvent{}
 	}
 }
 
-type SelectionHighlightEvent bool
-
-type SelectionMadeEvent struct {
-	Index int
-}
-
 type filterEvent struct {
 	SearchQuery string
-}
-
-type applySelectionEvent struct {
-	Index int
-}
-
-type selectedIndexRequestEvent struct {
-}
-
-type SelectedIndexEvent struct {
-	Index int
 }
 
 type SwapOrderEvent struct {
@@ -72,17 +53,9 @@ type SwapOrderEvent struct {
 	DesiredIndex int
 }
 
-func SelectedIndex(listName string) tea.Cmd {
-	return func() tea.Msg {
-		return selectedIndexRequestEvent{}
-	}
-}
-
 func ApplySelection(index int) tea.Cmd {
 	return func() tea.Msg {
-		return applySelectionEvent{
-			Index: index,
-		}
+		return applySelectionEvent(index)
 	}
 }
 
@@ -91,15 +64,12 @@ func (l List) applySelection(index int) (tea.Model, tea.Cmd) {
 	if total == 0 {
 		return l, nil
 	}
-	// if index+1 > total {
-	// 	index = total - 1
-	// }
 
 	var cmdPrevious, cmdNext tea.Cmd
-	l.Items[l.SelectedIndex], cmdPrevious = l.Items[l.SelectedIndex].Update(SelectionHighlightEvent(false))
-	l.Items[index], cmdNext = l.Items[index].Update(SelectionHighlightEvent(true))
+	l.Items[l.SelectedIndex], cmdPrevious = l.Items[l.SelectedIndex].Update(HighlightHintEvent(false))
+	l.Items[index], cmdNext = l.Items[index].Update(HighlightHintEvent(true))
 	l.SelectedIndex = index
-	return l, tea.Batch(cmdPrevious, cmdNext)
+	return l, tea.Batch(cmdPrevious, cmdNext, func() tea.Msg { return HighlightEvent(index) })
 }
 
 func ApplyFilter(searchQuery string) tea.Cmd {
@@ -108,8 +78,7 @@ func ApplyFilter(searchQuery string) tea.Cmd {
 	}
 }
 
-type countRequestEvent struct {
-}
+type countRequestEvent struct{}
 
 type CountEvent struct {
 	Count int

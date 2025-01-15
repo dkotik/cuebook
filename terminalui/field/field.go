@@ -30,7 +30,7 @@ func (f field) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		f.labelWidth = msg.Width / 4
 		f.valueWidth = msg.Width - f.labelWidth
-	case list.SelectionHighlightEvent:
+	case list.HighlightHintEvent:
 		f.selected = bool(msg)
 	}
 	return f, nil
