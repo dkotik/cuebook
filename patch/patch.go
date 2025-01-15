@@ -8,46 +8,59 @@ ranges before carrying out the intended operation.
 */
 package patch
 
-import "github.com/dkotik/cuebook"
+import (
+	"fmt"
+	"hash/fnv"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"cuelang.org/go/cue/cuecontext"
+)
 
 type Patch interface {
 	ApplyToCueSource([]byte) ([]byte, error)
 	Invert() Patch
 }
 
-type nothingPatch struct{}
-
-func (p nothingPatch) ApplyToCueSource(source []byte) ([]byte, error) {
-	return source, nil
-}
-
-func (p nothingPatch) Invert() Patch {
-	return p
-}
-
-func Nothing() Patch {
-	return nothingPatch{}
-}
-
-func Validated(p Patch) Patch {
-	return validatedPatch{Patch: p}
-}
-
-type validatedPatch struct {
-	Patch
-}
-
-func (p validatedPatch) ApplyToCueSource(source []byte) (result []byte, err error) {
-	result, err = p.Patch.ApplyToCueSource(source)
+// Commit applies a [Patch] to fresh contents of the source file after validating the changes.
+// A temporary file is created first using deterministic file name. Then, the temporary file
+// is renamed to overwrite the original. The additional steps ensure complete atomic operations
+// that anticipate that the file may be possibly changed after the patch had already been created.
+func Commit(
+	targetPath string,
+	swapPath string,
+	p Patch,
+) (err error) {
+	source, err := os.ReadFile(targetPath)
 	if err != nil {
-		return result, err
+		return err
 	}
-	if _, err = cuebook.New(result); err != nil {
-		return result, err
+	source, err = p.ApplyToCueSource(source)
+	if err != nil {
+		return err
 	}
-	return result, err
+	value := cuecontext.New().CompileBytes(source) // TODO: add options cuecontext...
+	if err = value.Err(); err != nil {
+		return err
+	}
+	if err = value.Validate(); err != nil {
+		return err
+	}
+	temp := filepath.Join(
+		swapPath,
+		temporaryName(
+			filepath.Base(targetPath),
+			source,
+		),
+	)
+	if err = os.WriteFile(temp, source, 0700); err != nil {
+		return err
+	}
+	return os.Rename(temp, targetPath)
 }
 
-func (p validatedPatch) Invert() Patch {
-	return validatedPatch{p.Patch.Invert()}
+func temporaryName(name string, source []byte) string {
+	ext := filepath.Ext(name)
+	return fmt.Sprintf("%s.%x.cue", strings.TrimSuffix(name, ext), fnv.New32().Sum(source)[:8])
 }

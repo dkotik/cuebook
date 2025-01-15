@@ -4,15 +4,25 @@ import (
 	"bytes"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
+	"cuelang.org/go/cue/cuecontext"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
-type entrySelected int
+type (
+	entrySelected int
+
+	entryAdded struct {
+		patch.Patch
+		UpdatedSource []byte
+	}
+)
 
 type EntryList struct {
 	tea.Model
@@ -62,15 +72,44 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg...)())
 		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize())
 	case tea.KeyMsg:
-		l.Model, cmd = l.Model.Update(msg)
-		if msg.Key().Code == tea.KeyEnter {
+		switch msg.Key().Code {
+		case tea.KeyEnter:
+			l.Model, cmd = l.Model.Update(msg)
 			return l, NewSelectionAdapter[entrySelected](cmd)
+		case 'n':
+			if msg.Key().Mod != tea.ModCtrl {
+				break
+			}
+			return l, func() tea.Msg {
+				value := cuecontext.New().BuildExpr(
+					ast.NewStruct(
+						&ast.Field{
+							Label: ast.NewString("Name"),
+							Value: ast.NewString("Someone"),
+						},
+						&ast.Field{
+							Label: ast.NewString("Email"),
+							Value: ast.NewString("someEmail@somehost.net"),
+						},
+					),
+				)
+				p, err := patch.AppendToStructList(l.book.Source, value)
+				if err != nil {
+					return err
+				}
+				result, err := p.ApplyToCueSource(l.book.Source)
+				if err != nil {
+					return err
+				}
+				return entryAdded{
+					Patch:         p,
+					UpdatedSource: result,
+				}
+			}
 		}
-		return l, cmd
-	default:
-		l.Model, cmd = l.Model.Update(msg)
-		return l, cmd
 	}
+	l.Model, cmd = l.Model.Update(msg)
+	return l, cmd
 }
 
 func LoadEntries(book cuebook.Document, currentSelection int, r *cuebook.SourcePatchResult) tea.Cmd {
