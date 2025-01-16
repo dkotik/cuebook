@@ -51,7 +51,7 @@ func DeleteFromStructList(source []byte, value cue.Value) (Patch, error) {
 					if c != '\n' { // until end of line
 						continue
 					}
-					i++ // take new line
+					// i++ // take new line
 				}
 				r.Tail += i
 				break
@@ -59,6 +59,27 @@ func DeleteFromStructList(source []byte, value cue.Value) (Patch, error) {
 		}
 		break
 	}
+
+	// extend to leading whitespace
+	for i := r.Head - 1; i > max(0, r.Head-1000); i-- {
+		c := rune(source[i])
+		if !unicode.IsSpace(c) {
+			break
+		}
+		r.Head--
+		if c == '\n' {
+			break // new line is also consumed
+		}
+	}
+	// for i, c := range source[:r.Head-1] {
+	// 	if unicode.IsSpace(rune(c)) && c != '\n' {
+	// 		// r.Head--
+	// 		continue
+	// 	}
+	// 	r.Head -= i
+	// 	// panic(i)
+	// 	break
+	// }
 
 	return delete{
 		Preceeding: r.PreceedingEntryAnchor(source),

@@ -3,6 +3,7 @@ package patch
 import (
 	"testing"
 
+	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"github.com/dkotik/cuebook"
 )
@@ -45,5 +46,28 @@ func TestSwapEntries(t *testing.T) {
 	}
 	// a := document.LookupPath(cue.MakePath(cue.Index(0)))
 	// b := document.LookupPath(cue.MakePath(cue.Index(5)))
+}
 
+func TestSwapDifference(t *testing.T) {
+	source := []byte(`[
+		{ one: "ok" },
+		{	two: "ok" },
+		{	two: "ok" }
+]`)
+	document := cuecontext.New().CompileBytes(source)
+	err := document.Err()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a := document.LookupPath(cue.MakePath(cue.Index(1)))
+	b := document.LookupPath(cue.MakePath(cue.Index(2)))
+
+	p, err := SwapEntries(source, a, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(p.Difference().PreceedingDuplicates)
+	t.Log(p.Invert().Difference().PreceedingDuplicates)
+	// t.Fatal("impl")
 }

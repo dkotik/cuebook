@@ -25,7 +25,7 @@ changes in data to other users and, most importantly, programs.
 - [ ] add `@cuebook(title)` attribute support
 - [ ] add `@cuebook(details)` attribute support
 - [ ] add `@cuebook(multiline)` attribute support
-- [ ] multiple delete and insert cycles leave whitespace artifacts
+- [x] multiple delete and insert cycles leave whitespace artifacts
 - [ ] add Markdown metadata loading and editing
 - [x] add editing history tracking
 - [ ] add copy-paste support

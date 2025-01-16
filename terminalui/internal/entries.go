@@ -146,7 +146,7 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 		if err != nil {
 			return err
 		}
-		if selectionIndex >= total {
+		if selectionIndex > total {
 			selectionIndex = total - 1
 		}
 		result := entryListCards{
@@ -167,6 +167,12 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 		if r.LastChange != nil {
 			diff := r.LastChange.Difference()
 			lastChange = diff.Content
+			if firstBrace := bytes.IndexByte(lastChange, '{'); firstBrace > 0 && firstBrace < 10 {
+				lastChange = lastChange[firstBrace:]
+			}
+			if lastBrace := bytes.LastIndexByte(lastChange, '}'); lastBrace > 0 && lastBrace > len(lastChange)-10 {
+				lastChange = lastChange[:lastBrace+1]
+			}
 			lastChangePreceedingDuplicates = diff.PreceedingDuplicates
 		}
 		for entry, err := range r.Document.EachEntry() {
@@ -174,11 +180,26 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 			if err != nil {
 				return err
 			}
-			if lastChange != nil && lastChangePreceedingDuplicates >= 0 {
+			if lastChange != nil {
 				at := cuebook.GetByteSpanInSource(entry.Value)
 				if !at.IsValid() {
 					continue // TODO: handle
 				}
+				if lastChangePreceedingDuplicates < 0 {
+					lastChange = nil // stop tracking
+				}
+
+				// if bytes.Index(lastChange, r.Source[at.BeginsAt+2:at.EndsAt-2]) > 0 {
+				// 	panic("'" + string(r.Source[at.BeginsAt:at.EndsAt]) + "'")
+				// 	panic(struct {
+				// 		Last   string
+				// 		Source string
+				// 	}{
+				// 		Last:   string(lastChange),
+				// 		Source: string(r.Source[at.BeginsAt:at.EndsAt]),
+				// 	})
+				// }
+
 				if bytes.Equal(lastChange, r.Source[at.BeginsAt:at.EndsAt]) {
 					result.SelectedIndex = index
 					lastChangePreceedingDuplicates--
