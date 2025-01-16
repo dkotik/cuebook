@@ -34,6 +34,6 @@ func NewTerminalUI(ctx context.Context, filePath string) (tea.Model, error) {
 			event.NewDecorator(terminalui.ParseFileToBookAndCreateEntryListIfNeeded)(file.New(filePath))),
 		window.WithLogger(
 			slog.New(logger).With("component", "bubbletea")),
-		// terminalui.WithStateEventTransformers(),
+		terminalui.WithStateEventTransformers(),
 	)
 }

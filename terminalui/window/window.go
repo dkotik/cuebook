@@ -84,17 +84,9 @@ func (w window) back() (tea.Model, tea.Cmd) {
 }
 
 func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
-	// adapted, ok := msg.(slog.LogValuer)
-	// if ok {
-	// 	w.logger.Debug("window", slog.Any("message", msg))
-	// } else {
-	// // w.logger.Debug(spew.Sdump(msg))
-	// }
 	w.logger.Debug(fmt.Sprintf("%T", msg), slog.Any("payload", msg))
 
 	switch msg := msg.(type) {
-	// case tea.WindowSizeMsg:
-	// 	w.size = msg
 	case *i18n.Localizer:
 		if msg == nil {
 			panic("nil localizer")

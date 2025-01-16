@@ -25,7 +25,7 @@ changes in data to other users and, most importantly, programs.
 - [ ] add `@cuebook(details)` attribute support
 - [ ] add `@cuebook(multiline)` attribute support
 - [ ] add Markdown metadata loading and editing
-- [ ] add editing history tracking
+- [x] add editing history tracking
 - [ ] add copy-paste support
 - [ ] saving should merge the state on disk with the state in memory
 - [x] Ctrl+J and Ctrl+K entry reordering of entries

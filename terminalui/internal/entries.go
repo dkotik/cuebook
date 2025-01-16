@@ -45,6 +45,14 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case entryHighlighted:
 		l.selected = int(msg)
 		return l, nil
+	case patch.Patch:
+		return l, func() tea.Msg { // TODO: handle switch highlight
+			result, err := patch.Commit("test/testdata/simple.cue", "test/testdata", msg)
+			if err != nil {
+				return err
+			}
+			return result
+		}
 	case patch.Result:
 		// bottomChange, ok := msg.BottomChangeSince(l.book)
 		l.book = msg
@@ -95,11 +103,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				if err != nil {
 					return err
 				}
-				result, err := patch.Commit("test/testdata/simple.cue", "test/testdata", p)
-				if err != nil {
-					return err
-				}
-				return result
+				return p
 			}
 		case 'n':
 			if msg.Key().Mod != tea.ModCtrl {
@@ -122,16 +126,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				if err != nil {
 					return err
 				}
-				result, err := patch.Commit("test/testdata/simple.cue", "test/testdata", p)
-				if err != nil {
-					return err
-				}
-				return tea.BatchMsg{
-					tea.Sequence(
-						func() tea.Msg { return result },
-						// list.ApplySelection(l.selected+2), // TODO: fix selection after change
-					),
-				}
+				return p
 			}
 		}
 		l.Model, cmd = l.Model.Update(msg)
