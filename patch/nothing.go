@@ -1,19 +1,26 @@
 package patch
 
-import "github.com/dkotik/cuebook"
+import (
+	"github.com/dkotik/cuebook"
+)
 
-type nothingPatch struct{}
+type nothingPatch struct {
+	A, B ByteAnchor
+}
+
+func (p nothingPatch) Difference() ByteAnchor {
+	return p.B
+}
 
 func (p nothingPatch) ApplyToCueSource(source []byte) ([]byte, error) {
 	return source, nil
 }
 
 func (p nothingPatch) Invert() Patch {
-	return p
-}
-
-func Nothing() Patch {
-	return nothingPatch{}
+	return nothingPatch{
+		A: p.B,
+		B: p.A,
+	}
 }
 
 func Validated(p Patch) Patch {

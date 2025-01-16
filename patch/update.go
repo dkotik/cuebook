@@ -12,6 +12,10 @@ type replacePatch struct {
 	Replacement ByteAnchor
 }
 
+func (p replacePatch) Difference() ByteAnchor {
+	return p.Replacement
+}
+
 func (p replacePatch) ApplyToCueSource(source []byte) (result []byte, err error) {
 	r, err := p.Target.Match(source)
 	if err != nil {

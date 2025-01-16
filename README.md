@@ -21,13 +21,15 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
+- [ ] remove `patch.Nothing` - the difference anchors have to flip
 - [ ] add `@cuebook(title)` attribute support
 - [ ] add `@cuebook(details)` attribute support
 - [ ] add `@cuebook(multiline)` attribute support
+- [ ] multiple delete and insert cycles leave whitespace artifacts
 - [ ] add Markdown metadata loading and editing
 - [x] add editing history tracking
 - [ ] add copy-paste support
-- [ ] saving should merge the state on disk with the state in memory
+- [x] saving should merge the state on disk with the state in memory
 - [x] Ctrl+J and Ctrl+K entry reordering of entries
 - [x] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] responsive color scheme: lipgloss.HasDarkBackground() at initialization

@@ -7,6 +7,8 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
+// TODO: multiple delete and insert cycles leave whitespace artifacts
+
 func TestDeleteStructFromList(t *testing.T) {
 	source := []byte(`[
 		{ one: "ok" },

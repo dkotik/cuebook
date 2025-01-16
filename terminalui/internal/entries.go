@@ -15,14 +15,7 @@ import (
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
-type (
-	entryHighlighted int
-
-	// entryAdded struct {
-	// 	patch.Patch
-	// 	UpdatedSource []byte
-	// }
-)
+type entryHighlighted int
 
 type EntryList struct {
 	tea.Model
@@ -38,7 +31,23 @@ func (l EntryList) Init() (_ tea.Model, cmd tea.Cmd) {
 	return l, nil
 }
 
-type entryListCards []tea.Model
+type entryListCards struct {
+	Cards         []tea.Model
+	SelectedIndex int
+}
+
+func (l EntryList) LoadSelectedEntry() tea.Cmd {
+	if l.selected < 0 {
+		return nil
+	}
+	return func() tea.Msg {
+		entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(l.selected - 1))))
+		if err != nil {
+			return err // TODO: fails on empty list?
+		}
+		return entry
+	}
+}
 
 func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
@@ -54,14 +63,15 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return result
 		}
 	case patch.Result:
-		// bottomChange, ok := msg.BottomChangeSince(l.book)
 		l.book = msg
-		return l, LoadEntries(msg.Document, l.selected, nil) // TODO: track patch changes
+		return l, LoadEntries(msg, l.selected)
 	case entryListCards:
+		l.selected = msg.SelectedIndex
 		l.Model, cmd = l.Model.Init()
-		var setCmd tea.Cmd
-		l.Model, setCmd = l.Model.Update(list.SetItems(msg...)())
-		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize())
+		var setCmd, updateCmd tea.Cmd
+		l.Model, setCmd = l.Model.Update(list.SetItems(msg.Cards...)())
+		l.Model, updateCmd = l.Model.Update(list.ApplySelection(l.selected)())
+		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize(), updateCmd, l.LoadSelectedEntry())
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case tea.KeyEnter:
@@ -70,16 +80,10 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 					tea.Sequence(
 						func() tea.Msg {
 							return window.SwitchTo(FieldList{
-								book: l.book,
+								// book: l.book,
 							})
 						},
-						func() tea.Msg {
-							entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(l.selected - 1))))
-							if err != nil {
-								return err
-							}
-							return entry
-						},
+						l.LoadSelectedEntry(),
 					),
 				}
 			}
@@ -136,44 +140,55 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return l, cmd
 }
 
-func LoadEntries(book cuebook.Document, currentSelection int, r *cuebook.SourcePatchResult) tea.Cmd {
+func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 	return func() tea.Msg {
-		total, err := book.Len()
+		total, err := r.Document.Len()
 		if err != nil {
 			return err
 		}
-		cards := make([]tea.Model, 0, total+1)
+		if selectionIndex >= total {
+			selectionIndex = total - 1
+		}
+		result := entryListCards{
+			Cards:         make([]tea.Model, 0, total+1),
+			SelectedIndex: selectionIndex,
+		}
 		title := list.Title{
-			Text:  book.Metadata().Title(),
+			Text:  r.Document.Metadata().Title(),
 			Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		}
-		cards = append(cards, title)
+		result.Cards = append(result.Cards, title)
 
-		index := 0
-		selectIndex := -1
-		for entry, err := range book.EachEntry() {
+		var (
+			index                          int
+			lastChangePreceedingDuplicates int
+			lastChange                     []byte
+		)
+		if r.LastChange != nil {
+			diff := r.LastChange.Difference()
+			lastChange = diff.Content
+			lastChangePreceedingDuplicates = diff.PreceedingDuplicates
+		}
+		for entry, err := range r.Document.EachEntry() {
+			index++
 			if err != nil {
 				return err
 			}
-			if r != nil && r.PrecedingDuplicates >= 0 {
+			if lastChange != nil && lastChangePreceedingDuplicates >= 0 {
 				at := cuebook.GetByteSpanInSource(entry.Value)
 				if !at.IsValid() {
 					continue // TODO: handle
 				}
-				if bytes.Equal(r.ReplaceWith, r.Source[at.BeginsAt:at.EndsAt]) {
-					selectIndex = index
-					r.PrecedingDuplicates--
+				if bytes.Equal(lastChange, r.Source[at.BeginsAt:at.EndsAt]) {
+					result.SelectedIndex = index
+					lastChangePreceedingDuplicates--
 				}
-				index++
 			}
-			cards = append(
-				cards,
+			result.Cards = append(
+				result.Cards,
 				card.New(entry.GetTitle(), entry.GetDescription()...),
 			)
 		}
-		if selectIndex >= 0 { // found matching bytes
-			currentSelection = selectIndex // TODO: write a test for it
-		}
-		return entryListCards(cards)
+		return result
 	}
 }

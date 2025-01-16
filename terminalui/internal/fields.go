@@ -3,7 +3,6 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/field"
 	"github.com/dkotik/cuebook/terminalui/list"
 )
@@ -16,8 +15,8 @@ type (
 type FieldList struct {
 	tea.Model
 
-	book patch.Result
-	// selected int // *patch.ByteAnchor
+	// book     patch.Result
+	selected int // *patch.ByteAnchor
 }
 
 func (l FieldList) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -29,7 +28,7 @@ func (l FieldList) Init() (_ tea.Model, cmd tea.Cmd) {
 func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case fieldHighlighted:
-		// l.selected = int(msg)
+		l.selected = int(msg)
 		return l, nil
 	case cuebook.Entry:
 		return l, LoadFields(msg) // TODO: track patch changes
@@ -61,14 +60,6 @@ const (
 
 func LoadFields(entry cuebook.Entry) tea.Cmd {
 	return func() tea.Msg {
-		// entry, err := cuebook.NewEntry(book.Value.LookupPath(cue.MakePath(cue.Index(index))))
-		// if err != nil {
-		// 	return err
-		// }
-		// total, err := book.Len()
-		// if err != nil {
-		// 	return err
-		// }
 		fields := make([]tea.Model, 0, len(entry.Fields)+len(entry.Details)+1)
 		// fields = append(fields, list.Title{
 		// 	Text:  entry.GetTitle() + fmt.Sprintf(" › %d/%d", index+1, total),

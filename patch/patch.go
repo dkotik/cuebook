@@ -22,13 +22,15 @@ import (
 )
 
 type Patch interface {
-	ApplyToCueSource([]byte) ([]byte, error)
+	ApplyToCueSource(original []byte) (updated []byte, err error)
+	Difference() ByteAnchor
 	Invert() Patch
 }
 
 type Result struct {
-	Document cuebook.Document
-	Source   []byte
+	Document   cuebook.Document
+	Source     []byte
+	LastChange Patch
 }
 
 func (r Result) BottomChangeIndex(since Result) (i int) {
@@ -92,6 +94,7 @@ func Commit(
 	if err = os.WriteFile(temp, r.Source, 0700); err != nil {
 		return
 	}
+	r.LastChange = p
 	return r, os.Rename(temp, targetPath)
 }
 

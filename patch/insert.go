@@ -15,6 +15,10 @@ type insertAfter struct {
 	Target     ByteAnchor
 }
 
+func (p insertAfter) Difference() ByteAnchor {
+	return p.Target
+}
+
 func (p insertAfter) ApplyToCueSource(source []byte) (result []byte, err error) {
 	r, err := p.Preceeding.Match(source)
 	if err != nil {

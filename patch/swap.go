@@ -10,8 +10,16 @@ import (
 type swapPatch struct {
 	Earlier                ByteAnchor
 	Later                  ByteAnchor
+	EarlierIsTarget        bool
 	EarlierDuplicatesInGap int
 	LaterDuplicatesInGap   int
+}
+
+func (p swapPatch) Difference() ByteAnchor {
+	if p.EarlierIsTarget {
+		return p.Earlier
+	}
+	return p.Later
 }
 
 func (p swapPatch) ApplyToCueSource(source []byte) (result []byte, err error) {
@@ -38,6 +46,7 @@ func (p swapPatch) Invert() Patch {
 	return swapPatch{
 		Earlier:                p.Later,
 		Later:                  p.Earlier,
+		EarlierIsTarget:        !p.EarlierIsTarget,
 		EarlierDuplicatesInGap: p.LaterDuplicatesInGap,
 		LaterDuplicatesInGap:   p.EarlierDuplicatesInGap,
 	}
@@ -53,18 +62,27 @@ func SwapEntries(source []byte, a, b cue.Value) (Patch, error) {
 		return nil, err
 	}
 	if bytes.Equal(source[aRange.Head:aRange.Tail], source[bRange.Head:bRange.Tail]) {
-		return Nothing(), nil
+		if aRange.Head > bRange.Head {
+			return nothingPatch{
+				A: bRange.Anchor(source),
+				B: aRange.Anchor(source),
+			}, nil
+		}
+		return nothingPatch{
+			A: aRange.Anchor(source),
+			B: bRange.Anchor(source),
+		}, nil
 	}
+	p := swapPatch{}
 	if aRange.Head > bRange.Head {
 		aRange, bRange = bRange, aRange
+		p.EarlierIsTarget = false
 	}
 	if aRange.Tail > bRange.Head {
 		return nil, ErrByteRangesOverlap
 	}
-	p := swapPatch{
-		Earlier: aRange.Anchor(source),
-		Later:   bRange.Anchor(source),
-	}
+	p.Earlier = aRange.Anchor(source)
+	p.Later = bRange.Anchor(source)
 	if aRange.Tail < bRange.Head {
 		gap := source[aRange.Tail:bRange.Head]
 		p.EarlierDuplicatesInGap = bytes.Count(gap, p.Earlier.Content)

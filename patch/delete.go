@@ -13,6 +13,10 @@ type delete struct {
 	Target     ByteAnchor
 }
 
+func (p delete) Difference() (d ByteAnchor) {
+	return d
+}
+
 func (p delete) ApplyToCueSource(source []byte) (result []byte, err error) {
 	r, err := p.Target.Match(source)
 	if err != nil {
