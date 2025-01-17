@@ -35,6 +35,7 @@ func (m Metadata) Description() string {
 				line := lines.At(i)
 				// _, _ = b.Write(m.Source[line.Start:line.Stop])
 				_, _ = b.Write(line.Value(m.Source))
+				_, _ = b.WriteRune('\n')
 			}
 		}
 		return b.String()

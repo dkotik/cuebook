@@ -5,7 +5,12 @@ import (
 )
 
 func TestInitialization(t *testing.T) {
-	ta := New("standard", "Label", "value", false)
+	type testType string
+
+	ta, err := New(WithLabel("Label"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	if ta.(Textarea).status == nil {
 		t.Error("status model is nil")
 	}

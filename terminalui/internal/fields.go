@@ -3,8 +3,11 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/field"
 	"github.com/dkotik/cuebook/terminalui/list"
+	"github.com/dkotik/cuebook/terminalui/textarea"
+	"github.com/dkotik/cuebook/terminalui/window"
 )
 
 type (
@@ -15,8 +18,9 @@ type (
 type FieldList struct {
 	tea.Model
 
-	// book     patch.Result
-	selected int // *patch.ByteAnchor
+	state    patch.Result
+	entry    cuebook.Entry
+	selected int
 }
 
 func (l FieldList) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -30,21 +34,51 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case fieldHighlighted:
 		l.selected = int(msg)
 		return l, nil
+	case patch.Result:
+		l.state = msg
+		return l, nil
 	case cuebook.Entry:
-		return l, LoadFields(msg) // TODO: track patch changes
+		l.entry = msg
+		return l, LoadFields(msg)
 	case fieldListCards:
 		l.Model, cmd = l.Model.Init()
 		var setCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg...)())
 		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize())
-	// case Book:
-	// 	return l, func() tea.Msg {
-	// 		// use func (b Book) LastDifferentEntry() ?
-	// 	}
 	case tea.KeyMsg:
 		l.Model, cmd = l.Model.Update(msg)
 		if msg.Key().Code == tea.KeyEnter {
-			return l, nil // TODO: open form
+			return l, func() tea.Msg {
+				field, err := l.entry.GetField(l.selected)
+				if err != nil {
+					return err
+				}
+				formWrapper, patchWrapper := NewPatchCloser("fieldPatch")
+				form, err := textarea.New(
+					textarea.WithLabel(field.Name),
+					textarea.WithValue(field.String()),
+					textarea.WithOnSubmitCommand(func(value string) tea.Cmd {
+						return func() tea.Msg {
+							p, err := patch.UpdateFieldValue(l.state.Source, l.entry.Value, field.Value, value)
+							if err != nil {
+								return err
+							}
+
+							// _, err = p.ApplyToCueSource(l.state.Source)
+							// if err != nil {
+							// 	panic(err)
+							// }
+							// panic(string(p.Difference().Content))
+
+							return patchWrapper(p)
+						}
+					}),
+				)
+				if err != nil {
+					return err
+				}
+				return window.SwitchTo(formWrapper(form))
+			}
 		}
 		return l, NewListItemHighlightAdaptor[fieldHighlighted](cmd)
 	default:
@@ -52,11 +86,6 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		return l, cmd
 	}
 }
-
-const (
-	fieldEditingTextAreaName = "fieldEditingTextArea"
-	fieldAddingTextAreaName  = "fieldAddingTextArea"
-)
 
 func LoadFields(entry cuebook.Entry) tea.Cmd {
 	return func() tea.Msg {
@@ -72,13 +101,5 @@ func LoadFields(entry cuebook.Entry) tea.Cmd {
 			fields = append(fields, field.New(f.Name, f.String()))
 		}
 		return fieldListCards(fields)
-		// return tea.BatchMsg{
-		// tea.Sequence(
-		// 	list.Reset(entryFieldListName),
-		// 	list.AddItems(entryFieldListName, fields...),
-		// 	tea.RequestWindowSize(),
-		// 	list.ApplySelection(entryFieldListName, index+1), // +1 for title
-		// ),
-		// }
 	}
 }

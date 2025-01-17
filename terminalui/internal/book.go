@@ -5,6 +5,7 @@ import (
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/file"
+	"github.com/dkotik/cuebook/terminalui/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
@@ -18,6 +19,19 @@ func parseBook(source []byte) tea.Cmd {
 			Document: document,
 			Source:   source,
 		}
+	}
+}
+
+func updateMetadata(doc cuebook.Document) tea.Cmd {
+	return func() tea.Msg {
+		form, err := textarea.New(
+			textarea.WithLabel("Description"),
+			textarea.WithValue(doc.Metadata().Description()),
+		)
+		if err != nil {
+			return err
+		}
+		return window.SwitchTo(form)
 	}
 }
 

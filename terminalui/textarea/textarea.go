@@ -1,6 +1,9 @@
 package textarea
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/textarea"
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -14,22 +17,40 @@ import (
 type Textarea struct {
 	Name     string
 	Label    string
-	Required bool
+	OnSubmit Command
+	// Required bool
 
-	status    tea.Model
-	saveKey   key.Binding
-	escapeKey key.Binding
-	textarea  textarea.Model
+	status  tea.Model
+	saveKey key.Binding
+	// escapeKey key.Binding
+	textarea textarea.Model
 }
 
-func New(name, label, value string, required bool) tea.Model {
+func New(withOptions ...Option) (_ tea.Model, err error) {
+	o := &options{}
+	for _, option := range append(withOptions, func(o *options) error {
+		if o.OnSubmit == nil {
+			o.OnSubmit = func(string) tea.Cmd { return nil }
+		}
+		if o.Label == "" {
+			return errors.New("label is required")
+		}
+		return nil
+	}) {
+		if err = option(o); err != nil {
+			return nil, fmt.Errorf("invalid textarea options: %w", err)
+		}
+	}
+
 	m := Textarea{
-		Name:     name,
-		Label:    label,
-		Required: required,
+		Label:    o.Label,
+		OnSubmit: o.OnSubmit,
+		// Required: required,
 		textarea: textarea.New(),
 	}
-	m.textarea.SetValue(value)
+	if o.Value != "" {
+		m.textarea.SetValue(o.Value)
+	}
 	// ta.Prompt = lipgloss.NewStyle().
 	// 	Foreground(lipgloss.Color("243")).
 	// 	Render(lipgloss.NormalBorder().Left + " ")
@@ -44,19 +65,19 @@ func New(name, label, value string, required bool) tea.Model {
 
 	lc := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
 	m.saveKey = window.NewSaveKey(lc)
-	m.escapeKey = window.NewCancelKey(lc)
+	// m.escapeKey = window.NewCancelKey(lc)
 	m.status = status.New(
 		window.NewSaveKey(lc),
 		window.NewCancelKey(lc),
 	)
-	return m
+	return m, nil
 }
 
 func (t Textarea) Init() (tea.Model, tea.Cmd) {
 	var cmdInitStatus tea.Cmd
 	t.status, cmdInitStatus = t.status.Init()
 	t.textarea.Focus()
-	return t, cmdInitStatus
+	return t, tea.Batch(cmdInitStatus, tea.RequestWindowSize())
 }
 
 func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -66,12 +87,7 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t.textarea.SetHeight(msg.Height*3/4 - 2)
 	case tea.KeyMsg:
 		if key.Matches(msg, t.saveKey) {
-			return t, func() tea.Msg {
-				return OnChangeEvent{
-					TextAreaName: t.Name,
-					Value:        t.textarea.Value(),
-				}
-			}
+			return t, t.OnSubmit(t.textarea.Value())
 		}
 	}
 	var statusCmd, textareaCmd tea.Cmd

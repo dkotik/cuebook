@@ -20,9 +20,8 @@ type entryHighlighted int
 type EntryList struct {
 	tea.Model
 
-	book        patch.Result
-	selected    int // *patch.ByteAnchor
-	highlighted int
+	book     patch.Result
+	selected int // *patch.ByteAnchor
 }
 
 func (l EntryList) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -37,7 +36,7 @@ type entryListCards struct {
 }
 
 func (l EntryList) LoadSelectedEntry() tea.Cmd {
-	if l.selected < 0 {
+	if l.selected <= 0 {
 		return nil
 	}
 	return func() tea.Msg {
@@ -75,13 +74,14 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case tea.KeyEnter:
+			if l.selected <= 0 {
+				return l, updateMetadata(l.book.Document)
+			}
 			return l, func() tea.Msg {
 				return tea.BatchMsg{
 					tea.Sequence(
 						func() tea.Msg {
-							return window.SwitchTo(FieldList{
-								// book: l.book,
-							})
+							return window.SwitchTo(FieldList{state: l.book})
 						},
 						l.LoadSelectedEntry(),
 					),
@@ -188,18 +188,6 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 				if lastChangePreceedingDuplicates < 0 {
 					lastChange = nil // stop tracking
 				}
-
-				// if bytes.Index(lastChange, r.Source[at.BeginsAt+2:at.EndsAt-2]) > 0 {
-				// 	panic("'" + string(r.Source[at.BeginsAt:at.EndsAt]) + "'")
-				// 	panic(struct {
-				// 		Last   string
-				// 		Source string
-				// 	}{
-				// 		Last:   string(lastChange),
-				// 		Source: string(r.Source[at.BeginsAt:at.EndsAt]),
-				// 	})
-				// }
-
 				if bytes.Equal(lastChange, r.Source[at.BeginsAt:at.EndsAt]) {
 					result.SelectedIndex = index
 					lastChangePreceedingDuplicates--

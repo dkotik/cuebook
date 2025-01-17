@@ -21,7 +21,7 @@ func TestMarkdownCommentParsing(t *testing.T) {
 
 	for _, comment := range book.Doc() {
 		t.Log("comments:", comment.Text())
-		t.Log("comments:", comment.Comments())
+		// t.Log("comments:", comment.Comments())
 		t.Log("byte range:", comment.End().Offset())
 		t.Log("comment chopped:", string(source[:comment.End().Offset()]))
 	}
@@ -33,7 +33,7 @@ func TestMarkdownCommentParsing(t *testing.T) {
 	if meta.Title() != "comment 1" {
 		t.Fatal("unexpected title")
 	}
-	if meta.Description() != "comment 2" {
+	if meta.Description() != "comment 2\n" {
 		t.Fatal("unexpected description")
 	}
 

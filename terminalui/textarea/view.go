@@ -14,11 +14,11 @@ func (t Textarea) View() string {
 		// Align(lipgloss.Center, lipgloss.Center).
 		Render(t.textarea.View())
 
-	label := " " + t.Label + ":"
-	if t.Required {
-		label += " " + lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render("*")
-	}
+	// label := " " + t.Label + ":"
+	// if t.Required {
+	// 	label += " " + lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render("*")
+	// }
 	return lipgloss.JoinVertical(lipgloss.Left,
-		label,
+		" "+t.Label+":",
 		ta, t.status.View())
 }
