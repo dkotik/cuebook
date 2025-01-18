@@ -7,6 +7,7 @@ import (
 
 func New(text string) tea.Model {
 	return middleware.NewCache(text).Wrap(markdown{text: text})
+	// return markdown{text: text}
 }
 
 type markdown struct {

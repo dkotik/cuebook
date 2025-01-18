@@ -57,6 +57,7 @@ type window struct {
 }
 
 func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
+	w.localizer = i18n.NewLocalizer(w.lcBundle, "en")
 	all := make([]tea.Cmd, 0, len(w.stack)+len(w.watchers)+1)
 	for i, model := range w.watchers {
 		w.watchers[i], cmd = model.Init()
@@ -87,21 +88,20 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	w.logger.Debug(fmt.Sprintf("%T", msg), slog.Any("payload", msg))
 
 	switch msg := msg.(type) {
-	case *i18n.Localizer:
-		if msg == nil {
-			panic("nil localizer")
-		}
-		w.localizer = msg
 	case commandContextRequestEvent:
 		return w, func() tea.Msg { return w.commandContext }
 	case localizerRequestEvent:
 		localizer := w.localizer
 		return w, func() tea.Msg { return localizer }
+		// cmd = func() tea.Msg { return localizer }
+		// return w, tea.Batch(
+		// 	event.Propagate(w.localizer, w.stack),
+		// 	event.Propagate(w.localizer, w.watchers),
+		// )
 	case SwitchTo:
 		w.stack = append(w.stack, w.current)
 		var cmdInit tea.Cmd
 		w.current, cmdInit = msg.Init()
-		// w.current, cmd = w.current.Update(w.size) // TODO: should be requested instead of fed, like localizer
 		return w, cmdInit
 	case BackEvent:
 		return w.back()
@@ -147,6 +147,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			event.Propagate(msg, w.watchers),
 		)
 	}
+	// w.logger.Info(fmt.Sprintf("%T", msg), slog.Any("payload", msg))
 	w.current, cmd = w.current.Update(msg)
 	return w, tea.Batch(
 		cmd,

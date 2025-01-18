@@ -12,8 +12,8 @@ import (
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/list"
-	"github.com/dkotik/cuebook/terminalui/markdown"
 	"github.com/dkotik/cuebook/terminalui/window"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 type entryHighlighted int
@@ -76,10 +76,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		switch msg.Key().Code {
 		case tea.KeyEnter:
 			if l.selected <= 0 {
-				return l, func() tea.Msg {
-					return window.SwitchTo(markdown.New(string(l.book.Document.Metadata().Source)))
-				}
-				// return l, updateMetadata(l.book.Document)
+				return l, displayMetadata(l.book.Document)
 			}
 			return l, func() tea.Msg {
 				return tea.BatchMsg{
@@ -154,7 +151,7 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 			selectionIndex = total - 1
 		}
 		result := entryListCards{
-			Cards:         make([]tea.Model, 0, total+1),
+			Cards:         make([]tea.Model, 0, total+2),
 			SelectedIndex: selectionIndex,
 		}
 		title := list.Title{
@@ -202,6 +199,16 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 				card.New(entry.GetTitle(), entry.GetDescription()...),
 			)
 		}
+
+		result.Cards = append(result.Cards, list.NewButton(&i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{
+				ID:    "bookEntryCreate",
+				Other: "Add entry",
+			},
+		}, func() tea.Msg {
+			// panic("add")
+			return nil
+		}))
 		return result
 	}
 }
