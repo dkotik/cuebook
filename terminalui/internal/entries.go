@@ -12,6 +12,7 @@ import (
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/list"
+	"github.com/dkotik/cuebook/terminalui/markdown"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
@@ -75,7 +76,10 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		switch msg.Key().Code {
 		case tea.KeyEnter:
 			if l.selected <= 0 {
-				return l, updateMetadata(l.book.Document)
+				return l, func() tea.Msg {
+					return window.SwitchTo(markdown.New(string(l.book.Document.Metadata().Source)))
+				}
+				// return l, updateMetadata(l.book.Document)
 			}
 			return l, func() tea.Msg {
 				return tea.BatchMsg{
