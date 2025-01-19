@@ -41,6 +41,16 @@ func (p replacePatch) Invert() Patch {
 	}
 }
 
+func UpdateRange(source []byte, r ByteRange, replacement []byte) (Patch, error) {
+	return replacePatch{
+		Target: r.Anchor(source),
+		Replacement: ByteAnchor{
+			Content:              replacement,
+			PreceedingDuplicates: bytes.Count(source[:r.Head], replacement),
+		},
+	}, nil
+}
+
 func ReplaceStructListEntry(source []byte, value cue.Value, b []byte) (Patch, error) {
 	r, err := NewByteRange(value)
 	if err != nil {

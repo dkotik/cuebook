@@ -5,13 +5,17 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-func (m markdown) View() string {
-	background := "light"
+var background = "dark"
 
-	if lipgloss.HasDarkBackground() {
-		background = "dark"
+func init() {
+	// TODO: this made Markdown rendering slow
+	// ought to be moved into style package?
+	if !lipgloss.HasDarkBackground() {
+		background = "light"
 	}
+}
 
+func (m markdown) View() string {
 	r, _ := glamour.NewTermRenderer(
 		glamour.WithWordWrap(m.width),
 		glamour.WithStandardStyle(background),

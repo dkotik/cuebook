@@ -1,19 +1,21 @@
-package cuebook
+package metadata
 
 import (
 	"bytes"
 
+	"github.com/dkotik/cuebook/patch"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 )
 
-type Metadata struct {
+type Frontmatter struct {
+	ByteRange patch.ByteRange
 	ast.Node
 	Source []byte
 }
 
-func (m Metadata) Title() string {
+func (m Frontmatter) Title() string {
 	if m.Node != nil && m.Node.HasChildren() {
 		first := m.Node.FirstChild()
 		return string(first.Lines().Value(m.Source))
@@ -21,7 +23,7 @@ func (m Metadata) Title() string {
 	return ""
 }
 
-func (m Metadata) Description() string {
+func (m Frontmatter) Description() string {
 	if m.Node == nil {
 		return ""
 	}
@@ -43,20 +45,20 @@ func (m Metadata) Description() string {
 	return ""
 }
 
-func (m Metadata) Get(frontMatterFieldName string) any {
+func (m Frontmatter) Get(frontMatterFieldName string) any {
 	return m.Node.OwnerDocument().Meta()[frontMatterFieldName]
 	// value, _ := m.Node.OwnerDocument().Meta()[frontMatterFieldName]
 	// return value
 }
 
-func (d Document) Metadata() Metadata {
-	for _, comment := range d.Doc() {
-		source := []byte(comment.Text())
-		return Metadata{
-			Node:   goldmark.New().Parser().Parse(text.NewReader(source)),
-			Source: source,
-		}
-		// return comment.Text()
+func NewFrontmatter(source []byte) Frontmatter {
+	source, tail := ReadLeadingComments(source)
+	return Frontmatter{
+		ByteRange: patch.ByteRange{
+			Head: 0,
+			Tail: tail,
+		},
+		Node:   goldmark.New().Parser().Parse(text.NewReader(source)),
+		Source: source,
 	}
-	return Metadata{}
 }

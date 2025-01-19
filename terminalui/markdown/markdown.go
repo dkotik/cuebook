@@ -2,17 +2,16 @@ package markdown
 
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/terminalui/middleware"
 )
 
 func New(text string) tea.Model {
-	return middleware.NewCache(text).Wrap(markdown{text: text})
-	// return markdown{text: text}
+	return markdown{text: text}
 }
 
 type markdown struct {
 	width int
 	text  string
+	// renderer *glamour.TermRenderer
 }
 
 func (m markdown) Init() (tea.Model, tea.Cmd) {
@@ -22,6 +21,8 @@ func (m markdown) Init() (tea.Model, tea.Cmd) {
 
 func (m markdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	// case markdownRenderer:
+	// 	m.text = msg.Render(m.text)
 	case tea.WindowSizeMsg:
 		m.width = max(10, msg.Width-2)
 		// TODO: loading screen

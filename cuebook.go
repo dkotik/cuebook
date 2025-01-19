@@ -96,7 +96,7 @@ func (d Document) Len() (int, error) {
 func (d Document) LogValue() slog.Value {
 	length, _ := d.Len()
 	return slog.GroupValue(
-		slog.String("title", d.Metadata().Title()),
+		// slog.String("title", d.Metadata().Title()),
 		slog.Int("entries", length),
 	)
 }

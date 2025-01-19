@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/list"
@@ -76,7 +77,8 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		switch msg.Key().Code {
 		case tea.KeyEnter:
 			if l.selected <= 0 {
-				return l, displayMetadata(l.book.Document)
+				frontmatter := metadata.NewFrontmatter(l.book.Source)
+				return l, displayMetadata(l.book.Source, &frontmatter)
 			}
 			return l, func() tea.Msg {
 				return tea.BatchMsg{
@@ -155,7 +157,7 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 			SelectedIndex: selectionIndex,
 		}
 		title := list.Title{
-			Text:  r.Document.Metadata().Title(),
+			Text:  metadata.NewFrontmatter(r.Source).Title(),
 			Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		}
 		result.Cards = append(result.Cards, title)
