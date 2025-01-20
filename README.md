@@ -21,12 +21,13 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] remove `patch.Nothing` - the difference anchors have to flip
+- [ ] delete entry button
+- [ ] delete field button
 - [ ] add `@cuebook(title)` attribute support
 - [ ] add `@cuebook(details)` attribute support
 - [ ] add `@cuebook(multiline)` attribute support
 - [x] multiple delete and insert cycles leave whitespace artifacts
-- [ ] add Markdown metadata loading and editing
+- [x] add Markdown metadata loading and editing
 - [x] add editing history tracking
 - [ ] add copy-paste support
 - [x] saving should merge the state on disk with the state in memory
@@ -38,6 +39,6 @@ changes in data to other users and, most importantly, programs.
     - [x] count potential preceding duplicates
     - [x] locate the entry with identical byte content as the last change, taking duplicates into account
 - [ ] Add Datastat web user interface server.
-- [ ] Add `@cuebook(uuid)` attribute support that fills in random IDs for entities that do not have them
-- [ ] Add `@cuebook(argon2id)` attribute that hashes and salts input when saved
+- [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
+- [ ] Add `@cuebook(secret=argon2id)` attribute that hashes and salts input when saved
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute

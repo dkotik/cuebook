@@ -1,11 +1,53 @@
-// # Example File
+// # 1Example File
 // 
 // First comment is a description of the contents in Markdown format.
 // The first heading is the title of the document.
 // 
 // `cue export --out=yaml simple.cue`
 // 
-// more than anything 12123
+// more than anything
+// 23
+// 
+// 3223
+// 
+// ds f
+// sdf
+//  sdf sdf
+//  sd
+// f
+// 
+// sdf
+//  sdf
+//  sd
+// f 
+// sdf
+//  sd
+// 
+// sdf
+//  sad
+// f
+// 
+// 1. sdf \
+// 2. 2 sdfsdf sdf
+// 3. sdf sdf sdf
+// 4. ds sdfsdfsdf
+// 5. sdfsdf s
+// 
+// ## Another heading
+// 
+// --------------------------
+// 
+// and yet again
+// 
+// sdklf jk
+// 
+// 
+// -----------------------
+// 
+// sdklfj skdlfjs
+// lskd;lfksdf
+// 
+// **bold** perfect
 
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
@@ -17,7 +59,7 @@
 
 [...#contact] & [
 	{
-		Name:  "First12za"
+		Name:  "First"
 		Email: "test@testdomain.com"
 	},
 	{

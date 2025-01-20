@@ -64,6 +64,9 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return result
 		}
 	case patch.Result:
+		// if l.book.IsEqual(msg) {
+		// 	return l, nil
+		// }
 		l.book = msg
 		return l, LoadEntries(msg, l.selected)
 	case entryListCards:
@@ -77,8 +80,14 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		switch msg.Key().Code {
 		case tea.KeyEnter:
 			if l.selected <= 0 {
-				frontmatter := metadata.NewFrontmatter(l.book.Source)
-				return l, displayMetadata(l.book.Source, &frontmatter)
+				return l, tea.Sequence(
+					func() tea.Msg {
+						return window.SwitchTo(FrontMatterView{})
+					},
+					func() tea.Msg {
+						return l.book // to populate the frontmatter view
+					},
+				)
 			}
 			return l, func() tea.Msg {
 				return tea.BatchMsg{

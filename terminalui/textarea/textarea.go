@@ -57,7 +57,7 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 	m.textarea.Prompt = "  "
 	m.textarea.Placeholder = "..."
 	m.textarea.ShowLineNumbers = false
-	// ta.CharLimit = 280
+	m.textarea.CharLimit = 1 << 20 // 1mb
 	// ta.KeyMap.InsertNewline.SetEnabled(false)
 	// 	// Remove cursor line styling
 	// ta.Styles.Focused.CursorLine = lipgloss.NewStyle()
