@@ -39,15 +39,7 @@
 // 
 // and yet again
 // 
-// sdklf jk
-// 
-// 
-// -----------------------
-// 
-// sdklfj skdlfjs
-// lskd;lfksdf
-// 
-// **bold** perfect
+// sdklf jk12
 
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
@@ -59,8 +51,8 @@
 
 [...#contact] & [
 	{
-		Name:  "First"
-		Email: "test@testdomain.com"
+		Name:  "First1"
+		Email: "test1@testdomain.com"
 	},
 	{
 		Name: "Second sdk;lfjsdakj skfjlskdjksdjf;sdjf ksdjflk sdfnbsdjfhskjdhf sdjh kjsdh ljsdhksdhf kjlsdhf jhsd ::::::::::::::::::::::::: ::::::::"
@@ -132,7 +124,7 @@
 		Email: "someEmail@somehost.net"
 	},
 	{
-		Name:  "Someone1"
+		Name:  "Someone11111"
 		Email: "someEmail121212121212@somehost.net"
 	},
 ]

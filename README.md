@@ -23,6 +23,8 @@ changes in data to other users and, most importantly, programs.
 
 - [ ] delete entry button
 - [ ] delete field button
+- [ ] Ctrl+J and Ctrl+K entry reordering of entries
+- [ ] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] add `@cuebook(title)` attribute support
 - [ ] add `@cuebook(details)` attribute support
 - [ ] add `@cuebook(multiline)` attribute support
@@ -31,14 +33,12 @@ changes in data to other users and, most importantly, programs.
 - [x] add editing history tracking
 - [ ] add copy-paste support
 - [x] saving should merge the state on disk with the state in memory
-- [x] Ctrl+J and Ctrl+K entry reordering of entries
-- [x] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] responsive color scheme: lipgloss.HasDarkBackground() at initialization
 - [x] handle change of entry index due to modification of the file by other processes
     - [x] after patch, check if item at current index has the same byte signature as the last change
     - [x] count potential preceding duplicates
     - [x] locate the entry with identical byte content as the last change, taking duplicates into account
-- [ ] Add Datastat web user interface server.
+- [ ] Add Datastar web user interface server.
 - [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
 - [ ] Add `@cuebook(secret=argon2id)` attribute that hashes and salts input when saved
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute

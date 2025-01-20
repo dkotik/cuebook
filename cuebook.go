@@ -100,19 +100,3 @@ func (d Document) LogValue() slog.Value {
 		slog.Int("entries", length),
 	)
 }
-
-func GetByteSpanInSource(v cue.Value) (byteRange SourceByteRange) {
-	_, expressions := v.Expr()
-	for _, expression := range expressions {
-		if expression.IsConcrete() {
-			if source := expression.Source(); source != nil {
-				// found first concrete data definition
-				// with present source pointer
-				byteRange.BeginsAt = source.Pos().Offset()
-				byteRange.EndsAt = source.End().Offset()
-				break
-			}
-		}
-	}
-	return byteRange
-}

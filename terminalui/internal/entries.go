@@ -193,14 +193,14 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 				return err
 			}
 			if lastChange != nil {
-				at := cuebook.GetByteSpanInSource(entry.Value)
-				if !at.IsValid() {
-					continue // TODO: handle
+				at, err := patch.NewByteRange(entry.Value)
+				if err != nil {
+					return err
 				}
 				if lastChangePreceedingDuplicates < 0 {
 					lastChange = nil // stop tracking
 				}
-				if bytes.Equal(lastChange, r.Source[at.BeginsAt:at.EndsAt]) {
+				if bytes.Equal(lastChange, r.Source[at.Head:at.Tail]) {
 					result.SelectedIndex = index
 					lastChangePreceedingDuplicates--
 				}

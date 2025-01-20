@@ -1,11 +1,9 @@
 package cuebook
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"iter"
-	"unicode"
 
 	"cuelang.org/go/cue"
 )
@@ -91,51 +89,6 @@ func (e Entry) GetField(atIndex int) (f Field, err error) {
 		return f, errors.New("not found: index out of range") // TODO: model
 	}
 	return e.Details[atIndex], nil
-}
-
-func (e Entry) Delete(source []byte) (p SourcePatch, err error) {
-	p.SourceByteRange = GetByteSpanInSource(e.Value)
-	if !p.IsValid() {
-		return p, errors.New("invalid byte range") // TODO: model error
-	}
-	p.PrecedingDuplicates = bytes.Count(source[:p.BeginsAt], p.Original)
-
-	limit := min(len(source), p.EndsAt+1000)
-	for i := p.EndsAt; i < limit; i++ {
-		c := source[i]
-		if unicode.IsSpace(rune(c)) {
-			continue
-		}
-		if c == ',' { // found an ending comma
-			p.EndsAt = i + 1
-		}
-		for i, c = range source[p.EndsAt : limit+1] {
-			if c == '\n' {
-				p.EndsAt += i + 1
-				break
-			}
-			if unicode.IsSpace(rune(c)) {
-				continue
-			}
-			break
-		}
-		break
-	}
-
-	// TODO: test this
-	for i := p.BeginsAt; i >= max(0, p.BeginsAt-1000); i-- {
-		if !unicode.IsSpace(rune(source[i])) || source[i] == '\n' {
-			p.BeginsAt = i - 1 // chop line space before the entry
-			break
-		}
-		if source[i] == '\n' {
-			p.BeginsAt = i - 1 // chop line space before the entry
-			break
-		}
-	}
-
-	p.Original = source[p.BeginsAt:p.EndsAt]
-	return p, nil
 }
 
 func EachValue(value cue.Value) iter.Seq[cue.Value] {

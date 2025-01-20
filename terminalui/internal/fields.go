@@ -35,6 +35,7 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		l.selected = int(msg)
 		return l, nil
 	case patch.Result:
+		// if !l.state.IsEqual(msg) { }
 		l.state = msg
 		return l, nil
 	case cuebook.Entry:
@@ -47,43 +48,41 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize())
 	case tea.KeyMsg:
 		l.Model, cmd = l.Model.Update(msg)
-		if msg.Key().Code == tea.KeyEnter {
-			return l, func() tea.Msg {
-				field, err := l.entry.GetField(l.selected)
-				if err != nil {
-					return err
-				}
-				formWrapper, patchWrapper := NewPatchCloser("fieldPatch")
-				form, err := textarea.New(
-					textarea.WithLabel(field.Name),
-					textarea.WithValue(field.String()),
-					textarea.WithOnSubmitCommand(func(value string) tea.Cmd {
-						return func() tea.Msg {
-							p, err := patch.UpdateFieldValue(l.state.Source, l.entry.Value, field.Value, value)
-							if err != nil {
-								return err
-							}
-
-							// _, err = p.ApplyToCueSource(l.state.Source)
-							// if err != nil {
-							// 	panic(err)
-							// }
-							// panic(string(p.Difference().Content))
-
-							return patchWrapper(p)
-						}
-					}),
-				)
-				if err != nil {
-					return err
-				}
-				return window.SwitchTo(formWrapper(form))
-			}
+		switch msg.Key().Code {
+		case tea.KeyEnter:
+			return l, displayFieldForm(l.state.Source, l.entry, l.selected)
 		}
 		return l, NewListItemHighlightAdaptor[fieldHighlighted](cmd)
 	default:
 		l.Model, cmd = l.Model.Update(msg)
 		return l, cmd
+	}
+}
+
+func displayFieldForm(source []byte, entry cuebook.Entry, index int) tea.Cmd {
+	return func() tea.Msg {
+		field, err := entry.GetField(index)
+		if err != nil {
+			return err
+		}
+		formWrapper, patchWrapper := NewPatchCloser("fieldPatch")
+		form, err := textarea.New(
+			textarea.WithLabel(field.Name),
+			textarea.WithValue(field.String()),
+			textarea.WithOnSubmitCommand(func(value string) tea.Cmd {
+				return func() tea.Msg {
+					p, err := patch.UpdateFieldValue(source, entry.Value, field.Value, value)
+					if err != nil {
+						return err
+					}
+					return patchWrapper(p)
+				}
+			}),
+		)
+		if err != nil {
+			return err
+		}
+		return window.SwitchTo(formWrapper(form))
 	}
 }
 
