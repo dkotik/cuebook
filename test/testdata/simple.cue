@@ -39,7 +39,7 @@
 // 
 // and yet again
 // 
-// sdklf jk12
+// sdklf jk
 
 #email: =~"^[^@]+@[^@]+$"
 #contact: {

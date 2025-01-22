@@ -37,6 +37,11 @@ type Result struct {
 	Hash       uint64
 }
 
+func (r Result) Revision() string {
+	eb := big.NewInt(0).SetUint64(r.Hash)
+	return base64.RawURLEncoding.EncodeToString(eb.Bytes())
+}
+
 func (r Result) IsEqual(another Result) bool {
 	return r.Hash == another.Hash
 }
@@ -99,12 +104,13 @@ func Commit(
 	}
 	r.Hash = hash.Sum64()
 
+	ext := filepath.Ext(targetPath)
 	temp := filepath.Join(
 		swapPath,
-		temporaryName(
-			filepath.Base(targetPath),
-			r.Source,
-			r.Hash,
+		fmt.Sprintf(
+			"%s.%s.cue",
+			strings.TrimSuffix(filepath.Base(targetPath), ext),
+			r.Revision(),
 		),
 	)
 	// panic(temp)
@@ -113,15 +119,4 @@ func Commit(
 	}
 	r.LastChange = p
 	return r, os.Rename(temp, targetPath)
-}
-
-func temporaryName(name string, source []byte, hash uint64) string {
-	ext := filepath.Ext(name)
-	eb := big.NewInt(0).SetUint64(hash)
-	return fmt.Sprintf(
-		"%s.%s.cue",
-		strings.TrimSuffix(name, ext),
-		base64.RawURLEncoding.EncodeToString(eb.Bytes()),
-		// fnv.New32().Sum(source)[:8],
-	)
 }

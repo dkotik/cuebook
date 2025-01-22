@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/bubbles/v2/textarea"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/dkotik/cuebook/terminalui/status"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
@@ -20,7 +19,6 @@ type Textarea struct {
 	OnSubmit Command
 	// Required bool
 
-	status  tea.Model
 	saveKey key.Binding
 	// escapeKey key.Binding
 	textarea textarea.Model
@@ -66,18 +64,12 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 	lc := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
 	m.saveKey = window.NewSaveKey(lc)
 	// m.escapeKey = window.NewCancelKey(lc)
-	m.status = status.New(
-		window.NewSaveKey(lc),
-		window.NewCancelKey(lc),
-	)
 	return m, nil
 }
 
 func (t Textarea) Init() (tea.Model, tea.Cmd) {
-	var cmdInitStatus tea.Cmd
-	t.status, cmdInitStatus = t.status.Init()
 	t.textarea.Focus()
-	return t, tea.Batch(cmdInitStatus, tea.RequestWindowSize())
+	return t, tea.RequestWindowSize()
 }
 
 func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -90,9 +82,7 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return t, t.OnSubmit(t.textarea.Value())
 		}
 	}
-	var statusCmd, textareaCmd tea.Cmd
-
-	t.status, statusCmd = t.status.Update(msg)
+	var textareaCmd tea.Cmd
 	t.textarea, textareaCmd = t.textarea.Update(msg)
-	return t, tea.Batch(statusCmd, textareaCmd)
+	return t, textareaCmd
 }

@@ -13,6 +13,7 @@ import (
 	"golang.org/x/text/language"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/charmbracelet/lipgloss/v2"
 )
 
 func New(withOptions ...Option) (_ tea.Model, err error) {
@@ -22,6 +23,12 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 	for _, option := range append(
 		withOptions,
 		func(o *options) error { // validate options
+			if o.FlashMaximumHeight == 0 {
+				o.FlashMaximumHeight = 5
+			}
+			if o.FlashLingerDuration == 0 {
+				o.FlashLingerDuration = time.Second * 3
+			}
 			if len(o.stack) == 0 {
 				return errors.New("cannot create a window without any initial models")
 			}
@@ -35,12 +42,14 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 
 	lastModel := len(o.stack) - 1
 	return window{
-		commandContext: cmp.Or(o.commandContext, context.Background()),
-		current:        o.stack[lastModel],
-		stack:          o.stack[:lastModel],
-		watchers:       o.watchers,
-		lcBundle:       cmp.Or(o.lcBundle, i18n.NewBundle(language.AmericanEnglish)),
-		logger:         cmp.Or(o.logger, slog.Default()),
+		commandContext:      cmp.Or(o.commandContext, context.Background()),
+		current:             o.stack[lastModel],
+		stack:               o.stack[:lastModel],
+		watchers:            o.watchers,
+		FlashLingerDuration: o.FlashLingerDuration,
+		FlashMaximumHeight:  o.FlashMaximumHeight,
+		lcBundle:            cmp.Or(o.lcBundle, i18n.NewBundle(language.AmericanEnglish)),
+		logger:              cmp.Or(o.logger, slog.Default()),
 	}, nil
 }
 
@@ -49,8 +58,15 @@ type window struct {
 	current        tea.Model
 	stack          []tea.Model
 	watchers       []tea.Model
-	// size           tea.WindowSizeMsg
-	busy      uint8
+	size           tea.WindowSizeMsg
+	busy           uint8
+
+	FlashLingerDuration  time.Duration
+	FlashMaximumHeight   int
+	flashMessageStyles   map[FlashMessageKind]lipgloss.Style
+	flashMessageTemplate *flashMessageTemplate
+	flashMessage         *flashMessage
+
 	lcBundle  *i18n.Bundle
 	localizer *i18n.Localizer
 	logger    *slog.Logger
@@ -98,6 +114,8 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		// 	event.Propagate(w.localizer, w.stack),
 		// 	event.Propagate(w.localizer, w.watchers),
 		// )
+	case Translatable:
+		return w, msg.Translate(w.localizer)
 	case SwitchTo:
 		w.stack = append(w.stack, w.current)
 		var cmdInit tea.Cmd
@@ -129,11 +147,15 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 		switch msg.Key().Code {
 		case tea.KeyEscape:
+			if w.flashMessage != nil {
+				w.flashMessage = nil
+				return w, nil
+			}
 			return w.back()
 		}
 		// fallthrough
 		w.current, cmd = w.current.Update(msg)
-		return w, tea.Batch(
+		return w.ClearFlashMessageIfNeeded(), tea.Batch(
 			cmd,
 			event.Propagate(msg, w.watchers),
 		)
@@ -142,10 +164,29 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return w, nil // drop event if busy
 		}
 		w.current, cmd = w.current.Update(msg)
-		return w, tea.Batch(
+		return w.ClearFlashMessageIfNeeded(), tea.Batch(
 			cmd,
 			event.Propagate(msg, w.watchers),
 		)
+	case flashMessageClear:
+		w = w.ClearFlashMessageIfNeeded()
+		if w.flashMessage == nil {
+			return w, nil
+		}
+		// flash message was not yet ready to clear, so schedule another clearing attempt
+		return w, tea.Tick(time.Until(w.flashMessage.Expires)+time.Microsecond*100, func(_ time.Time) tea.Msg {
+			return flashMessageClear{}
+		})
+	case flashMessageTemplate:
+		w.flashMessageTemplate = &msg
+		return w, w.RenderFlashMessage(msg)
+	case flashMessage:
+		w.flashMessage = &msg
+		return w, tea.RequestWindowSize()
+	case tea.WindowSizeMsg:
+		if w.flashMessageTemplate != nil {
+			msg.Height = max(0, msg.Height-w.flashMessage.Height)
+		}
 	}
 	// w.logger.Info(fmt.Sprintf("%T", msg), slog.Any("payload", msg))
 	w.current, cmd = w.current.Update(msg)
@@ -154,8 +195,4 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		event.Propagate(msg, w.stack),
 		event.Propagate(msg, w.watchers),
 	)
-}
-
-func (w window) View() string {
-	return w.current.View()
 }

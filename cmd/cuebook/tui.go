@@ -27,11 +27,18 @@ func NewTerminalUI(ctx context.Context, filePath string) (tea.Model, error) {
 	logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	})
+	picker, err := file.New(
+		filePath,
+		file.WithAllowedFileExtensions(".cue"),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	return window.New(
 		window.WithCommandContext(ctx),
 		window.WithInitialModels(
-			event.NewDecorator(terminalui.ParseFileToBookAndCreateEntryListIfNeeded)(file.New(filePath))),
+			event.NewDecorator(terminalui.ParseFileToBookAndCreateEntryListIfNeeded)(picker)),
 		window.WithLogger(
 			slog.New(logger).With("component", "bubbletea")),
 		terminalui.WithStateEventTransformers(),

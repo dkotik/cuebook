@@ -3,20 +3,54 @@ package file
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
+	"github.com/charmbracelet/bubbles/v2/filepicker"
 	tea "github.com/charmbracelet/bubbletea/v2"
 )
 
+type Command func(filePath string) tea.Cmd
+
 type file struct {
-	Path string
+	filepicker.Model
+
+	OnSelect Command
+	Path     string
 }
 
-func New(p string) tea.Model {
-	return file{
-		Path: p,
+func New(p string, withOptions ...Option) (_ tea.Model, err error) {
+	o := &options{}
+	for _, option := range append(
+		withOptions,
+		func(o *options) error {
+			if len(o.AllowedExtensions) == 0 {
+				return errors.New("no file extensions provided")
+			}
+			// if o.OnSelect == nil {
+			// 	return errors.New("no selection command provided")
+			// }
+			return nil
+		},
+	) {
+		if err = option(o); err != nil {
+			return nil, fmt.Errorf("cannot create file browser: %w", err)
+		}
 	}
+	fp := filepicker.New()
+	fp.AllowedTypes = o.AllowedExtensions
+	fp.CurrentDirectory, _ = os.Getwd()
+	fp.AutoHeight = true
+	fp.DirAllowed = false
+	fp.FileAllowed = true
+	fp.ShowPermissions = false
+	fp.ShowSize = false
+	fp.ShowHidden = true
+	return file{
+		Model: fp,
+		Path:  p,
+	}, nil
 }
 
 func (f file) Load() (tea.Model, tea.Cmd) {
@@ -31,11 +65,12 @@ func (f file) Load() (tea.Model, tea.Cmd) {
 	}
 }
 
-func (f file) Init() (tea.Model, tea.Cmd) {
+func (f file) Init() (_ tea.Model, cmd tea.Cmd) {
+	f.Model, cmd = f.Model.Init()
 	if f.Path != "" {
-		return f.Load()
+		return f.Load() // TODO: skipping cmd!
 	}
-	return f, nil
+	return f, cmd
 }
 
 func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -70,9 +105,7 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return UpdateEvent(msg)
 		}
 	}
-	return f, nil
-}
-
-func (f file) View() string {
-	return "<file picker>" // TODO: implement
+	var cmd tea.Cmd
+	f.Model, cmd = f.Model.Update(msg)
+	return f, cmd
 }

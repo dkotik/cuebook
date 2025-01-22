@@ -61,7 +61,19 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if err != nil {
 				return err
 			}
-			return result
+			return tea.BatchMsg{
+				func() tea.Msg { return result },
+				window.NewFlashMessage(window.FlashMessageKindInfo, &i18n.LocalizeConfig{
+					DefaultMessage: &i18n.Message{
+						ID:    "CueSourceUpdated",
+						Other: "Changes saved to `{{ .FileName }}`, revision <{{ .Revision }}>.",
+					},
+					TemplateData: map[string]interface{}{
+						"FileName": "<...>",
+						"Revision": result.Revision(),
+					},
+				}),
+			}
 		}
 	case patch.Result:
 		// if l.book.IsEqual(msg) {

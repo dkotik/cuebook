@@ -11,15 +11,15 @@ import (
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
-func New(bindings ...key.Binding) tea.Model {
+func New() (_ tea.Model, err error) {
 	return model{
-		KeyBindings: bindings,
+		// KeyBindings: bindings,
 		Spinner: spinner.New(
 			spinner.WithSpinner(spinner.MiniDot),
 			spinner.WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("4"))),
 		),
 		Help: help.New(),
-	}
+	}, nil
 }
 
 type model struct {

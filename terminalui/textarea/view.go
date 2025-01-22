@@ -20,5 +20,5 @@ func (t Textarea) View() string {
 	// }
 	return lipgloss.JoinVertical(lipgloss.Left,
 		" "+t.Label+":",
-		ta, t.status.View())
+		ta)
 }

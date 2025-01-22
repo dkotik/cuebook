@@ -5,17 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 type options struct {
-	commandContext context.Context
-	stack          []tea.Model
-	watchers       []tea.Model
-	lcBundle       *i18n.Bundle
-	logger         *slog.Logger
+	commandContext      context.Context
+	stack               []tea.Model
+	watchers            []tea.Model
+	lcBundle            *i18n.Bundle
+	logger              *slog.Logger
+	FlashMaximumHeight  int
+	FlashLingerDuration time.Duration
 }
 
 type Option func(*options) error
@@ -80,6 +83,32 @@ func WithLogger(logger *slog.Logger) Option {
 			return errors.New("logger is already set")
 		}
 		o.logger = logger
+		return nil
+	}
+}
+
+func WithFlashMaximumHeight(h int) Option {
+	return func(o *options) error {
+		if h < 1 {
+			return errors.New("maximum height must be at least 1")
+		}
+		if o.FlashMaximumHeight != 0 {
+			return errors.New("maximum height is already set")
+		}
+		o.FlashMaximumHeight = h
+		return nil
+	}
+}
+
+func WithFlashMessageLingerDuration(d time.Duration) Option {
+	return func(o *options) error {
+		if d < time.Millisecond*50 {
+			return errors.New("linger duration must be at least 50ms")
+		}
+		if o.FlashLingerDuration != 0 {
+			return errors.New("linger duration is already set")
+		}
+		o.FlashLingerDuration = d
 		return nil
 	}
 }
