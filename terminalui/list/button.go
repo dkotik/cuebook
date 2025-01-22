@@ -3,30 +3,29 @@ package list
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-func NewButton(text *i18n.LocalizeConfig, commad tea.Cmd) tea.Model {
-	if text == nil {
-		panic("text is nil")
+func NewButton(text string, commad tea.Cmd) tea.Model {
+	if text == "" {
+		panic("text is empty")
 	}
-	temp := "..."
-	if text.DefaultMessage != nil {
-		temp = "`" + text.DefaultMessage.Other + "`"
-	}
+	// temp := "..."
+	// if text.DefaultMessage != nil {
+	// 	temp = "`" + text.DefaultMessage.Other + "`"
+	// }
 	return button{
-		Text:         temp,
-		Command:      commad,
-		TextTemplate: text,
+		Text:    text,
+		Command: commad,
+		// TextTemplate: text,
 	}
 }
 
 type button struct {
-	Text         string
-	TextTemplate *i18n.LocalizeConfig
-	Command      tea.Cmd
-	Width        int
-	Focused      bool
+	Text string
+	// TextTemplate *i18n.LocalizeConfig
+	Command tea.Cmd
+	Width   int
+	Focused bool
 }
 
 func (b button) Init() (tea.Model, tea.Cmd) {
@@ -35,13 +34,13 @@ func (b button) Init() (tea.Model, tea.Cmd) {
 
 func (b button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case *i18n.Localizer:
-		// panic("..")
-		text, err := msg.Localize(b.TextTemplate)
-		if err != nil {
-			return b, func() tea.Msg { return err }
-		}
-		b.Text = text
+	// case *i18n.Localizer:
+	// 	// panic("..")
+	// 	text, err := msg.Localize(b.TextTemplate)
+	// 	if err != nil {
+	// 		return b, func() tea.Msg { return err }
+	// 	}
+	// 	b.Text = text
 	case tea.WindowSizeMsg:
 		b.Width = msg.Width / 2
 	case HighlightHintEvent:

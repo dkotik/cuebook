@@ -223,15 +223,15 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 			)
 		}
 
-		result.Cards = append(result.Cards, list.NewButton(&i18n.LocalizeConfig{
-			DefaultMessage: &i18n.Message{
-				ID:    "bookEntryCreate",
-				Other: "Add entry",
-			},
-		}, func() tea.Msg {
-			// panic("add")
-			return nil
-		}))
+		// result.Cards = append(result.Cards, list.NewButton(&i18n.LocalizeConfig{
+		// 	DefaultMessage: &i18n.Message{
+		// 		ID:    "bookEntryCreate",
+		// 		Other: "Add entry",
+		// 	},
+		// }, func() tea.Msg {
+		// 	// panic("add")
+		// 	return nil
+		// }))
 		return result
 	}
 }

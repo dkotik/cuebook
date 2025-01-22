@@ -21,10 +21,10 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] delete entry button
-- [ ] delete field button
 - [ ] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
+- [x] delete entry button
+- [ ] delete field button
 - [ ] add `@cuebook(title)` attribute support
 - [ ] add `@cuebook(details)` attribute support
 - [ ] add `@cuebook(multiline)` attribute support

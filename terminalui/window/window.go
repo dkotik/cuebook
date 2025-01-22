@@ -184,11 +184,10 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		w.flashMessage = &msg
 		return w, tea.RequestWindowSize()
 	case tea.WindowSizeMsg:
-		if w.flashMessageTemplate != nil {
+		if w.flashMessage != nil {
 			msg.Height = max(0, msg.Height-w.flashMessage.Height)
 		}
 	}
-	// w.logger.Info(fmt.Sprintf("%T", msg), slog.Any("payload", msg))
 	w.current, cmd = w.current.Update(msg)
 	return w, tea.Batch(
 		cmd,

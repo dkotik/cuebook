@@ -51,7 +51,7 @@
 
 [...#contact] & [
 	{
-		Name:  "First1"
+		Name:  "First"
 		Email: "test1@testdomain.com"
 	},
 	{
@@ -119,12 +119,8 @@
 		Name:  " fjsld fjsld kfjsdl fjsdlk fjsl kfjsld f sdf  sdf kjslk jfsldk fjsdlk fjsdl fkjsdl fjsdlk fjsdl fkjslk fjsdl fkjsdlfkjsdl fkjsdlkfj 6"
 		Email: "test@testdomain.com"
 	},
-	{
-		Name:  "Someone"
+  {
+		Name:  "Someone1"
 		Email: "someEmail@somehost.net"
-	},
-	{
-		Name:  "Someone11111"
-		Email: "someEmail121212121212@somehost.net"
 	},
 ]

@@ -39,16 +39,21 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 
 		v.state = msg
 		return v, func() tea.Msg {
-			md := metadata.NewFrontmatter(msg.Source)
-			return frontMatterListItems{
-				markdown.New(string(md.Source)),
-				list.NewButton(&i18n.LocalizeConfig{
-					DefaultMessage: &i18n.Message{
-						ID:    "bookMetadataUpdateDescription",
-						Other: "Update description",
-					},
-				}, func() tea.Msg { return frontMatterUpdate{} }),
-			}
+			return window.TranslatableFunc(func(lc *i18n.Localizer) tea.Cmd {
+				return func() tea.Msg {
+					md := metadata.NewFrontmatter(msg.Source)
+					updateLabel := lc.MustLocalize(&i18n.LocalizeConfig{
+						DefaultMessage: &i18n.Message{
+							ID:    "bookMetadataUpdateDescription",
+							Other: "Update description",
+						},
+					})
+					return frontMatterListItems{
+						markdown.New(string(md.Source)),
+						list.NewButton(updateLabel, func() tea.Msg { return frontMatterUpdate{} }),
+					}
+				}
+			})
 		}
 	case frontMatterListItems:
 		v.Model, cmd = v.Model.Update(list.SetItems(msg...)())
