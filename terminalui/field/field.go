@@ -6,18 +6,20 @@ import (
 )
 
 type field struct {
-	Name  string
-	Value string
+	Name     string
+	Value    string
+	OnSelect tea.Cmd
 
 	labelWidth int
 	valueWidth int
 	selected   bool
 }
 
-func New(name, value string) tea.Model {
+func New(name, value string, onSelect tea.Cmd) tea.Model {
 	return &field{
-		Name:  name,
-		Value: value,
+		Name:     name,
+		Value:    value,
+		OnSelect: onSelect,
 	}
 }
 
@@ -32,6 +34,13 @@ func (f field) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		f.valueWidth = msg.Width - f.labelWidth
 	case list.HighlightHintEvent:
 		f.selected = bool(msg)
+	case tea.KeyMsg:
+		if f.selected {
+			switch msg.Key().Code {
+			case tea.KeyEnter:
+				return f, f.OnSelect
+			}
+		}
 	}
 	return f, nil
 }

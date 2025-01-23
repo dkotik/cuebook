@@ -17,6 +17,10 @@ import (
 type (
 	frontMatterListItems []tea.Model
 	frontMatterUpdate    struct{}
+
+	frontmatterPatch struct {
+		patch.Patch
+	}
 )
 
 type FrontMatterView struct {
@@ -33,6 +37,9 @@ func (v FrontMatterView) Init() (_ tea.Model, cmd tea.Cmd) {
 func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case patch.Result:
+		if _, ok := msg.LastChange.(frontmatterPatch); ok {
+			return v, func() tea.Msg { return window.BackEvent{} }
+		}
 		if v.state.IsEqual(msg) {
 			return v, nil
 		}
@@ -62,7 +69,6 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		source := v.state.Source
 		return v, func() tea.Msg {
 			md := metadata.NewFrontmatter(source)
-			formWrapper, patchWrapper := NewPatchCloser("metadataPatch")
 			form, err := textarea.New(
 				textarea.WithLabel("Description"),
 				textarea.WithValue(string(md.Source)),
@@ -79,14 +85,14 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 						if err != nil {
 							return err
 						}
-						return patchWrapper(p)
+						return frontmatterPatch{Patch: p}
 					}
 				}),
 			)
 			if err != nil {
 				return err
 			}
-			return window.SwitchTo(formWrapper(form))
+			return window.SwitchTo(form)
 		}
 	}
 	v.Model, cmd = v.Model.Update(msg)

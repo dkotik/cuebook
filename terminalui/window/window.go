@@ -42,10 +42,16 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 
 	lastModel := len(o.stack) - 1
 	return window{
-		commandContext:      cmp.Or(o.commandContext, context.Background()),
-		current:             o.stack[lastModel],
-		stack:               o.stack[:lastModel],
-		watchers:            o.watchers,
+		commandContext: cmp.Or(o.commandContext, context.Background()),
+		current:        o.stack[lastModel],
+		stack:          o.stack[:lastModel],
+		watchers:       o.watchers,
+		flashMessageStyles: map[FlashMessageKind]lipgloss.Style{
+			FlashMessageKindInfo:    lipgloss.NewStyle().Foreground(lipgloss.BrightCyan),
+			FlashMessageKindSuccess: lipgloss.NewStyle().Foreground(lipgloss.BrightGreen),
+			FlashMessageKindWarning: lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F1F")), // Neon Orange
+			FlashMessageKindError:   lipgloss.NewStyle().Foreground(lipgloss.BrightRed),
+		},
 		FlashLingerDuration: o.FlashLingerDuration,
 		FlashMaximumHeight:  o.FlashMaximumHeight,
 		lcBundle:            cmp.Or(o.lcBundle, i18n.NewBundle(language.AmericanEnglish)),

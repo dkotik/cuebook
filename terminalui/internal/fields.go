@@ -15,8 +15,14 @@ type (
 	fieldHighlighted int
 	fieldListCards   []tea.Model
 
-	fieldViewClosingPatch struct {
+	updateFieldPatch struct {
 		patch.Patch
+		Entry cuebook.Entry
+	}
+
+	deleteEntryPatch struct {
+		patch.Patch
+		Entry cuebook.Entry
 	}
 )
 
@@ -42,7 +48,10 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case patch.Result:
 		// if !l.state.IsEqual(msg) { }
 		l.state = msg
-		if _, ok := msg.LastChange.(fieldViewClosingPatch); ok {
+		if _, ok := msg.LastChange.(updateFieldPatch); ok {
+			return l, func() tea.Msg { return window.BackEvent{} }
+		}
+		if _, ok := msg.LastChange.(deleteEntryPatch); ok {
 			return l, func() tea.Msg { return window.BackEvent{} }
 		}
 		return l, nil
@@ -54,26 +63,14 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		var setCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg...)())
 		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize())
-	case tea.KeyMsg:
-		l.Model, cmd = l.Model.Update(msg)
-		switch msg.Key().Code {
-		case tea.KeyEnter:
-			return l, displayFieldForm(l.state.Source, l.entry, l.selected)
-		}
-		return l, NewListItemHighlightAdaptor[fieldHighlighted](cmd)
 	default:
 		l.Model, cmd = l.Model.Update(msg)
 		return l, cmd
 	}
 }
 
-func displayFieldForm(source []byte, entry cuebook.Entry, index int) tea.Cmd {
+func displayFieldForm(source []byte, entry cuebook.Entry, field cuebook.Field) tea.Cmd {
 	return func() tea.Msg {
-		field, err := entry.GetField(index)
-		if err != nil {
-			return err
-		}
-		formWrapper, patchWrapper := NewPatchCloser("fieldPatch")
 		form, err := textarea.New(
 			textarea.WithLabel(field.Name),
 			textarea.WithValue(field.String()),
@@ -83,14 +80,17 @@ func displayFieldForm(source []byte, entry cuebook.Entry, index int) tea.Cmd {
 					if err != nil {
 						return err
 					}
-					return patchWrapper(p)
+					return updateFieldPatch{
+						Patch: p,
+						Entry: entry,
+					}
 				}
 			}),
 		)
 		if err != nil {
 			return err
 		}
-		return window.SwitchTo(formWrapper(form))
+		return window.SwitchTo(form)
 	}
 }
 
@@ -103,10 +103,10 @@ func LoadFields(source []byte, entry cuebook.Entry) tea.Cmd {
 			// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 			// })
 			for _, f := range entry.Fields {
-				fields = append(fields, field.New(f.Name, f.String()))
+				fields = append(fields, field.New(f.Name, f.String(), displayFieldForm(source, entry, f)))
 			}
 			for _, f := range entry.Details {
-				fields = append(fields, field.New(f.Name, f.String()))
+				fields = append(fields, field.New(f.Name, f.String(), displayFieldForm(source, entry, f)))
 			}
 			rmLabel := lc.MustLocalize(&i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{
@@ -121,7 +121,10 @@ func LoadFields(source []byte, entry cuebook.Entry) tea.Cmd {
 					if err != nil {
 						return err
 					}
-					return fieldViewClosingPatch{Patch: p}
+					return deleteEntryPatch{
+						Patch: p,
+						Entry: entry,
+					}
 				})))
 			}
 		})

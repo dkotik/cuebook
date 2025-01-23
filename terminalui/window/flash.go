@@ -28,7 +28,7 @@ func (w window) ClearFlashMessageIfNeeded() window {
 func (w window) RenderFlashMessage(t flashMessageTemplate) tea.Cmd {
 	style, ok := w.flashMessageStyles[t.Kind]
 	if !ok {
-		style = lipgloss.NewStyle().Foreground(lipgloss.BrightRed)
+		style = w.flashMessageStyles[FlashMessageKindError]
 	}
 	style = style.Width(max(0, w.size.Width-2))
 	expires := time.Now().Add(w.FlashLingerDuration)
