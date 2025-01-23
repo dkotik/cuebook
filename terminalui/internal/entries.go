@@ -61,6 +61,22 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return result
 		}
 	case patch.Result:
+		switch p := msg.LastChange.(type) {
+		case swapEntryPatch:
+			target, err := p.Difference().Match(msg.Source)
+			if err == nil {
+				i := 0
+				for entry := range msg.Document.EachValue() {
+					i++
+					r, err := patch.NewByteRange(entry)
+					if err == nil && r == target {
+						l.selected = i
+						break
+					}
+				}
+			}
+		}
+
 		// if l.book.IsEqual(msg) {
 		// 	return l, nil
 		// }
@@ -72,7 +88,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		var setCmd, updateCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg.Cards...)())
 		l.Model, updateCmd = l.Model.Update(list.ApplySelection(l.selected)())
-		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize(), updateCmd)
+		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize(), updateCmd, l.LoadEntry(msg.SelectedIndex))
 	case entrySelected:
 		// l.selected = int(msg) + 1
 		return l, tea.Sequence(
@@ -81,6 +97,26 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			},
 			l.LoadEntry(int(msg)),
 		)
+	case list.SwapOrderEvent:
+		return l, func() tea.Msg {
+			a, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1))))
+			if err != nil {
+				return err
+			}
+			b, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.DesiredIndex - 1))))
+			if err != nil {
+				return err
+			}
+			p, err := patch.SwapEntries(l.book.Source, a.Value, b.Value)
+			if err != nil {
+				return err
+			}
+			// target, err := patch.NewByteRange(a.Value)
+			// if err != nil {
+			// 	return err
+			// }
+			return swapEntryPatch{Patch: p}
+		}
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case 'x':
@@ -187,7 +223,6 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 			lastChangePreceedingDuplicates = diff.PreceedingDuplicates
 		}
 		for entry, err := range r.Document.EachEntry() {
-			index++
 			if err != nil {
 				return err
 			}
@@ -208,9 +243,10 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 				result.Cards,
 				Entry{
 					Model: card.New(entry.GetTitle(), entry.GetDescription()...),
-					Index: index - 1,
+					Index: index,
 				},
 			)
+			index++
 		}
 		return result
 	}

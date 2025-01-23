@@ -20,6 +20,11 @@ type (
 		Entry cuebook.Entry
 	}
 
+	swapEntryPatch struct {
+		patch.Patch
+		// Target patch.ByteAnchor
+	}
+
 	deleteEntryPatch struct {
 		patch.Patch
 		Entry cuebook.Entry

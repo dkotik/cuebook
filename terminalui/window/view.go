@@ -11,7 +11,7 @@ func (w window) View() string {
 		w.current.View(),
 		lipgloss.JoinHorizontal( // TODO: take FlashMaximumHeight into account
 			lipgloss.Top,
-			w.flashMessage.Prefix+" ",
+			" "+w.flashMessage.Prefix+" ",
 			w.flashMessage.Lines,
 		),
 	)

@@ -153,10 +153,10 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 		switch msg.Key().Code {
 		case tea.KeyEscape:
-			if w.flashMessage != nil {
-				w.flashMessage = nil
-				return w, nil
-			}
+			// if w.flashMessage != nil {
+			// 	w.flashMessage = nil
+			// 	return w, nil
+			// }
 			return w.back()
 		}
 		// fallthrough
