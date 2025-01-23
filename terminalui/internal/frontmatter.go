@@ -18,7 +18,7 @@ type (
 	frontMatterListItems []tea.Model
 	frontMatterUpdate    struct{}
 
-	frontmatterPatch struct {
+	frontMatterPatch struct {
 		patch.Patch
 	}
 )
@@ -37,31 +37,34 @@ func (v FrontMatterView) Init() (_ tea.Model, cmd tea.Cmd) {
 func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case patch.Result:
-		if _, ok := msg.LastChange.(frontmatterPatch); ok {
-			return v, func() tea.Msg { return window.BackEvent{} }
-		}
 		if v.state.IsEqual(msg) {
 			return v, nil
 		}
-
 		v.state = msg
-		return v, func() tea.Msg {
-			return window.TranslatableFunc(func(lc *i18n.Localizer) tea.Cmd {
-				return func() tea.Msg {
-					md := metadata.NewFrontmatter(msg.Source)
-					updateLabel := lc.MustLocalize(&i18n.LocalizeConfig{
-						DefaultMessage: &i18n.Message{
-							ID:    "bookMetadataUpdateDescription",
-							Other: "Update description",
-						},
-					})
-					return frontMatterListItems{
-						markdown.New(string(md.Source)),
-						list.NewButton(updateLabel, func() tea.Msg { return frontMatterUpdate{} }),
-					}
-				}
-			})
+		if _, ok := msg.LastChange.(frontMatterPatch); ok {
+			cmd = func() tea.Msg { return window.BackEvent{} }
 		}
+
+		return v, tea.Batch(
+			cmd, // nil or flip back if recognized as frontMatterPatch
+			func() tea.Msg {
+				return window.TranslatableFunc(func(lc *i18n.Localizer) tea.Cmd {
+					return func() tea.Msg {
+						md := metadata.NewFrontmatter(msg.Source)
+						updateLabel := lc.MustLocalize(&i18n.LocalizeConfig{
+							DefaultMessage: &i18n.Message{
+								ID:    "bookMetadataUpdateDescription",
+								Other: "Update description",
+							},
+						})
+						return frontMatterListItems{
+							markdown.New(string(md.Source)),
+							list.NewButton(updateLabel, func() tea.Msg { return frontMatterUpdate{} }),
+						}
+					}
+				})
+			},
+		)
 	case frontMatterListItems:
 		v.Model, cmd = v.Model.Update(list.SetItems(msg...)())
 		return v, cmd
@@ -85,7 +88,7 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 						if err != nil {
 							return err
 						}
-						return frontmatterPatch{Patch: p}
+						return frontMatterPatch{Patch: p}
 					}
 				}),
 			)

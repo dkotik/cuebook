@@ -35,9 +35,8 @@ type FieldList struct {
 }
 
 func (l FieldList) Init() (_ tea.Model, cmd tea.Cmd) {
-	l.Model = list.New()
-	// l.selected = -1
-	return l, nil
+	l.Model, cmd = list.New().Init()
+	return l, cmd
 }
 
 func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {

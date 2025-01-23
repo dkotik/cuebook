@@ -12,6 +12,7 @@ import (
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/card"
+	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
@@ -36,12 +37,9 @@ type entryListCards struct {
 	SelectedIndex int
 }
 
-func (l EntryList) LoadSelectedEntry() tea.Cmd {
-	if l.selected <= 0 {
-		return nil
-	}
+func (l EntryList) LoadEntry(index int) tea.Cmd {
 	return func() tea.Msg {
-		entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(l.selected - 1))))
+		entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(index))))
 		if err != nil {
 			return err // TODO: fails on empty list?
 		}
@@ -74,30 +72,17 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		var setCmd, updateCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg.Cards...)())
 		l.Model, updateCmd = l.Model.Update(list.ApplySelection(l.selected)())
-		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize(), updateCmd, l.LoadSelectedEntry())
+		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize(), updateCmd)
+	case entrySelected:
+		// l.selected = int(msg) + 1
+		return l, tea.Sequence(
+			func() tea.Msg {
+				return window.SwitchTo(FieldList{state: l.book})
+			},
+			l.LoadEntry(int(msg)),
+		)
 	case tea.KeyMsg:
 		switch msg.Key().Code {
-		case tea.KeyEnter:
-			if l.selected <= 0 {
-				return l, tea.Sequence(
-					func() tea.Msg {
-						return window.SwitchTo(FrontMatterView{})
-					},
-					func() tea.Msg {
-						return l.book // to populate the frontmatter view
-					},
-				)
-			}
-			return l, func() tea.Msg {
-				return tea.BatchMsg{
-					tea.Sequence(
-						func() tea.Msg {
-							return window.SwitchTo(FieldList{state: l.book})
-						},
-						l.LoadSelectedEntry(),
-					),
-				}
-			}
 		case 'x':
 			if msg.Key().Mod != tea.ModCtrl {
 				break
@@ -145,7 +130,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			}
 		}
 		l.Model, cmd = l.Model.Update(msg)
-		return l, NewListItemHighlightAdaptor[entryHighlighted](cmd)
+		return l, cmd
 	}
 	l.Model, cmd = l.Model.Update(msg)
 	return l, cmd
@@ -164,10 +149,25 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 			Cards:         make([]tea.Model, 0, total+2),
 			SelectedIndex: selectionIndex,
 		}
-		title := list.Title{
+
+		title := event.NewAdaptor[tea.KeyMsg](func(m tea.Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+			switch msg.Key().Code {
+			case tea.KeyEnter:
+				return m, tea.Sequence(
+					func() tea.Msg {
+						return window.SwitchTo(FrontMatterView{})
+					},
+					func() tea.Msg {
+						return r // to populate the frontmatter view
+					},
+				)
+			default:
+				return m, nil
+			}
+		})(list.Title{
 			Text:  metadata.NewFrontmatter(r.Source).Title(),
 			Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
-		}
+		})
 		result.Cards = append(result.Cards, title)
 
 		var (
@@ -206,19 +206,12 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 			}
 			result.Cards = append(
 				result.Cards,
-				card.New(entry.GetTitle(), entry.GetDescription()...),
+				Entry{
+					Model: card.New(entry.GetTitle(), entry.GetDescription()...),
+					Index: index - 1,
+				},
 			)
 		}
-
-		// result.Cards = append(result.Cards, list.NewButton(&i18n.LocalizeConfig{
-		// 	DefaultMessage: &i18n.Message{
-		// 		ID:    "bookEntryCreate",
-		// 		Other: "Add entry",
-		// 	},
-		// }, func() tea.Msg {
-		// 	// panic("add")
-		// 	return nil
-		// }))
 		return result
 	}
 }

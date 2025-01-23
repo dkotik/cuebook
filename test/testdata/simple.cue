@@ -39,7 +39,7 @@
 // 
 // and yet again
 // 
-// sdklf jk
+// sdklf jkzxxc
 
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
@@ -120,10 +120,6 @@
 		Email: "test@testdomain.com"
 	},
   {
-		Name:  "Someone1"
-		Email: "someEmail1@somehost.net"
-	},
-  {
 		Name:  "Someone"
 		Email: "someEmail@somehost.net"
 	},
@@ -136,7 +132,7 @@
 		Email: "someEmail@somehost.net"
 	},
   {
-		Name:  "Someone1221121221"
+		Name:  "Someone"
 		Email: "someEmail@somehost.net"
 	}
 ]
