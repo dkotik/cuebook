@@ -42,3 +42,15 @@ changes in data to other users and, most importantly, programs.
 - [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
 - [ ] Add `@cuebook(secret=argon2id)` attribute that hashes and salts input when saved
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute
+- [ ] turn replace patch into insert patch, if the original entry disappeared, but not without letting the user choose
+
+## Entry Latching
+
+Cuebook assumes that the file may be modified by another process while the user is typing. The original entry may change the location in file or disappear altogether. To apply changes, the program latches on the exact bytes of the entry and looks for them in file before applying the difference. Latching compensates for possible duplicate entries by counting them, and apply the changes to the last one.
+
+Since the process can occasionally apply modification to the wrong entry, in the presence of duplicates, it is best to populate each entry with a unique identifier. To accomplish this, add one of the following tags to an entry field you desire to use for identifier:
+
+- @cuebook(default=UUID,detail)
+- @cuebook(default=SFID?node=0&encoding=base58,detail) for shorter [Snow Flake ID](https://en.wikipedia.org/wiki/Snowflake_ID). If a default Cue value is also present (marked with \*), it is used as prefix for the generated identifier. Default Snow Flake node is `0`, and default encoding is `base58`.
+
+When that field is edited and it is empty, the initial value will be populated with generated identifier. `detail` tag conceals the ID from the entry list and display it only when the entry is selected.
