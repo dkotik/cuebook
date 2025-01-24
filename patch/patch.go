@@ -15,6 +15,7 @@ import (
 	"hash/fnv"
 	"io"
 	"iter"
+	"log/slog"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -74,6 +75,13 @@ func (r Result) BottomChangeIndex(since Result) (i int) {
 		}
 	}
 	return -1
+}
+
+func (r Result) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("revision", r.Revision()),
+		slog.Any("patch", r.LastChange),
+	)
 }
 
 // Commit applies a [Patch] to fresh contents of the source file after validating the changes.

@@ -2,7 +2,7 @@
 
 Terminal editor for lists of structured entries in [Cuelang](https://cuelang.org/) format.
 
-Plain text is a resilient and versatile file format. [Cuelang](https://cuelang.org/) makes text files consumable by programs
+Plain text is a resilient and versatile file format. Cuelang makes text files consumable by programs
 by including intuitive and flexible structure and validation definitions in the same file as the data being stored. In effect,
 it centralizes authority over data consistency in the best possible place, together with the data itself. Consequently, the data
 becomes an execution context with contractual enforcement that can be shared reliably by different people and programs.
@@ -21,6 +21,7 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
+- [ ] display and translate errors
 - [ ] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] add/delete entry button
@@ -28,7 +29,6 @@ changes in data to other users and, most importantly, programs.
 - [x] add `@cuebook(title)` attribute support
 - [x] add `@cuebook(details)` attribute support
 - [ ] add `@cuebook(multiline)` attribute support
-- [x] multiple delete and insert cycles leave whitespace artifacts
 - [x] add Markdown metadata loading and editing
 - [x] add editing history tracking
 - [ ] add copy-paste support
@@ -50,7 +50,7 @@ Cuebook assumes that the file may be modified by another process while the user 
 
 Since the process can occasionally apply modification to the wrong entry, in the presence of duplicates, it is best to populate each entry with a unique identifier. To accomplish this, add one of the following tags to an entry field you desire to use for identifier:
 
-- @cuebook(default=UUID,detail)
-- @cuebook(default=SFID?node=0&encoding=base58,detail) for shorter [Snow Flake ID](https://en.wikipedia.org/wiki/Snowflake_ID). If a default Cue value is also present (marked with \*), it is used as prefix for the generated identifier. Default Snow Flake node is `0`, and default encoding is `base58`.
+- `@cuebook(default=UUID,detail)`
+- `@cuebook(default=SFID?node=0&encoding=base58,detail)` for shorter [Snow Flake ID](https://en.wikipedia.org/wiki/Snowflake_ID). If a default Cue value is also present (marked with \*), it is used as prefix for the generated identifier. The default Snow Flake node is `0` (up to 1023 maximum by specification), and the default encoding is `base58`.
 
 When that field is edited and it is empty, the initial value will be populated with generated identifier. `detail` tag conceals the ID from the entry list and display it only when the entry is selected.

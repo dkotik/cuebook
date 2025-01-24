@@ -2,6 +2,7 @@ package patch
 
 import (
 	"bytes"
+	"log/slog"
 
 	"cuelang.org/go/cue"
 )
@@ -73,4 +74,11 @@ func (a ByteAnchor) Match(source []byte) (r ByteRange, err error) {
 		r.Tail = r.Head + length
 	}
 	return r, nil
+}
+
+func (a ByteAnchor) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("content", string(a.Content)),
+		slog.Int("preceedingDuplicates", a.PreceedingDuplicates),
+	)
 }

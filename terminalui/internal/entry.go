@@ -35,6 +35,10 @@ func (e Entry) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		// 		break
 		// 	}
 		// 	return e, func() tea.Msg { return entrySwap{SelectedIndex: e.Index, TargetIndex: e.Index + 1} }
+		case 'c':
+			if msg.Key().Mod.Contains(tea.ModCtrl) {
+				return e, tea.SetClipboard("test123")
+			}
 		case tea.KeyEnter:
 			return e, func() tea.Msg { return entrySelected(e.Index) }
 		}

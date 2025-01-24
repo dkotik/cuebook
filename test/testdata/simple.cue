@@ -51,7 +51,7 @@
 
 [...#contact] & [
 	{
-		Name:  "First11"
+		Name:  "First"
 		Email: "test1@testdomain.com"
 	},
 	{
@@ -128,11 +128,11 @@
 		Email: "test@testdomain.com"
 	},
 	{
-		Name:  "Someone"
+		Name:  "Someone1344"
 		Email: "someEmail@somehost.net"
 	},
   {
 		Name:  "Someone"
 		Email: "someEmail@somehost.net"
-	},
+	}
 ]

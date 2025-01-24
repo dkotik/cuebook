@@ -3,6 +3,7 @@ package textarea
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/textarea"
@@ -85,4 +86,11 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var textareaCmd tea.Cmd
 	t.textarea, textareaCmd = t.textarea.Update(msg)
 	return t, textareaCmd
+}
+
+func (t Textarea)  LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("label", t.Label),
+		slog.String("value", t.textarea.Value()),
+	)
 }
