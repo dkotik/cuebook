@@ -19,6 +19,7 @@ func (f flashAnnouncer) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case patch.Result:
 		switch patch := msg.LastChange.(type) {
+		// TODO: handle other patch types: swapEntriesPatch, swapFieldsPatch
 		case updateFieldPatch:
 			return f, window.NewFlashMessage(window.FlashMessageKindSuccess, &i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{

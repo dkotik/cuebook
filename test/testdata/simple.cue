@@ -1,63 +1,63 @@
 // # 1Example File
-// 
+//
 // First comment is a description of the contents in Markdown format.
 // The first heading is the title of the document.
-// 
+//
 // `cue export --out=yaml simple.cue`
-// 
+//
 // more than anything
 // 23
-// 
+//
 // 3223
-// 
+//
 // ds f
 // sdf
 //  sdf sdf
 //  sd
 // f
-// 
+//
 // sdf
 //  sdf
 //  sd
-// f 
+// f
 // sdf
 //  sd
-// 
+//
 // sdf
 //  sad
 // f
-// 
+//
 // 1. sdf \
 // 2. 2 sdfsdf sdf
 // 3. sdf sdf sdf
 // 4. ds sdfsdfsdf
 // 5. sdfsdf s
-// 
+//
 // ## Another heading
-// 
+//
 // --------------------------
-// 
+//
 // and yet again
-// 
+//
 // sdklf jkzxxc
 
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
-	Name: string
+	Name: string @cuebook(title)
 	Email: #email | [...#email]
-	Notes?: string
+	Notes?: string @cuebook(detail)
 	... // allow any additional fields
 }
 
 [...#contact] & [
 	{
-		Name:  "First"
+		Name:  "First11"
 		Email: "test1@testdomain.com"
 	},
 	{
 		Name: "Second sdk;lfjsdakj skfjlskdjksdjf;sdjf ksdjflk sdfnbsdjfhskjdhf sdjh kjsdh ljsdhksdhf kjlsdhf jhsd ::::::::::::::::::::::::: ::::::::"
 		Email: ["test@testdomain.com", "another@sdfklsdjf.com"]
-		Notess: """
+		Notes: """
 			sdfksjdflk
 			sfsdfsdfasjdflksjdf
 			sdfsdf
@@ -112,6 +112,10 @@
 		Notes: "sf jsdlfjk sdf sdf kjdsl fjsdlk fjsdlkf jdslkfj sl ksdlfksjdfl ksdjlf jasdklf jsldf jsdlf jsdlkfjlds jflsdjflksjdflkj slfjslfk jdslkf jsdlfjlsfjlksfj lsdjf lksdjf lksjdfl ksdjflk 111"
 	},
 	{
+		Name:  " fjsld fjsld kfjsdl fjsdlk fjsl kfjsld f sdf  sdf kjslk jfsldk fjsdlk fjsdl fkjsdl fjsdlk fjsdl fkjslk fjsdl fkjsdlfkjsdl fkjsdlkfj 6"
+		Email: "test@testdomain.com"
+	},
+	{
 		Name:  "Nine is great 99999999999999999999"
 		Email: "test@testdomain.com"
 	},
@@ -119,11 +123,11 @@
 		Name:  "Someone1236"
 		Email: "someEmail@somehost.net"
 	},
-  {
+	{
 		Name:  "11aaaaaz"
 		Email: "test@testdomain.com"
 	},
-  {
+	{
 		Name:  "Someone"
 		Email: "someEmail@somehost.net"
 	},
@@ -131,8 +135,4 @@
 		Name:  "Someone"
 		Email: "someEmail@somehost.net"
 	},
-  {
-		Name:  " fjsld fjsld kfjsdl fjsdlk fjsl kfjsld f sdf  sdf kjslk jfsldk fjsdlk fjsdl fkjsdl fjsdlk fjsdl fkjslk fjsdl fkjsdlfkjsdl fkjsdlkfj 6"
-		Email: "test@testdomain.com"
-	}
 ]

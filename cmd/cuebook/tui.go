@@ -13,7 +13,7 @@ import (
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
-func NewTerminalUI(ctx context.Context, filePath string) (tea.Model, error) {
+func NewTerminalUI(ctx context.Context) (tea.Model, error) {
 	logFile, err := os.OpenFile("test/testdata/debug.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 	if err != nil {
 		return nil, err
@@ -27,10 +27,7 @@ func NewTerminalUI(ctx context.Context, filePath string) (tea.Model, error) {
 	logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	})
-	picker, err := file.New(
-		filePath,
-		file.WithAllowedFileExtensions(".cue"),
-	)
+	picker, err := file.New(file.WithAllowedFileExtensions(".cue"))
 	if err != nil {
 		return nil, err
 	}

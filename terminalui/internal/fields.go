@@ -20,9 +20,13 @@ type (
 		Entry cuebook.Entry
 	}
 
-	swapEntryPatch struct {
+	swapEntriesPatch struct {
 		patch.Patch
 		// Target patch.ByteAnchor
+	}
+
+	swapFieldsPatch struct {
+		patch.Patch
 	}
 
 	deleteEntryPatch struct {
@@ -67,6 +71,22 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		var setCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg...)())
 		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize())
+	case list.SwapOrderEvent:
+		return l, func() tea.Msg {
+			a, err := l.entry.GetField(msg.CurrentIndex)
+			if err != nil {
+				return err
+			}
+			b, err := l.entry.GetField(msg.DesiredIndex)
+			if err != nil {
+				return err
+			}
+			p, err := patch.SwapEntries(l.state.Source, a.Value, b.Value)
+			if err != nil {
+				return err
+			}
+			return swapFieldsPatch{Patch: p}
+		}
 	default:
 		l.Model, cmd = l.Model.Update(msg)
 		return l, cmd

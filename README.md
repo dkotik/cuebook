@@ -23,10 +23,10 @@ changes in data to other users and, most importantly, programs.
 
 - [ ] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
-- [x] delete entry button
-- [ ] delete field button
-- [ ] add `@cuebook(title)` attribute support
-- [ ] add `@cuebook(details)` attribute support
+- [ ] add/delete entry button
+- [ ] add/delete field button
+- [x] add `@cuebook(title)` attribute support
+- [x] add `@cuebook(details)` attribute support
 - [ ] add `@cuebook(multiline)` attribute support
 - [x] multiple delete and insert cycles leave whitespace artifacts
 - [x] add Markdown metadata loading and editing

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/urfave/cli/v3"
 )
 
@@ -13,17 +14,22 @@ func main() {
 		Name:  "cuebook",
 		Usage: "edit lists of structured data items",
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			ui, err := NewTerminalUI(ctx, "test/testdata/simple.cue")
+			ui, err := NewTerminalUI(ctx)
 			if err != nil {
 				return err
 			}
 
-			_, err = tea.NewProgram(
+			p := tea.NewProgram(
 				ui,
 				tea.WithContext(ctx),
 				tea.WithAltScreen(),
 				tea.WithMouseCellMotion(),
-			).Run()
+			)
+			go func() {
+				p.Send(file.LoadEvent("test/testdata/simple.cue"))
+			}()
+			_, err = p.Run()
+
 			return err
 		},
 	}

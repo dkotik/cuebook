@@ -84,7 +84,10 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 							_, _ = b.WriteRune('\n')
 						}
 						_, _ = b.WriteRune('\n') // skip a line after comments
-						p, err := patch.UpdateRange(source, md.ByteRange, b.Bytes())
+						p, err := patch.UpdateRange(source, patch.ByteRange{
+							Head: 0,
+							Tail: md.TailBytePosition,
+						}, b.Bytes())
 						if err != nil {
 							return err
 						}

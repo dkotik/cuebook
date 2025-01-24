@@ -3,16 +3,15 @@ package metadata
 import (
 	"bytes"
 
-	"github.com/dkotik/cuebook/patch"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 )
 
 type Frontmatter struct {
-	ByteRange patch.ByteRange
 	ast.Node
-	Source []byte
+	Source           []byte
+	TailBytePosition int
 }
 
 func (m Frontmatter) Title() string {
@@ -54,11 +53,8 @@ func (m Frontmatter) Get(frontMatterFieldName string) any {
 func NewFrontmatter(source []byte) Frontmatter {
 	source, tail := ReadLeadingComments(source)
 	return Frontmatter{
-		ByteRange: patch.ByteRange{
-			Head: 0,
-			Tail: tail,
-		},
-		Node:   goldmark.New().Parser().Parse(text.NewReader(source)),
-		Source: source,
+		Node:             goldmark.New().Parser().Parse(text.NewReader(source)),
+		Source:           source,
+		TailBytePosition: tail,
 	}
 }

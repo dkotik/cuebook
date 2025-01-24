@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"cmp"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
@@ -15,6 +16,11 @@ import (
 	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
+)
+
+const (
+	booleanTrue            = "✓"
+	informationUnavailable = " ⃠"
 )
 
 type entryHighlighted int
@@ -62,7 +68,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 	case patch.Result:
 		switch p := msg.LastChange.(type) {
-		case swapEntryPatch:
+		case swapEntriesPatch:
 			target, err := p.Difference().Match(msg.Source)
 			if err == nil {
 				i := 0
@@ -115,7 +121,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			// if err != nil {
 			// 	return err
 			// }
-			return swapEntryPatch{Patch: p}
+			return swapEntriesPatch{Patch: p}
 		}
 	case tea.KeyMsg:
 		switch msg.Key().Code {
@@ -201,7 +207,7 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 				return m, nil
 			}
 		})(list.Title{
-			Text:  metadata.NewFrontmatter(r.Source).Title(),
+			Text:  cmp.Or(metadata.NewFrontmatter(r.Source).Title(), informationUnavailable),
 			Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		})
 		result.Cards = append(result.Cards, title)

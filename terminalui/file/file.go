@@ -17,10 +17,10 @@ type file struct {
 	filepicker.Model
 
 	OnSelect Command
-	Path     string
+	// Path     string
 }
 
-func New(p string, withOptions ...Option) (_ tea.Model, err error) {
+func New(withOptions ...Option) (_ tea.Model, err error) {
 	o := &options{}
 	for _, option := range append(
 		withOptions,
@@ -28,9 +28,13 @@ func New(p string, withOptions ...Option) (_ tea.Model, err error) {
 			if len(o.AllowedExtensions) == 0 {
 				return errors.New("no file extensions provided")
 			}
-			// if o.OnSelect == nil {
-			// 	return errors.New("no selection command provided")
-			// }
+			if o.OnSelect == nil {
+				o.OnSelect = func(filePath string) tea.Cmd {
+					return func() tea.Msg {
+						return LoadEvent(filePath)
+					}
+				}
+			}
 			return nil
 		},
 	) {
@@ -40,7 +44,7 @@ func New(p string, withOptions ...Option) (_ tea.Model, err error) {
 	}
 	fp := filepicker.New()
 	fp.AllowedTypes = o.AllowedExtensions
-	fp.CurrentDirectory, _ = os.Getwd()
+	// fp.CurrentDirectory, _ = os.Getwd()
 	fp.AutoHeight = true
 	fp.DirAllowed = false
 	fp.FileAllowed = true
@@ -48,8 +52,8 @@ func New(p string, withOptions ...Option) (_ tea.Model, err error) {
 	fp.ShowSize = false
 	fp.ShowHidden = true
 	return file{
-		Model: fp,
-		Path:  p,
+		Model:    fp,
+		OnSelect: o.OnSelect,
 	}, nil
 }
 
@@ -67,9 +71,9 @@ func (f file) Load() (tea.Model, tea.Cmd) {
 
 func (f file) Init() (_ tea.Model, cmd tea.Cmd) {
 	f.Model, cmd = f.Model.Init()
-	if f.Path != "" {
-		return f.Load() // TODO: skipping cmd!
-	}
+	// if f.Path != "" {
+	// 	return f.Load() // TODO: skipping cmd!
+	// }
 	return f, cmd
 }
 
@@ -77,6 +81,14 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
+		case tea.KeyEnter:
+			var cmd tea.Cmd
+			f.Model, cmd = f.Model.Update(msg)
+			ok, filePath := f.Model.DidSelectFile(msg)
+			if !ok {
+				return f, cmd
+			}
+			return f, tea.Batch(f.OnSelect(filePath), cmd)
 		case tea.KeyF5:
 			return f.Load()
 		}

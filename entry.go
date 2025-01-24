@@ -6,15 +6,11 @@ import (
 	"iter"
 
 	"cuelang.org/go/cue"
-)
-
-const (
-	informationUnavailable = " ⃠"
-	booleanTrue            = "✓"
-	attrDetail             = "detail"
+	"github.com/dkotik/cuebook/metadata"
 )
 
 type Entry struct {
+	title   string
 	Value   cue.Value
 	Fields  []Field
 	Details []Field
@@ -35,20 +31,24 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 	}
 	for iterator.Next() {
 		value := iterator.Value()
+		if metadata.IsTitleField(value) {
+			entry.title = metadata.ValueToString(value)
+		}
 		if !value.IsConcrete() {
 			continue // skip abstract fields
 		}
-		attr := value.Attribute("detail")
-		isDetail, _ := attr.Flag(0, attrDetail)
+		// attr := value.Attribute("detail")
+		// isDetail, _ := attr.Flag(0, attrDetail)
 		// if err != nil {
 		// 	return entry, fmt.Errorf("unable to read `detail` attribute on structed object field %q: %w", iterator.Selector().String(), err)
 		// }
-		if isDetail {
+		if metadata.IsDetailField(value) {
 			entry.Details = append(entry.Details, Field{
 				Parent: entry,
 				Name:   iterator.Selector().String(),
 				Value:  value,
 			})
+			// panic(iterator.Selector().String())
 			continue
 		}
 		entry.Fields = append(entry.Fields, Field{
@@ -57,21 +57,23 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 			Value:  value,
 		})
 	}
+
+	if entry.title == "" && len(entry.Fields) > 0 {
+		entry.title = entry.Fields[0].String()
+	}
 	return entry, nil
 }
 
 func (e Entry) GetTitle() string {
-	if len(e.Fields) > 0 {
-		return e.Fields[0].String()
-	}
-	return informationUnavailable
+	return e.title
 }
 
 func (e Entry) GetDescription() (description []string) {
-	if len(e.Fields) > 1 {
-		for _, field := range e.Fields[1:] {
-			description = append(description, field.String())
-		}
+	for _, field := range e.Fields {
+		description = append(description, field.String())
+	}
+	if len(description) > 0 && description[0] == e.title {
+		return description[1:] // skip first line if identical to title
 	}
 	return description
 }

@@ -52,9 +52,14 @@ func (c card) View() string {
 	_, _ = b.WriteString(style.Inherit(styleTitle).Render(c.Title))
 	// _, _ = b.WriteRune('\n')
 
-	if len(c.Description) > 0 {
+	// if len(c.Description) > 0 {
+	// 	_, _ = b.WriteRune('\n')
+	// 	_, _ = b.WriteString(style.Render(c.Description...))
+	// }
+
+	for _, line := range c.Description {
 		_, _ = b.WriteRune('\n')
-		_, _ = b.WriteString(style.Render(c.Description...))
+		_, _ = b.WriteString(style.Render(line))
 	}
 
 	return b.String()
