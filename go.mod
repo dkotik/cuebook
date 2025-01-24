@@ -5,19 +5,22 @@ go 1.23.4
 require (
 	cuelang.org/go v0.11.0
 	github.com/blevesearch/bleve/v2 v2.4.4
+	github.com/bwmarrin/snowflake v0.3.0
 	github.com/charmbracelet/bubbles/v2 v2.0.0-alpha.2
 	github.com/charmbracelet/bubbletea/v2 v2.0.0-alpha.2
 	github.com/charmbracelet/glamour v0.8.0
 	github.com/charmbracelet/lipgloss v0.12.1
 	github.com/charmbracelet/lipgloss/v2 v2.0.0-alpha.2
 	github.com/charmbracelet/x/ansi v0.4.5
+	github.com/google/uuid v1.6.0
+	github.com/matthewhartstonge/argon2 v1.1.1
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/muesli/reflow v0.3.0
 	github.com/nicksnyder/go-i18n/v2 v2.4.1
 	github.com/rivo/uniseg v0.4.7
 	github.com/urfave/cli/v3 v3.0.0-beta1
 	github.com/yuin/goldmark v1.7.8
-	golang.org/x/text v0.19.0
+	golang.org/x/text v0.21.0
 )
 
 require (
@@ -55,7 +58,6 @@ require (
 	github.com/golang/geo v0.0.0-20210211234256-740aa86cb551 // indirect
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/json-iterator/go v0.0.0-20171115153421-f7279a603ede // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
@@ -68,10 +70,11 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yuin/goldmark-emoji v1.0.3 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sync v0.9.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/term v0.25.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/term v0.27.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

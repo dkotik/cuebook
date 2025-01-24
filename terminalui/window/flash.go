@@ -64,8 +64,8 @@ const (
 const (
 	flashPrefixSuccess = '✔'
 	flashPrefixInfo    = 'ⓘ'
-	flashPrefixWarning = '✱'
-	flashPrefixError   = '✖'
+	flashPrefixWarning = '💥' // ✱
+	flashPrefixError   = '✖' // 💥
 )
 
 func (k FlashMessageKind) Prefix() rune {

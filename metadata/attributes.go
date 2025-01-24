@@ -7,26 +7,31 @@ import (
 	"time"
 
 	"cuelang.org/go/cue"
+	"github.com/dkotik/cuebook/metadata/identifier"
 )
 
-var AttributeDefaults = map[string]func(string, url.Values) (string, error){
-	"date": func(defaultValue string, parameters url.Values) (string, error) {
+type FieldTransformer func(string, url.Values) (string, error)
+
+var AttributeDefaults = map[string]FieldTransformer{
+	"date": func(input string, parameters url.Values) (string, error) {
 		var t time.Time
-		if defaultValue == "" {
+		if input == "" {
 			t = time.Now()
-		} else if defaultValue == "yesterday" || parameters.Has("yesterday") {
+		} else if input == "yesterday" || parameters.Has("yesterday") {
 			t = time.Now().Add(time.Hour * -24)
-		} else if defaultValue == "tomorrow" || parameters.Has("tomorrow") {
+		} else if input == "tomorrow" || parameters.Has("tomorrow") {
 			t = time.Now().Add(time.Hour * 24)
 		} else {
 			var err error
-			t, err = time.Parse(time.DateOnly, defaultValue)
+			t, err = time.Parse(time.DateOnly, input)
 			if err != nil {
 				return "", err
 			}
 		}
 		return t.Format(cmp.Or(parameters.Get("format"), time.DateOnly)), nil
 	},
+	"UUID": identifier.GenerateUUID,
+	"SFID": identifier.GenerateSnowFlakeID,
 }
 
 func IsTitleField(v cue.Value) (ok bool) {
