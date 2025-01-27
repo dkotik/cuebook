@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/charmbracelet/bubbles/v2/filepicker"
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -81,6 +82,12 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
+		case tea.KeyEsc:
+			cwd, _ := os.Getwd()
+			picked := filepath.Join(cwd, f.Model.CurrentDirectory)
+			if picked == cwd {
+				return f, nil // allows window escape handler to navigate back
+			}
 		case tea.KeyEnter:
 			var cmd tea.Cmd
 			f.Model, cmd = f.Model.Update(msg)
@@ -121,3 +128,14 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	f.Model, cmd = f.Model.Update(msg)
 	return f, cmd
 }
+
+// // HandleEscapeKey satisfies [window.EscapeKeyHandler] interface
+// // to block navigation away from the window
+// func (f file) HandleEscapeKey(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
+// 	cwd, _ := os.Getwd()
+// 	if f.Model.Path == cwd {
+// 		panic("end")
+// 	}
+// 	f.Model, cmd = f.Model.Update(msg)
+// 	return f, cmd
+// }

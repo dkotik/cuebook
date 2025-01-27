@@ -94,22 +94,15 @@ func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
 	return w, tea.Batch(all...)
 }
 
-func (w window) back() (tea.Model, tea.Cmd) {
-	if l := len(w.stack); l > 0 {
-		l -= 1
-		w.current = w.stack[l]
-		w.stack = w.stack[:l]
-		// var cmd tea.Cmd
-		// w.current, cmd = w.current.Update(w.size)
-		return w, nil
-	}
-	return w, tea.Quit
-}
-
 func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	w.logger.Debug(fmt.Sprintf("%T", msg), slog.Any("payload", msg))
 
 	switch msg := msg.(type) {
+	case error:
+		w.current, cmd = w.current.Update(msg)
+		if cmd == nil {
+			return w.issueLocalizedFlashErrorMessage(msg)
+		}
 	case commandContextRequestEvent:
 		return w, func() tea.Msg { return w.commandContext }
 	case localizerRequestEvent:
@@ -151,16 +144,10 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		if w.busy != 0 {
 			return w, nil // drop event if busy
 		}
-		switch msg.Key().Code {
-		case tea.KeyEscape:
-			// if w.flashMessage != nil {
-			// 	w.flashMessage = nil
-			// 	return w, nil
-			// }
+		w.current, cmd = w.current.Update(msg)
+		if cmd == nil && msg.Key().Code == tea.KeyEsc {
 			return w.back()
 		}
-		// fallthrough
-		w.current, cmd = w.current.Update(msg)
 		return w.ClearFlashMessageIfNeeded(), tea.Batch(
 			cmd,
 			event.Propagate(msg, w.watchers),

@@ -7,6 +7,7 @@ type (
 	Decorator  func(tea.Model) tea.Model
 )
 
+// TODO: deprecate, may be this entire package
 func NewDecorator(mw Middleware) Decorator {
 	if mw == nil {
 		panic("middleware is nil")

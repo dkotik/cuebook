@@ -6,20 +6,20 @@ import (
 )
 
 type field struct {
-	Name     string
 	Value    string
 	OnSelect tea.Cmd
 
-	labelWidth int
-	valueWidth int
-	selected   bool
+	width    int
+	selected bool
 }
 
 func New(name, value string, onSelect tea.Cmd) tea.Model {
-	return &field{
-		Name:     name,
-		Value:    value,
-		OnSelect: onSelect,
+	return horizontalLabel{
+		Text: name,
+		Model: &field{
+			Value:    value,
+			OnSelect: onSelect,
+		},
 	}
 }
 
@@ -30,8 +30,7 @@ func (f field) Init() (tea.Model, tea.Cmd) {
 func (f field) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		f.labelWidth = msg.Width / 4
-		f.valueWidth = msg.Width - f.labelWidth
+		f.width = msg.Width
 	case list.HighlightHintEvent:
 		f.selected = bool(msg)
 	case tea.KeyMsg:

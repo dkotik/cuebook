@@ -44,7 +44,7 @@ type FieldList struct {
 }
 
 func (l FieldList) Init() (_ tea.Model, cmd tea.Cmd) {
-	l.Model, cmd = list.New().Init()
+	l.Model, cmd = field.NewForm().Init()
 	return l, cmd
 }
 
@@ -67,10 +67,10 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		l.entry = msg
 		return l, LoadFields(l.state.Source, msg)
 	case fieldListCards:
-		l.Model, cmd = l.Model.Init()
+		l.Model, cmd = field.NewForm().Init()
 		var setCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg...)())
-		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize())
+		return l, tea.Sequence(cmd, setCmd)
 	case list.SwapOrderEvent:
 		return l, func() tea.Msg {
 			a, err := l.entry.GetField(msg.CurrentIndex)

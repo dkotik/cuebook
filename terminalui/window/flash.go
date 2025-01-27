@@ -25,17 +25,24 @@ func (w window) ClearFlashMessageIfNeeded() window {
 	return w
 }
 
+func (w window) getFlashLingerDuration(kind FlashMessageKind) time.Duration {
+	if kind == FlashMessageKindError {
+		return w.FlashLingerDuration * 5
+	}
+	return w.FlashLingerDuration
+}
+
 func (w window) RenderFlashMessage(t flashMessageTemplate) tea.Cmd {
 	style, ok := w.flashMessageStyles[t.Kind]
 	if !ok {
 		style = w.flashMessageStyles[FlashMessageKindError]
 	}
 	style = style.Width(max(0, w.size.Width-2))
-	expires := time.Now().Add(w.FlashLingerDuration)
+	expires := time.Now().Add(w.getFlashLingerDuration(t.Kind))
 	return tea.Batch(
 		func() tea.Msg {
 			var m flashMessage
-			m.Prefix = style.Render(string(t.Kind.Prefix()) + " ")
+			m.Prefix = style.Render(string(t.Kind.Prefix()))
 			m.Lines = style.Render(t.Text)
 			m.Height = lipgloss.Height(m.Lines)
 			m.Expires = expires
@@ -64,8 +71,8 @@ const (
 const (
 	flashPrefixSuccess = '✔'
 	flashPrefixInfo    = 'ⓘ'
-	flashPrefixWarning = '💥' // ✱
-	flashPrefixError   = '✖' // 💥
+	flashPrefixWarning = '✖' // ✱
+	flashPrefixError   = '💥' // 💥
 )
 
 func (k FlashMessageKind) Prefix() rune {

@@ -21,7 +21,6 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] display and translate errors
 - [ ] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] add/delete entry button
