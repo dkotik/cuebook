@@ -1,4 +1,4 @@
-package field
+package form
 
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -7,7 +7,7 @@ import (
 )
 
 type labelStyleChangeEvent struct {
-	Style        *LabelStyle
+	Style        LabelStyle
 	IsHorizontal bool
 }
 
@@ -34,10 +34,14 @@ func (s LabelStyle) Horizontal(withWidth int) LabelStyle {
 	}
 }
 
+func NewBlankResponsiveLabel(wrap tea.Model) tea.Model {
+	return horizontalLabel{Model: wrap}
+}
+
 type horizontalLabel struct {
 	tea.Model
 	Text     string
-	Style    *LabelStyle
+	Style    LabelStyle
 	Focused  bool
 	required bool
 	// Modified bool
@@ -66,9 +70,6 @@ func (l horizontalLabel) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 }
 
 func (l horizontalLabel) GetStyle() lipgloss.Style {
-	if l.Style == nil {
-		return lipgloss.NewStyle() // loading
-	}
 	if l.Focused {
 		return l.Style.Focused
 	}
@@ -76,6 +77,9 @@ func (l horizontalLabel) GetStyle() lipgloss.Style {
 }
 
 func (l horizontalLabel) Render() string {
+	if l.Text == "" {
+		return l.Style.Blurred.Render("")
+	}
 	if l.required {
 		return l.Style.RequiredMarker.Render("✱") + l.GetStyle().Render(l.Text+":")
 	}
@@ -110,6 +114,9 @@ func (l verticalLabel) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 }
 
 func (l verticalLabel) View() string {
+	if l.Text == "" {
+		return l.Model.View()
+	}
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		l.Render(),

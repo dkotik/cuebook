@@ -56,16 +56,20 @@ func (b button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (b button) View() string {
 	style := lipgloss.NewStyle().
 		Width(b.Width).
-		PaddingLeft(2)
+		Foreground(lipgloss.Color("#999999"))
+		// Padding(1).
+		// Background(lipgloss.Color("#333333"))
+		// PaddingLeft(2)
 
 	if b.Focused {
 		style = style.
-			Foreground(lipgloss.Color("73")).
-			BorderLeft(true).
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("65")).
-			PaddingLeft(1)
+			Foreground(lipgloss.Color("73"))
+		// BorderLeft(true).
+		// BorderStyle(lipgloss.NormalBorder()).
+		// BorderForeground(lipgloss.Color("65"))
+		// Background(lipgloss.Color("#3399AA"))
+		// PaddingLeft(1)
 	}
 
-	return style.Render(b.Text)
+	return style.Render("● " + b.Text)
 }

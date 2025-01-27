@@ -39,7 +39,7 @@ func (l List) IsFullscreen() bool {
 	return lipgloss.Height(view) > l.Size.Height
 }
 
-func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (l List) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Key().Code {
@@ -94,8 +94,8 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
+			// var cmd tea.Cmd
 			if l.IsFullscreen() && !l.fullScreenView.AtTop() {
-				var cmd tea.Cmd
 				*l.fullScreenView, cmd = l.fullScreenView.Update(msg)
 				l.fullScreenView.HalfViewUp()
 				return l, cmd
@@ -108,6 +108,11 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return l.applySelection(l.SelectedIndex - 1)
 			}
 		}
+		// any other key press message goes to the selected node
+		if len(l.Items) > 0 {
+			l.Items[l.SelectedIndex], cmd = l.Items[l.SelectedIndex].Update(msg)
+		}
+		return l, cmd
 	case countRequestEvent:
 		return l, func() tea.Msg {
 			count := len(l.Items)
@@ -158,9 +163,9 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// any other message goes to the selected node
-	var cmd tea.Cmd
-	if len(l.Items) > 0 {
-		l.Items[l.SelectedIndex], cmd = l.Items[l.SelectedIndex].Update(msg)
-	}
-	return l, cmd
+	// var cmd tea.Cmd
+	// if len(l.Items) > 0 {
+	// 	l.Items[l.SelectedIndex], cmd = l.Items[l.SelectedIndex].Update(msg)
+	// }
+	return l, event.Propagate(msg, l.Items)
 }

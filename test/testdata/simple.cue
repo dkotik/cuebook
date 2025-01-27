@@ -51,7 +51,7 @@
 
 [...#contact] & [
 	{
-		Name:  "First11111" @cuebook(title)
+		Name:  "First11111"
 		Email: "test1@testdomain.com"
 	},
 	{
@@ -127,8 +127,12 @@
 		Name:  "11aaaaaz"
 		Email: "test@testdomain.com"
 	},
-	{
-		Name:  "Someone1344"
+  {
+		Name:  "Someone"
+		Email: "someEmail@somehost.net"
+	},
+  {
+		Name:  "Someone"
 		Email: "someEmail@somehost.net"
 	},
   {

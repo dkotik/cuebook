@@ -1,4 +1,4 @@
-package field
+package form
 
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -13,7 +13,7 @@ type field struct {
 	selected bool
 }
 
-func New(name, value string, onSelect tea.Cmd) tea.Model {
+func NewField(name, value string, onSelect tea.Cmd) tea.Model {
 	return horizontalLabel{
 		Text: name,
 		Model: &field{

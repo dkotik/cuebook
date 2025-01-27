@@ -4,7 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/patch"
-	"github.com/dkotik/cuebook/terminalui/field"
+	"github.com/dkotik/cuebook/terminalui/form"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -44,7 +44,7 @@ type FieldList struct {
 }
 
 func (l FieldList) Init() (_ tea.Model, cmd tea.Cmd) {
-	l.Model, cmd = field.NewForm().Init()
+	l.Model, cmd = form.New().Init()
 	return l, cmd
 }
 
@@ -67,7 +67,7 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		l.entry = msg
 		return l, LoadFields(l.state.Source, msg)
 	case fieldListCards:
-		l.Model, cmd = field.NewForm().Init()
+		l.Model, cmd = form.New().Init()
 		var setCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg...)())
 		return l, tea.Sequence(cmd, setCmd)
@@ -127,10 +127,10 @@ func LoadFields(source []byte, entry cuebook.Entry) tea.Cmd {
 			// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 			// })
 			for _, f := range entry.Fields {
-				fields = append(fields, field.New(f.Name, f.String(), displayFieldForm(source, entry, f)))
+				fields = append(fields, form.NewField(f.Name, f.String(), displayFieldForm(source, entry, f)))
 			}
 			for _, f := range entry.Details {
-				fields = append(fields, field.New(f.Name, f.String(), displayFieldForm(source, entry, f)))
+				fields = append(fields, form.NewField(f.Name, f.String(), displayFieldForm(source, entry, f)))
 			}
 			rmLabel := lc.MustLocalize(&i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{
@@ -140,7 +140,7 @@ func LoadFields(source []byte, entry cuebook.Entry) tea.Cmd {
 			})
 			return func() tea.Msg {
 				// bWrapper, bCapture := NewPatchCloser("entryDelete")
-				return fieldListCards(append(fields, list.NewButton(rmLabel, func() tea.Msg {
+				return fieldListCards(append(fields, form.NewBlankResponsiveLabel(list.NewButton(rmLabel, func() tea.Msg {
 					p, err := patch.DeleteFromStructList(source, entry.Value)
 					if err != nil {
 						return err
@@ -149,7 +149,7 @@ func LoadFields(source []byte, entry cuebook.Entry) tea.Cmd {
 						Patch: p,
 						Entry: entry,
 					}
-				})))
+				}))))
 			}
 		})
 	}

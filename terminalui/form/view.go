@@ -1,4 +1,4 @@
-package field
+package form
 
 import "github.com/charmbracelet/lipgloss/v2"
 

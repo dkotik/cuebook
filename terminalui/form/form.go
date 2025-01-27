@@ -1,4 +1,4 @@
-package field
+package form
 
 import (
 	"github.com/dkotik/cuebook/terminalui/list"
@@ -9,7 +9,7 @@ import (
 
 type formLayoutIsHorizontalEvent bool
 
-func NewForm() tea.Model {
+func New() tea.Model {
 	// fields ...tea.Model
 	// layout := list.New()
 	// layout, cmd := layout.Update(list.AddItems(fields...))
@@ -21,6 +21,8 @@ func NewForm() tea.Model {
 			Focused:        lipgloss.NewStyle().Foreground(lipgloss.Blue),
 			RequiredMarker: lipgloss.NewStyle().Foreground(lipgloss.BrightRed),
 		},
+		LabelMinimumHorizontalWidth:  20,
+		LabelWidthRatioToWindowWidth: 0.15,
 	}
 }
 
@@ -46,13 +48,13 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if labelWidth < f.LabelMinimumHorizontalWidth {
 				f.LabelStyle = f.LabelStyle.Vertical()
 				f.Model, _ = f.Model.Update(labelStyleChangeEvent{
-					Style:        &f.LabelStyle,
+					Style:        f.LabelStyle,
 					IsHorizontal: false,
 				})
 			} else {
 				f.LabelStyle = f.LabelStyle.Horizontal(labelWidth)
 				f.Model, _ = f.Model.Update(labelStyleChangeEvent{
-					Style:        &f.LabelStyle,
+					Style:        f.LabelStyle,
 					IsHorizontal: true,
 				})
 			}
