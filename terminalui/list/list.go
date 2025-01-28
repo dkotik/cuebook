@@ -39,6 +39,13 @@ func (l List) IsFullscreen() bool {
 	return lipgloss.Height(view) > l.Size.Height
 }
 
+func (l List) UpdateSelected(msg tea.Msg) (_ List, cmd tea.Cmd) {
+	if len(l.Items) > 0 {
+		l.Items[l.SelectedIndex], cmd = l.Items[l.SelectedIndex].Update(msg)
+	}
+	return l, cmd
+}
+
 func (l List) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -69,18 +76,22 @@ func (l List) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				}
 			}
 
-			if l.IsFullscreen() && !l.fullScreenView.AtBottom() {
-				var cmd tea.Cmd
-				l.fullScreenView.HalfViewDown()
-				return l, cmd
-			}
-
-			if len(l.Items) > 1 {
-				if l.SelectedIndex < len(l.Items)-1 {
-					return l.applySelection(l.SelectedIndex + 1)
+			l, cmd = l.UpdateSelected(msg)
+			if cmd == nil {
+				if l.IsFullscreen() && !l.fullScreenView.AtBottom() {
+					var cmd tea.Cmd
+					l.fullScreenView.HalfViewDown()
+					return l, cmd
 				}
-				return l.applySelection(0)
+
+				if len(l.Items) > 1 {
+					if l.SelectedIndex < len(l.Items)-1 {
+						return l.applySelection(l.SelectedIndex + 1)
+					}
+					return l.applySelection(0)
+				}
 			}
+			return l, cmd
 		case tea.KeyUp, 'k':
 			if msg.Key().Mod == tea.ModCtrl {
 				return l, func() tea.Msg {
@@ -94,25 +105,24 @@ func (l List) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				}
 			}
 
-			// var cmd tea.Cmd
-			if l.IsFullscreen() && !l.fullScreenView.AtTop() {
-				*l.fullScreenView, cmd = l.fullScreenView.Update(msg)
-				l.fullScreenView.HalfViewUp()
-				return l, cmd
-			}
-
-			if len(l.Items) > 1 {
-				if l.SelectedIndex < 1 {
-					return l.applySelection(len(l.Items) - 1)
+			l, cmd = l.UpdateSelected(msg)
+			if cmd == nil {
+				if l.IsFullscreen() && !l.fullScreenView.AtTop() {
+					*l.fullScreenView, cmd = l.fullScreenView.Update(msg)
+					l.fullScreenView.HalfViewUp()
+					return l, cmd
 				}
-				return l.applySelection(l.SelectedIndex - 1)
+
+				if len(l.Items) > 1 {
+					if l.SelectedIndex < 1 {
+						return l.applySelection(len(l.Items) - 1)
+					}
+					return l.applySelection(l.SelectedIndex - 1)
+				}
 			}
+			return l, cmd
 		}
-		// any other key press message goes to the selected node
-		if len(l.Items) > 0 {
-			l.Items[l.SelectedIndex], cmd = l.Items[l.SelectedIndex].Update(msg)
-		}
-		return l, cmd
+		return l.UpdateSelected(msg)
 	case countRequestEvent:
 		return l, func() tea.Msg {
 			count := len(l.Items)

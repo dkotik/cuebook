@@ -134,9 +134,5 @@
   {
 		Name:  "Someone"
 		Email: "someEmail@somehost.net"
-	},
-  {
-		Name:  "Someone"
-		Email: "someEmail@somehost.net"
 	}
 ]

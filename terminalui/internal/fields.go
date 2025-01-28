@@ -15,6 +15,12 @@ type (
 	fieldHighlighted int
 	fieldListCards   []tea.Model
 
+	fieldChangedEvent struct {
+		Name     string
+		Value    string
+		Original string
+	}
+
 	updateFieldPatch struct {
 		patch.Patch
 		Entry cuebook.Entry
@@ -38,6 +44,7 @@ type (
 type FieldList struct {
 	tea.Model
 
+	changes  map[string]string
 	state    patch.Result
 	entry    cuebook.Entry
 	selected int
@@ -45,11 +52,19 @@ type FieldList struct {
 
 func (l FieldList) Init() (_ tea.Model, cmd tea.Cmd) {
 	l.Model, cmd = form.New().Init()
+	l.changes = make(map[string]string)
 	return l, cmd
 }
 
 func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
+	case fieldChangedEvent:
+		if msg.Value == msg.Original {
+			delete(l.changes, msg.Name)
+		} else {
+			l.changes[msg.Name] = msg.Value
+		}
+		return l, nil
 	case fieldHighlighted:
 		l.selected = int(msg)
 		return l, nil
@@ -118,6 +133,19 @@ func displayFieldForm(source []byte, entry cuebook.Entry, field cuebook.Field) t
 	}
 }
 
+func createField(f cuebook.Field) tea.Model {
+	return form.NewField(f.Name, f.String(), func(updated string) tea.Cmd {
+		original := f.String()
+		return func() tea.Msg {
+			return fieldChangedEvent{
+				Name:     f.Name,
+				Value:    updated,
+				Original: original,
+			}
+		}
+	})
+}
+
 func LoadFields(source []byte, entry cuebook.Entry) tea.Cmd {
 	return func() tea.Msg {
 		return window.TranslatableFunc(func(lc *i18n.Localizer) tea.Cmd {
@@ -127,29 +155,41 @@ func LoadFields(source []byte, entry cuebook.Entry) tea.Cmd {
 			// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 			// })
 			for _, f := range entry.Fields {
-				fields = append(fields, form.NewField(f.Name, f.String(), displayFieldForm(source, entry, f)))
+				fields = append(fields, createField(f))
 			}
 			for _, f := range entry.Details {
-				fields = append(fields, form.NewField(f.Name, f.String(), displayFieldForm(source, entry, f)))
+				fields = append(fields, createField(f))
 			}
+			commitLabel := lc.MustLocalize(&i18n.LocalizeConfig{
+				DefaultMessage: &i18n.Message{
+					ID:    "bookEntryCommitChanges",
+					Other: "Save Changes",
+				},
+			})
 			rmLabel := lc.MustLocalize(&i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{
 					ID:    "bookEntryDelete",
-					Other: "Delete entry",
+					Other: "Delete Entry",
 				},
 			})
 			return func() tea.Msg {
-				// bWrapper, bCapture := NewPatchCloser("entryDelete")
-				return fieldListCards(append(fields, form.NewBlankResponsiveLabel(list.NewButton(rmLabel, func() tea.Msg {
-					p, err := patch.DeleteFromStructList(source, entry.Value)
-					if err != nil {
-						return err
-					}
-					return deleteEntryPatch{
-						Patch: p,
-						Entry: entry,
-					}
-				}))))
+				return fieldListCards(append(
+					fields,
+					// TODO: share label with all buttons
+					form.NewBlankResponsiveLabel(list.NewButton(commitLabel, func() tea.Msg {
+						return nil
+					})),
+					form.NewBlankResponsiveLabel(list.NewButton(rmLabel, func() tea.Msg {
+						p, err := patch.DeleteFromStructList(source, entry.Value)
+						if err != nil {
+							return err
+						}
+						return deleteEntryPatch{
+							Patch: p,
+							Entry: entry,
+						}
+					})),
+				))
 			}
 		})
 	}
