@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
@@ -105,4 +106,51 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 		i++
 	}
 	return nil, errors.New("field not found") // TODO: model error
+}
+
+func UpdateFieldValues(source []byte, entry cue.Value, values map[string]string) (Patch, error) {
+	tree := entry.Syntax(cue.Concrete(true)) // TODO: concrete OPTION is CRITICAL
+	fields, ok := tree.(*ast.StructLit)
+	if !ok {
+		return nil, errors.New("entry not a struct") // TODO: model error
+	}
+
+	pending := maps.Clone(values)
+	iterator, err := entry.Value().Fields(cue.Optional(true))
+	if err != nil {
+		return nil, fmt.Errorf("unable to iterate through fields of a structured object: %w", err)
+	}
+	i := 0
+	// TODO: instead of iterating can use Cue selectors?
+	for iterator.Next() {
+		label, ok := iterator.Value().Label()
+		if !ok {
+			return nil, errors.New("source field not a struct field") // TODO: model error
+		}
+		if value, ok := pending[label]; ok {
+			fields.Elts[i] = &ast.Field{
+				Label: ast.NewString(label),
+				Value: ast.NewLit(token.STRING, literal.String.WithOptionalTabIndent(1).Quote(value)),
+			}
+			delete(pending, label)
+			if len(pending) == 0 {
+				break
+			}
+		}
+		i++
+	}
+	if len(pending) > 0 {
+		return nil, errors.New("not all fields were found") // TODO: model error
+	}
+
+	content, err := format.Node(
+		fields,
+		format.Simplify(),
+		format.IndentPrefix(1),
+		format.UseSpaces(4),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return ReplaceStructListEntry(source, entry, content)
 }

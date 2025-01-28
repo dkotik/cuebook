@@ -133,6 +133,6 @@
 	},
   {
 		Name:  "Someone"
-		Email: "someEmail@somehost.net"
+		Email: "someEmail12@somehost.net"
 	}
 ]

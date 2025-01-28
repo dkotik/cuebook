@@ -8,16 +8,16 @@ import (
 	"cuelang.org/go/cue"
 )
 
-type delete struct {
+type deletePatch struct {
 	Preceeding ByteAnchor
 	Target     ByteAnchor
 }
 
-func (p delete) Difference() (d ByteAnchor) {
+func (p deletePatch) Difference() (d ByteAnchor) {
 	return d
 }
 
-func (p delete) ApplyToCueSource(source []byte) (result []byte, err error) {
+func (p deletePatch) ApplyToCueSource(source []byte) (result []byte, err error) {
 	r, err := p.Target.Match(source)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func (p delete) ApplyToCueSource(source []byte) (result []byte, err error) {
 	return b.Bytes(), nil
 }
 
-func (p delete) Invert() Patch {
+func (p deletePatch) Invert() Patch {
 	return insertAfter(p)
 }
 
@@ -81,7 +81,7 @@ func DeleteFromStructList(source []byte, value cue.Value) (Patch, error) {
 	// 	break
 	// }
 
-	return delete{
+	return deletePatch{
 		Preceeding: r.PreceedingEntryAnchor(source),
 		Target:     r.Anchor(source),
 	}, nil

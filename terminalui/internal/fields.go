@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"maps"
+
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/patch"
@@ -20,6 +22,8 @@ type (
 		Value    string
 		Original string
 	}
+
+	applyFieldChanges struct{}
 
 	updateFieldPatch struct {
 		patch.Patch
@@ -65,6 +69,18 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			l.changes[msg.Name] = msg.Value
 		}
 		return l, nil
+	case applyFieldChanges:
+		changes := maps.Clone(l.changes)
+		return l, func() tea.Msg {
+			p, err := patch.UpdateFieldValues(l.state.Source, l.entry.Value, changes)
+			if err != nil {
+				return err
+			}
+			return updateFieldPatch{
+				Patch: p,
+				Entry: l.entry,
+			}
+		}
 	case fieldHighlighted:
 		l.selected = int(msg)
 		return l, nil
@@ -177,7 +193,7 @@ func LoadFields(source []byte, entry cuebook.Entry) tea.Cmd {
 					fields,
 					// TODO: share label with all buttons
 					form.NewBlankResponsiveLabel(list.NewButton(commitLabel, func() tea.Msg {
-						return nil
+						return applyFieldChanges{}
 					})),
 					form.NewBlankResponsiveLabel(list.NewButton(rmLabel, func() tea.Msg {
 						p, err := patch.DeleteFromStructList(source, entry.Value)

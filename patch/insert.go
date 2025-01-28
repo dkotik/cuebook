@@ -32,7 +32,7 @@ func (p insertAfter) ApplyToCueSource(source []byte) (result []byte, err error) 
 }
 
 func (p insertAfter) Invert() Patch {
-	return delete(p)
+	return deletePatch(p)
 }
 
 func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
