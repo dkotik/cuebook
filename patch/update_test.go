@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
 	"github.com/dkotik/cuebook"
 )
@@ -135,19 +136,20 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	if target.Err() != nil {
 		t.Fatal(target.Err())
 	}
-	entry, err := cuebook.NewEntry(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	field, err := entry.GetField(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("field:", field.Name)
+	// entry, err := cuebook.NewEntry(target)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// field, err := entry.GetField(1)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// t.Log("field:", field.Name)
 
-	patch, err := UpdateFieldValues(source, target, map[string]string{
-		"another":   "123",
-		"seriously": "545445",
+	patch, err := MergeFieldValues(source, target, map[string]string{
+		"another":     "123",
+		"seriously":   "545445",
+		"entirelyNew": "new",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -159,5 +161,31 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Run("reverse", ensureInversible(source, patch))
+
+	document = cuecontext.New().CompileBytes(updated)
+	another := document.LookupPath(cue.MakePath(cue.Index(2), cue.Label(ast.NewString("another"))))
+	if another.Kind() == cue.BottomKind {
+		t.Fatal("another element was not found")
+	}
+	value, err := another.String()
+	if err != nil {
+		t.Fatal("another value is not a string")
+	}
+	if value != "123" {
+		t.Fatal("another value was not updated:", value, "vs 123")
+	}
+
+	entirelyNew := document.LookupPath(cue.MakePath(cue.Index(2), cue.Label(ast.NewString("entirelyNew"))))
+	if another.Kind() == cue.BottomKind {
+		t.Fatal("another element was not found")
+	}
+	value, err = entirelyNew.String()
+	if err != nil {
+		t.Fatal("another value is not a string")
+	}
+	if value != "new" {
+		t.Fatal("another value was not updated:", value, "vs new")
+	}
+
 	// t.Fatal("check")
 }

@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/format"
+	"cuelang.org/go/cue/literal"
+	"cuelang.org/go/cue/token"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/metadata"
 )
 
 type replacePatch struct {
@@ -110,62 +112,48 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	return nil, errors.New("field not found") // TODO: model error
 }
 
-func UpdateFieldValues(source []byte, entry cue.Value, values map[string]string) (Patch, error) {
-	tree := entry.Syntax(cue.Concrete(true), cue.Optional(true)) // TODO: concrete OPTION is CRITICAL
+func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) (_ Patch, err error) {
+	tree := entry.Syntax(cue.Concrete(true)) // TODO: concrete OPTION is CRITICAL
 	fields, ok := tree.(*ast.StructLit)
 	if !ok {
 		return nil, errors.New("entry not a struct") // TODO: model error
 	}
 
-	// for i, fieldElement := range fields.Elts {
-	// 	field, ok := fieldElement.(*ast.Field)
-	// 	if !ok {
-	// 		return nil, errors.New("not a field in struct element")
-	// 	}
-	// 	label := fmt.Sprintf("%s", field.Label)
-	// 	value, ok := values[label]
-	// 	if ok {
-	// 		fields.Elts[i], err = cuebook.Field{
-	// 			Name:  label,
-	// 			Value: iterator.Value(),
-	// 		}.WithValue(value)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		delete(pending, label)
-	// 	}
-	// }
-
-	pending := maps.Clone(values)
-	iterator, err := entry.Value().Fields(cue.Concrete(true), cue.Optional(true))
-	if err != nil {
-		return nil, fmt.Errorf("unable to iterate through fields of a structured object: %w", err)
-	}
-
-	i := 0
-	// TODO: instead of iterating can use Cue selectors?
-	for iterator.Next() {
-		label, ok := iterator.Value().Label()
+	lookup := make(map[string]*ast.Field, len(fields.Elts))
+	for _, element := range fields.Elts {
+		field, ok := element.(*ast.Field)
 		if !ok {
-			return nil, errors.New("source field not a struct field") // TODO: model error
+			return nil, errors.New("structure field is not a field")
 		}
-		if value, ok := pending[label]; ok {
-			fields.Elts[i], err = cuebook.Field{
-				Name:  label,
-				Value: iterator.Value(),
-			}.WithValue(value)
-			if err != nil {
-				return nil, err
-			}
-			delete(pending, label)
-			if len(pending) == 0 {
-				break
-			}
-		}
-		i++
+		lookup[fmt.Sprintf("%s", field.Label)] = field
 	}
-	if len(pending) > 0 {
-		return nil, errors.New("not all fields were found") // TODO: model error
+
+	for label, value := range values {
+		field := entry.LookupPath(cue.MakePath(cue.Label(ast.NewString(label))))
+		if field.Kind() == cue.BottomKind {
+			// add field to the list when it is not in the original entry
+			fields.Elts = append(fields.Elts, &ast.Field{
+				Label: ast.NewString(label),
+				Value: ast.NewLit(
+					token.STRING,
+					literal.String.
+						WithOptionalTabIndent(1).
+						Quote(value),
+				),
+			})
+			continue
+		}
+
+		value, err = metadata.FormatAccordingToAttributes(field, value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to format field value: %w", err)
+		}
+		lookup[label].Value = ast.NewLit( // replace
+			token.STRING,
+			literal.String.
+				WithOptionalTabIndent(1).
+				Quote(value),
+		)
 	}
 
 	content, err := format.Node(

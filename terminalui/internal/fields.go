@@ -72,7 +72,7 @@ func (l FieldList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case applyFieldChanges:
 		changes := maps.Clone(l.changes)
 		return l, func() tea.Msg {
-			p, err := patch.UpdateFieldValues(l.state.Source, l.entry.Value, changes)
+			p, err := patch.MergeFieldValues(l.state.Source, l.entry.Value, changes)
 			if err != nil {
 				return err
 			}
