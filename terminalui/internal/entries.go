@@ -94,7 +94,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		var setCmd, updateCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg.Cards...)())
 		l.Model, updateCmd = l.Model.Update(list.ApplySelection(l.selected)())
-		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize(), updateCmd, l.LoadEntry(msg.SelectedIndex))
+		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize(), updateCmd)
 	case entrySelected:
 		// l.selected = int(msg) + 1
 		return l, tea.Sequence(

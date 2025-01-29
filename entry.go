@@ -44,17 +44,17 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 		// }
 		if metadata.IsDetailField(value) {
 			entry.Details = append(entry.Details, Field{
-				Parent: entry,
-				Name:   iterator.Selector().String(),
-				Value:  value,
+				// Parent: entry,
+				Name:  iterator.Selector().String(),
+				Value: value,
 			})
 			// panic(iterator.Selector().String())
 			continue
 		}
 		entry.Fields = append(entry.Fields, Field{
-			Parent: entry,
-			Name:   iterator.Selector().String(),
-			Value:  value,
+			// Parent: entry,
+			Name:  iterator.Selector().String(),
+			Value: value,
 		})
 	}
 

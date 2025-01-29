@@ -39,13 +39,16 @@
 //
 // and yet again
 //
-// sdklf jkzxxc
+// sdklf jkzasd
+// asd
+// asdasd
 
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
 	Name: string @cuebook(title)
 	Email: #email | [...#email]
-	Notes?: string @cuebook(detail)
+	Notes?:    string @cuebook(detail)
+	Password?: string @cuebook(detail,trim,argon2id)
 	... // allow any additional fields
 }
 
@@ -127,12 +130,13 @@
 		Name:  "11aaaaaz"
 		Email: "test@testdomain.com"
 	},
-  {
-		Name:  "Someone"
+	{
+		Name:  "Someone" @cuebook(title)
 		Email: "someEmail@somehost.net"
 	},
-  {
-		Name:  "Someone"
-		Email: "someEmail12@somehost.net"
-	}
+	{
+		Name:     "Someone0011"
+		Email:    "someEmail12@somehost.net"
+		Password: "" @cuebook(detail,trim,argon2id)
+	},
 ]

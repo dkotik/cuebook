@@ -5,6 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/list"
+	ta "github.com/dkotik/cuebook/terminalui/textarea"
 )
 
 type field struct {
@@ -39,13 +40,7 @@ func (f field) Focus() (tea.Model, tea.Cmd) {
 	height := lipgloss.Height(f.Value)
 	f.Input.SetHeight(max(2, min(height, 6)))
 	f.Input.Focus()
-
-	// scrolling up, then down to match viewpower to height
-	// because f.Input.Cursor only has line jumps to front or end
-	// TODO: contribute cursor start and end of input jumps
-	// see: https://github.com/charmbracelet/bubbles/pull/559
-	f.Input, _ = f.Input.Update(tea.KeyPressMsg{Code: tea.KeyHome, Mod: tea.ModCtrl, Text: "ctrl+home"})
-	f.Input, _ = f.Input.Update(tea.KeyPressMsg{Code: tea.KeyEnd, Mod: tea.ModCtrl, Text: "ctrl+end"})
+	f.Input = ta.ScrollFix(f.Input)
 	return f, nil
 }
 

@@ -5,14 +5,32 @@ import (
 	"fmt"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/literal"
+	"cuelang.org/go/cue/token"
 	"github.com/dkotik/cuebook/metadata"
 )
 
 type Field struct {
-	Parent Entry
-	Name   string
-	Value  cue.Value
+	// Parent Entry
+	Name  string
+	Value cue.Value
+}
+
+func (f Field) WithValue(value string) (_ *ast.Field, err error) {
+	value, err = metadata.FormatAccordingToAttributes(f.Value, value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to format field value: %w", err)
+	}
+	return &ast.Field{
+		Label: ast.NewString(f.Name),
+		Value: ast.NewLit(
+			token.STRING,
+			literal.String.
+				WithOptionalTabIndent(1).
+				Quote(value),
+		),
+	}, nil
 }
 
 func (f Field) Default() (string, bool) {

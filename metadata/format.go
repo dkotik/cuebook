@@ -3,30 +3,18 @@ package metadata
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
 	"cuelang.org/go/cue"
-	"github.com/matthewhartstonge/argon2"
+	"github.com/dkotik/cuebook/metadata/secret"
 )
 
 var formatTransformers = map[string]FieldTransformer{
 	"trim": func(input string, parameters url.Values) (string, error) {
 		return strings.TrimSpace(input), nil
 	},
-	"argon2id": func(input string, parameters url.Values) (string, error) {
-		if strings.TrimSpace(input) == "" {
-			return "", nil // errors.New("cannot hash an empty password")
-		}
-		if strings.HasPrefix(input, "$argon2id$") {
-			return input, nil
-		}
-		argon := argon2.DefaultConfig()
-		encoded, err := argon.HashEncoded([]byte(input))
-		if err != nil {
-			return "", fmt.Errorf("unable to hash secret: %w", err)
-		}
-		return string(encoded), nil
-	},
+	"argon2id": secret.Argon2ID,
 }
 
 func FormatAccordingToAttributes(v cue.Value, input string) (string, error) {
@@ -36,6 +24,12 @@ func FormatAccordingToAttributes(v cue.Value, input string) (string, error) {
 				format, params := attribute.Arg(i)
 				call, ok := formatTransformers[format]
 				if !ok {
+					if slices.Index([]string{
+						"title",
+						"detail",
+					}, format) > -1 {
+						continue
+					}
 					return "", fmt.Errorf("format function does not exist: %s", format)
 				}
 				parsedParams, err := url.ParseQuery(params)

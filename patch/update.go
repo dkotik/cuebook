@@ -10,8 +10,7 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/format"
-	"cuelang.org/go/cue/literal"
-	"cuelang.org/go/cue/token"
+	"github.com/dkotik/cuebook"
 )
 
 type replacePatch struct {
@@ -87,9 +86,12 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 			return nil, errors.New("source field not a struct field") // TODO: model error
 		}
 		if label == search {
-			fields.Elts[i] = &ast.Field{
-				Label: ast.NewString(label),
-				Value: ast.NewLit(token.STRING, literal.String.WithOptionalTabIndent(1).Quote(value)),
+			fields.Elts[i], err = cuebook.Field{
+				Name:  search,
+				Value: field,
+			}.WithValue(value)
+			if err != nil {
+				return nil, err
 			}
 
 			content, err := format.Node(
@@ -109,17 +111,37 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 }
 
 func UpdateFieldValues(source []byte, entry cue.Value, values map[string]string) (Patch, error) {
-	tree := entry.Syntax(cue.Concrete(true)) // TODO: concrete OPTION is CRITICAL
+	tree := entry.Syntax(cue.Concrete(true), cue.Optional(true)) // TODO: concrete OPTION is CRITICAL
 	fields, ok := tree.(*ast.StructLit)
 	if !ok {
 		return nil, errors.New("entry not a struct") // TODO: model error
 	}
 
+	// for i, fieldElement := range fields.Elts {
+	// 	field, ok := fieldElement.(*ast.Field)
+	// 	if !ok {
+	// 		return nil, errors.New("not a field in struct element")
+	// 	}
+	// 	label := fmt.Sprintf("%s", field.Label)
+	// 	value, ok := values[label]
+	// 	if ok {
+	// 		fields.Elts[i], err = cuebook.Field{
+	// 			Name:  label,
+	// 			Value: iterator.Value(),
+	// 		}.WithValue(value)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		delete(pending, label)
+	// 	}
+	// }
+
 	pending := maps.Clone(values)
-	iterator, err := entry.Value().Fields(cue.Optional(true))
+	iterator, err := entry.Value().Fields(cue.Concrete(true), cue.Optional(true))
 	if err != nil {
 		return nil, fmt.Errorf("unable to iterate through fields of a structured object: %w", err)
 	}
+
 	i := 0
 	// TODO: instead of iterating can use Cue selectors?
 	for iterator.Next() {
@@ -128,9 +150,12 @@ func UpdateFieldValues(source []byte, entry cue.Value, values map[string]string)
 			return nil, errors.New("source field not a struct field") // TODO: model error
 		}
 		if value, ok := pending[label]; ok {
-			fields.Elts[i] = &ast.Field{
-				Label: ast.NewString(label),
-				Value: ast.NewLit(token.STRING, literal.String.WithOptionalTabIndent(1).Quote(value)),
+			fields.Elts[i], err = cuebook.Field{
+				Name:  label,
+				Value: iterator.Value(),
+			}.WithValue(value)
+			if err != nil {
+				return nil, err
 			}
 			delete(pending, label)
 			if len(pending) == 0 {

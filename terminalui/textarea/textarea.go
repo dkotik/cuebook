@@ -70,6 +70,7 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 
 func (t Textarea) Init() (tea.Model, tea.Cmd) {
 	t.textarea.Focus()
+	t.textarea = ScrollFix(t.textarea) // TODO: does not seem to work
 	return t, tea.RequestWindowSize()
 }
 
@@ -88,7 +89,7 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return t, textareaCmd
 }
 
-func (t Textarea)  LogValue() slog.Value {
+func (t Textarea) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("label", t.Label),
 		slog.String("value", t.textarea.Value()),
