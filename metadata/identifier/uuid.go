@@ -6,10 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func GenerateUUID(input string, parameters url.Values) (string, error) {
+func GenerateUUID(_ string, parameters url.Values) (string, error) {
 	UUID, err := uuid.NewRandom()
 	if err != nil {
 		return "", err
 	}
-	return input + UUID.String(), nil
+	return parameters.Get("prefix") + UUID.String(), nil
 }

@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-func TestSnowFlakeIDGeneration(t *testing.T) {
-	id, err := GenerateSnowFlakeID("", url.Values{
+func TestUUIDGeneration(t *testing.T) {
+	id, err := GenerateUUID("", url.Values{
 		"prefix": []string{"prefix"},
 	})
 	if err != nil {

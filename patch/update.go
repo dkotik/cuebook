@@ -119,41 +119,48 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 		return nil, errors.New("entry not a struct") // TODO: model error
 	}
 
-	lookup := make(map[string]*ast.Field, len(fields.Elts))
-	for _, element := range fields.Elts {
+	lookup := make(map[string]int, len(fields.Elts))
+	for i, element := range fields.Elts {
 		field, ok := element.(*ast.Field)
 		if !ok {
 			return nil, errors.New("structure field is not a field")
 		}
-		lookup[fmt.Sprintf("%s", field.Label)] = field
+		lookup[fmt.Sprintf("%s", field.Label)] = i
 	}
 
 	for label, value := range values {
-		field := entry.LookupPath(cue.MakePath(cue.Label(ast.NewString(label))))
-		if field.Kind() == cue.BottomKind {
-			// add field to the list when it is not in the original entry
-			fields.Elts = append(fields.Elts, &ast.Field{
-				Label: ast.NewString(label),
-				Value: ast.NewLit(
-					token.STRING,
-					literal.String.
-						WithOptionalTabIndent(1).
-						Quote(value),
-				),
-			})
+		for found, field := range cuebook.EachField(entry, cue.All()) {
+			// format both concrete and optional selectors by watching for "?" at the end:
+			// if selector := found.String(); selector == label || selector == label+"?" {
+			if found.Unquoted() == label {
+				value, err = metadata.FormatAccordingToAttributes(field, value)
+				if err != nil {
+					return nil, fmt.Errorf("failed to format field value: %w", err)
+				}
+				// if value == "" {
+				// 	value, _ = metadata.GetDefaultValue(field)
+				// }
+				// fmt.Println("sdfsdfsdf:", found.String(), value)
+			}
+		}
+
+		updated := &ast.Field{
+			Label: ast.NewString(label),
+			Value: ast.NewLit(
+				token.STRING,
+				literal.String.
+					WithOptionalTabIndent(1).
+					Quote(value),
+			),
+		}
+
+		index, ok := lookup[label]
+		if ok {
+			fields.Elts[index] = updated
 			continue
 		}
 
-		value, err = metadata.FormatAccordingToAttributes(field, value)
-		if err != nil {
-			return nil, fmt.Errorf("failed to format field value: %w", err)
-		}
-		lookup[label].Value = ast.NewLit( // replace
-			token.STRING,
-			literal.String.
-				WithOptionalTabIndent(1).
-				Quote(value),
-		)
+		fields.Elts = append(fields.Elts, updated)
 	}
 
 	content, err := format.Node(

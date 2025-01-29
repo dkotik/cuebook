@@ -22,11 +22,7 @@ func getSnowFlakeNodeNumber(p url.Values) (node int, err error) {
 // GenerateSnowFlakeID returns a short unique identifier.
 // Uses readable, concise, and unambiguous Base58 encoding, which is
 // commonly used for Bitcoin addresses, by default.
-//
-// Any default value is included as the prefix of the ID. For example,
-// Cue value `string | *"prefix_" @cuebook(default=SFID)` will
-// generate an identifier that begins with `prefix_`.
-func GenerateSnowFlakeID(input string, parameters url.Values) (string, error) {
+func GenerateSnowFlakeID(_ string, parameters url.Values) (string, error) {
 	number, err := getSnowFlakeNodeNumber(parameters)
 	if err != nil {
 		return "", err
@@ -43,8 +39,8 @@ func GenerateSnowFlakeID(input string, parameters url.Values) (string, error) {
 
 	switch encoding {
 	case EncodingBase64:
-		return input + node.Generate().Base64(), nil
+		return parameters.Get("prefix") + node.Generate().Base64(), nil
 	default:
-		return input + node.Generate().Base58(), nil
+		return parameters.Get("prefix") + node.Generate().Base58(), nil
 	}
 }

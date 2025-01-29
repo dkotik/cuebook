@@ -17,30 +17,35 @@ var formatTransformers = map[string]FieldTransformer{
 	"argon2id": secret.Argon2ID,
 }
 
-func FormatAccordingToAttributes(v cue.Value, input string) (string, error) {
-	for _, attribute := range v.Attributes(cue.FieldAttr) {
-		if attribute.Name() == "cuebook" {
-			for i := range attribute.NumArgs() {
-				format, params := attribute.Arg(i)
-				call, ok := formatTransformers[format]
-				if !ok {
-					if slices.Index([]string{
-						"title",
-						"detail",
-					}, format) > -1 {
-						continue
+func FormatAccordingToAttributes(v cue.Value, input string) (_ string, err error) {
+	for attributeField := range GetFieldAttributes(v, "cuebook") {
+		call, ok := formatTransformers[attributeField.Key]
+		if !ok {
+			if attributeField.Key == "default" {
+				if input == "" { // TODO: move this logic into UI form to populate the form, rather than apply here
+					defaultCall, ok := AttributeDefaults[attributeField.Value]
+					if !ok {
+						return "", fmt.Errorf("no such default function: %s", attributeField.Value)
 					}
-					return "", fmt.Errorf("format function does not exist: %s", format)
+					input, err = defaultCall("", attributeField.Query)
+					if err != nil {
+						return "", fmt.Errorf("unable to apply default value: %w", err)
+					}
 				}
-				parsedParams, err := url.ParseQuery(params)
-				if err != nil {
-					return "", fmt.Errorf("cannot parse format function parameters: %w", err)
-				}
-				input, err = call(input, parsedParams)
-				if err != nil {
-					return "", fmt.Errorf("unable to execute format function %q: %w", format, err)
-				}
+				continue
 			}
+			if slices.Index([]string{
+				"title",
+				"detail",
+				"multiline",
+			}, attributeField.Key) > -1 {
+				continue
+			}
+			return "", fmt.Errorf("format function does not exist: %s", attributeField.Key)
+		}
+		input, err = call(input, attributeField.Query)
+		if err != nil {
+			return "", fmt.Errorf("unable to execute format function %q: %w", attributeField.Key, err)
 		}
 	}
 	return input, nil

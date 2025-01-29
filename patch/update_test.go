@@ -107,6 +107,7 @@ func TestUpdateStructField(t *testing.T) {
 func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	source := []byte(`
 #contact: {
+	ID?: string @cuebook(default=SFID?prefix=prefix_)
 	Name?: string
 	Email?: string
 	Notes?: string
@@ -136,19 +137,21 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	if target.Err() != nil {
 		t.Fatal(target.Err())
 	}
-	// entry, err := cuebook.NewEntry(target)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// field, err := entry.GetField(1)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// t.Log("field:", field.Name)
+	entry, err := cuebook.NewEntry(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	field, err := entry.GetField(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("field:", field.Name)
 
 	patch, err := MergeFieldValues(source, target, map[string]string{
+		"ID":          "",
 		"another":     "123",
 		"seriously":   "545445",
+		"Notes":       "important to handle \nabstract optional definitions",
 		"entirelyNew": "new",
 	})
 	if err != nil {

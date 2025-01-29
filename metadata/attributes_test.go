@@ -12,7 +12,7 @@ import (
 
 func TestFormatByAttribute(t *testing.T) {
 	book := cuecontext.New().CompileBytes([]byte(`{
-		"key": "extra information" @cuebook(trim,argon2id)
+		"key": "extra information" @cuebook(trim,argon2id,default=SFID?prefix=PREFIX)
 	}`))
 	err := book.Err()
 	if err != nil {
