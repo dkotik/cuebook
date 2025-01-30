@@ -5,8 +5,6 @@ import (
 	"cmp"
 
 	"cuelang.org/go/cue"
-	"cuelang.org/go/cue/ast"
-	"cuelang.org/go/cue/cuecontext"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
@@ -95,7 +93,15 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		var setCmd, updateCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg.Cards...)())
 		l.Model, updateCmd = l.Model.Update(list.ApplySelection(l.selected)())
-		return l, tea.Sequence(cmd, setCmd, tea.RequestWindowSize(), updateCmd)
+		return l, tea.Sequence(
+			cmd,
+			setCmd,
+			tea.RequestWindowSize(),
+			window.RequestLocalizer(),
+			updateCmd,
+		)
+	case entry.CreateEvent:
+		return l, entry.NewCreateForm(l.book.Document.Value)
 	case entrySelected:
 		// l.selected = int(msg) + 1
 		return l, tea.Sequence(
@@ -150,25 +156,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if msg.Key().Mod != tea.ModCtrl {
 				break
 			}
-			return l, func() tea.Msg {
-				value := cuecontext.New().BuildExpr(
-					ast.NewStruct(
-						&ast.Field{
-							Label: ast.NewString("Name"),
-							Value: ast.NewString("Someone"),
-						},
-						&ast.Field{
-							Label: ast.NewString("Email"),
-							Value: ast.NewString("someEmail@somehost.net"),
-						},
-					),
-				)
-				p, err := patch.AppendToStructList(l.book.Source, value)
-				if err != nil {
-					return err
-				}
-				return p
-			}
+			return l, entry.NewCreateForm(l.book.Document.Value)
 		}
 		l.Model, cmd = l.Model.Update(msg)
 		return l, cmd
@@ -253,6 +241,10 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 			)
 			index++
 		}
+		result.Cards = append(
+			result.Cards,
+			entry.NewCreateButton(),
+		)
 		return result
 	}
 }

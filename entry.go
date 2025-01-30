@@ -53,7 +53,7 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 		}
 		entry.Fields = append(entry.Fields, Field{
 			// Parent: entry,
-			Name:  iterator.Selector().String(),
+			Name:  iterator.Selector().Unquoted(),
 			Value: value,
 		})
 	}
@@ -91,6 +91,20 @@ func (e Entry) GetField(atIndex int) (f Field, err error) {
 		return f, errors.New("not found: index out of range") // TODO: model
 	}
 	return e.Details[atIndex], nil
+}
+
+func (e Entry) GetFieldByName(name string) (field Field, ok bool) {
+	for _, field = range e.Fields {
+		if field.Name == name {
+			return field, true
+		}
+	}
+	for _, field = range e.Details {
+		if field.Name == name {
+			return field, true
+		}
+	}
+	return
 }
 
 func EachValue(value cue.Value) iter.Seq[cue.Value] {

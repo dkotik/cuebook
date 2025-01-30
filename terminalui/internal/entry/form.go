@@ -1,6 +1,8 @@
 package entry
 
 import (
+	"slices"
+
 	"cuelang.org/go/cue"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
@@ -15,7 +17,10 @@ import (
 
 type (
 	fieldHighlighted int
-	fieldListCards   []tea.Model
+	fieldListCards   struct {
+		Cards           []tea.Model
+		KnownFieldNames []string
+	}
 
 	fieldChangedEvent struct {
 		Name     string
@@ -54,10 +59,11 @@ func NewForm(state patch.Result) tea.Cmd {
 type form struct {
 	tea.Model
 
-	changes  map[string]string
-	state    patch.Result
-	entry    cuebook.Entry
-	selected int
+	changes     map[string]string
+	state       patch.Result
+	entry       cuebook.Entry
+	knownFields []string
+	selected    int
 }
 
 func (f form) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -102,12 +108,23 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 		return f, cmd
 	case extendEvent:
+		if slices.Index(f.knownFields, msg.Name) >= 0 {
+			return f, window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{
+				DefaultMessage: &i18n.Message{
+					ID:    "bookEntryDuplicateFieldName",
+					Other: "Field `{{ .Name }}` already exists.",
+				},
+				TemplateData: map[string]any{
+					"Name": msg.Name,
+				},
+			})
+		}
+		f.knownFields = append(f.knownFields, msg.Name)
+		f.Model, cmd = f.Model.Update(list.AddItems(createField(cuebook.Field{
+			Name: msg.Name,
+		}))())
 		return f, tea.Sequence(
-			func() tea.Msg {
-				return list.AddItems(createField(cuebook.Field{
-					Name: msg.Name,
-				}))()
-			},
+			cmd,
 			tea.RequestWindowSize(),
 			func() tea.Msg { return window.BackEvent{} },
 		)
@@ -128,10 +145,11 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		f.entry = msg
 		return f, LoadFields(f.state.Source, msg)
 	case fieldListCards:
+		f.knownFields = msg.KnownFieldNames
 		f.Model, cmd = listForm.New().Init()
-		initCmd := event.PropagateInit(msg)
+		initCmd := event.PropagateInit(msg.Cards)
 		var setCmd tea.Cmd
-		f.Model, setCmd = f.Model.Update(list.SetItems(msg...)())
+		f.Model, setCmd = f.Model.Update(list.SetItems(msg.Cards...)())
 		return f, tea.Sequence(cmd, setCmd, initCmd, tea.RequestWindowSize(), window.RequestLocalizer())
 	case list.SwapOrderEvent:
 		return f, func() tea.Msg {
@@ -210,24 +228,31 @@ func createField(f cuebook.Field) tea.Model {
 
 func LoadFields(source []byte, cueEntry cuebook.Entry) tea.Cmd {
 	return func() tea.Msg {
-		fields := make([]tea.Model, 0, len(cueEntry.Fields)+len(cueEntry.Details)+3)
+		expectedTotal := len(cueEntry.Fields) + len(cueEntry.Details) + 3
+		knownFieldNames := make([]string, 0, expectedTotal)
+		fields := make([]tea.Model, 0, expectedTotal)
 		// fields = append(fields, list.Title{
 		// 	Text:  entry.GetTitle() + fmt.Sprintf(" › %d/%d", index+1, total),
 		// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		// })
 		for _, f := range cueEntry.Fields {
 			fields = append(fields, createField(f))
+			knownFieldNames = append(knownFieldNames, f.Name)
 		}
 		for _, f := range cueEntry.Details {
 			fields = append(fields, createField(f))
+			knownFieldNames = append(knownFieldNames, f.Name)
 		}
 		if cueEntry.Value.Allows(cue.AnyString) {
 			fields = append(fields, NewExtendButton())
 		}
-		return fieldListCards(append(
-			fields,
-			NewSaveButton(),
-			NewDeleteButton(),
-		))
+		return fieldListCards{
+			Cards: append(
+				fields,
+				NewSaveButton(),
+				NewDeleteButton(),
+			),
+			KnownFieldNames: knownFieldNames,
+		}
 	}
 }

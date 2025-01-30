@@ -133,15 +133,14 @@
 	{
 		Name:     "Someone0011aa" @cuebook(title)
 		Email:    "someEmail12@somehost.net"
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$+UbhxEgDdvSIMPTboh8zZA$tcM8iddKv/rBdK8qM45LCAYmPzoVDswiocPITJhfDzA" @cuebook(detail,trim,argon2id)
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$+UbhxEgDdvSIMPTboh8zZA$tcM8iddKv/rBdK8qM45LCAYmPzoVDswiocPITJhfDzA"
 	},
 	{
-		Name:  "Someone" @cuebook(title)
-		Email: "someEmail@somehost.net"
-		Custom: """
-			sddsf
-
-			"""
-		"12313": "sdflkxcvmmnxcvkds"
+		Name:     "Someone" @cuebook(title)
+		Email:    "someEmail@somehost.net"
+		Custom:   "xc"
+		yayay:    "dsfjsdlkfjk"
+		z:        "sdfjdskf klvjclkvxcv"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$I4BZZ90hMBjpc1IoHTN3RQ$KW8S387rBMvBVN4J7KOoHuhdeiE8K54je04cy3Mcayk"
 	},
 ]

@@ -75,12 +75,8 @@ func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// )
 	case addItemsEvent:
 		l.Items = append(l.Items, msg...)
-		initCmd := event.PropagateInit(l.Items)
-		m, cmd := l.applySelection(l.SelectedIndex)
-		return m, tea.Sequence(
-			initCmd,
-			cmd,
-		)
+		cmd := event.PropagateInit(msg)
+		return l, cmd
 	case applySelectionEvent:
 		// && l.SelectedIndex != msg.Index
 		index := int(msg)
