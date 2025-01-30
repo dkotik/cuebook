@@ -135,12 +135,13 @@
 		Email:    "someEmail12@somehost.net"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$+UbhxEgDdvSIMPTboh8zZA$tcM8iddKv/rBdK8qM45LCAYmPzoVDswiocPITJhfDzA" @cuebook(detail,trim,argon2id)
 	},
-  {
-		Name:  "Someone"
+	{
+		Name:  "Someone" @cuebook(title)
 		Email: "someEmail@somehost.net"
+		Custom: """
+			sddsf
+
+			"""
+		"12313": "sdflkxcvmmnxcvkds"
 	},
-  {
-		Name:  "Someoneaa121asd"
-		Email: "someEmail@somehost.net"
-	}
 ]

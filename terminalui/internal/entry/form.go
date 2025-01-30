@@ -1,6 +1,7 @@
 package entry
 
 import (
+	"cuelang.org/go/cue"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/patch"
@@ -100,6 +101,16 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			f.Model, cmd = f.Model.Update(msg)
 		}
 		return f, cmd
+	case extendEvent:
+		return f, tea.Sequence(
+			func() tea.Msg {
+				return list.AddItems(createField(cuebook.Field{
+					Name: msg.Name,
+				}))()
+			},
+			tea.RequestWindowSize(),
+			func() tea.Msg { return window.BackEvent{} },
+		)
 	case fieldHighlighted:
 		f.selected = int(msg)
 		return f, nil
@@ -143,13 +154,13 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return f, window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{
 					ID:    "bookEntryUnsavedChangesWarning",
-					One:   "There is {{ .Count }} unsaved change.",
+					One:   "There is one unsaved change.",
 					Other: "There are {{ .Count }} changes that were not saved.",
 				},
 				TemplateData: map[string]any{
 					"Count": len(f.changes),
 				},
-				PluralCount: 2,
+				PluralCount: len(f.changes),
 			})
 		}
 	}
@@ -199,7 +210,7 @@ func createField(f cuebook.Field) tea.Model {
 
 func LoadFields(source []byte, cueEntry cuebook.Entry) tea.Cmd {
 	return func() tea.Msg {
-		fields := make([]tea.Model, 0, len(cueEntry.Fields)+len(cueEntry.Details)+1)
+		fields := make([]tea.Model, 0, len(cueEntry.Fields)+len(cueEntry.Details)+3)
 		// fields = append(fields, list.Title{
 		// 	Text:  entry.GetTitle() + fmt.Sprintf(" › %d/%d", index+1, total),
 		// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
@@ -209,6 +220,9 @@ func LoadFields(source []byte, cueEntry cuebook.Entry) tea.Cmd {
 		}
 		for _, f := range cueEntry.Details {
 			fields = append(fields, createField(f))
+		}
+		if cueEntry.Value.Allows(cue.AnyString) {
+			fields = append(fields, NewExtendButton())
 		}
 		return fieldListCards(append(
 			fields,
