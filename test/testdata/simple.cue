@@ -131,12 +131,16 @@
 		Email: "test@testdomain.com"
 	},
 	{
-		Name:  "Someone" @cuebook(title)
-		Email: "someEmail@somehost.net"
-	},
-	{
-		Name:     "Someone0011" @cuebook(title)
+		Name:     "Someone0011aa" @cuebook(title)
 		Email:    "someEmail12@somehost.net"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$+UbhxEgDdvSIMPTboh8zZA$tcM8iddKv/rBdK8qM45LCAYmPzoVDswiocPITJhfDzA" @cuebook(detail,trim,argon2id)
 	},
+  {
+		Name:  "Someone"
+		Email: "someEmail@somehost.net"
+	},
+  {
+		Name:  "Someoneaa121asd"
+		Email: "someEmail@somehost.net"
+	}
 ]

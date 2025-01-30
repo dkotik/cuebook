@@ -14,6 +14,7 @@ import (
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/event"
+	"github.com/dkotik/cuebook/terminalui/internal/entry"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
@@ -67,21 +68,21 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return result
 		}
 	case patch.Result:
-		switch p := msg.LastChange.(type) {
-		case swapEntriesPatch:
-			target, err := p.Difference().Match(msg.Source)
-			if err == nil {
-				i := 0
-				for entry := range msg.Document.EachValue() {
-					i++
-					r, err := patch.NewByteRange(entry)
-					if err == nil && r == target {
-						l.selected = i
-						break
-					}
-				}
-			}
-		}
+		// switch p := msg.LastChange.(type) {
+		// case swapEntriesPatch:
+		// 	target, err := p.Difference().Match(msg.Source)
+		// 	if err == nil {
+		// 		i := 0
+		// 		for entry := range msg.Document.EachValue() {
+		// 			i++
+		// 			r, err := patch.NewByteRange(entry)
+		// 			if err == nil && r == target {
+		// 				l.selected = i
+		// 				break
+		// 			}
+		// 		}
+		// 	}
+		// }
 
 		// if l.book.IsEqual(msg) {
 		// 	return l, nil
@@ -98,31 +99,29 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case entrySelected:
 		// l.selected = int(msg) + 1
 		return l, tea.Sequence(
-			func() tea.Msg {
-				return window.SwitchTo(FieldList{state: l.book})
-			},
+			entry.NewForm(l.book),
 			l.LoadEntry(int(msg)),
 		)
-	case list.SwapOrderEvent:
-		return l, func() tea.Msg {
-			a, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1))))
-			if err != nil {
-				return err
-			}
-			b, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.DesiredIndex - 1))))
-			if err != nil {
-				return err
-			}
-			p, err := patch.SwapEntries(l.book.Source, a.Value, b.Value)
-			if err != nil {
-				return err
-			}
-			// target, err := patch.NewByteRange(a.Value)
-			// if err != nil {
-			// 	return err
-			// }
-			return swapEntriesPatch{Patch: p}
-		}
+	// case list.SwapOrderEvent:
+	// 	return l, func() tea.Msg {
+	// 		a, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1))))
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		b, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.DesiredIndex - 1))))
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		p, err := patch.SwapEntries(l.book.Source, a.Value, b.Value)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		// target, err := patch.NewByteRange(a.Value)
+	// 		// if err != nil {
+	// 		// 	return err
+	// 		// }
+	// 		return swapEntriesPatch{Patch: p}
+	// 	}
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case 'x':

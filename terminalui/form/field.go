@@ -62,27 +62,29 @@ func (f field) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return f.Blur()
 		}
 	case tea.KeyMsg:
-		if f.selected {
-			var cmd tea.Cmd
-			f.Input, cmd = f.Input.Update(msg)
-
-			if cmd == nil {
-				switch msg.Key().Code {
-				case tea.KeyEnter:
-				case tea.KeyEscape:
-					f.selected = false
-					f.Input.Blur()
-				}
-			} else {
-				f.Value = f.Input.Value()
-				// f.Input.SetHeight(min(lipgloss.Height(f.Value), 6))
-				// f.Input, _ = f.Input.Update(nil) // to reposition view
+		var cmd tea.Cmd
+		switch msg.Key().Code {
+		case tea.KeyUp:
+			if f.Input.Line() == 0 {
+				return f, nil
 			}
-
-			return f, tea.Batch(cmd, f.OnChange(f.Value))
-		} else if msg.Key().Code == tea.KeyEnter {
-			return f.Focus()
+		case tea.KeyLeft:
+			if f.Input.Line() == 0 && f.Input.LineInfo().ColumnOffset == 0 {
+				return f, nil
+			}
+		case tea.KeyDown:
+			if f.Input.Line() == f.Input.LineCount()-1 {
+				return f, nil
+			}
+		case tea.KeyRight:
+			if line := f.Input.LineInfo(); f.Input.Line() == f.Input.LineCount()-1 && line.ColumnOffset == line.Width-1 {
+				// info := f.Input.LineInfo()
+				return f, nil
+			}
 		}
+		f.Input, cmd = f.Input.Update(msg)
+		f.Value = f.Input.Value()
+		return f, tea.Batch(cmd, f.OnChange(f.Value))
 	}
 	return f, nil
 }

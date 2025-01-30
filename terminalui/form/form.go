@@ -9,6 +9,8 @@ import (
 
 type formLayoutIsHorizontalEvent bool
 
+type SaveChangesEvent struct{}
+
 func New() tea.Model {
 	// fields ...tea.Model
 	// layout := list.New()
@@ -41,6 +43,19 @@ func (f form) Init() (_ tea.Model, cmd tea.Cmd) {
 
 func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Key().Code {
+		case tea.KeyEscape:
+			return f, nil
+		case 's':
+			if msg.Key().Mod.Contains(tea.ModCtrl) {
+				// f.Model, cmd = f.Model.Update(msg)
+				// if cmd == nil {
+				// }
+				// return f, cmd
+				return f, func() tea.Msg { return SaveChangesEvent{} }
+			}
+		}
 	case tea.WindowSizeMsg:
 		if msg != f.WindowSize {
 			f.WindowSize = msg

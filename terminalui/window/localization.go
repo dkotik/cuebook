@@ -2,6 +2,7 @@ package window
 
 import (
 	"errors"
+	"fmt"
 	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -52,4 +53,45 @@ func (w window) issueLocalizedFlashErrorMessage(err error) (tea.Model, tea.Cmd) 
 		// 	},
 		// )()
 	}
+}
+
+type TranslatableModel interface {
+	tea.Model
+	Translate(*i18n.Localizer) (TranslatableModel, error)
+}
+
+func NewTranslatableModel(m TranslatableModel) TranslatableModel {
+	return translatableModel{TranslatableModel: m}
+}
+
+type translatableModel struct {
+	TranslatableModel
+}
+
+func (t translatableModel) Init() (tea.Model, tea.Cmd) {
+	model, cmd := t.TranslatableModel.Init()
+	var ok bool
+	t.TranslatableModel, ok = model.(TranslatableModel)
+	if !ok {
+		return model, tea.Batch(cmd, func() tea.Msg { return fmt.Errorf("model of type %T is not translatable", model) })
+	}
+	return t, cmd
+}
+
+func (t translatableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	lc, ok := msg.(*i18n.Localizer)
+	if ok {
+		model, err := t.TranslatableModel.Translate(lc)
+		if err != nil {
+			return t, func() tea.Msg { return err }
+		}
+		t.TranslatableModel = model
+	}
+	model, cmd := t.TranslatableModel.Update(msg)
+
+	t.TranslatableModel, ok = model.(TranslatableModel)
+	if !ok {
+		return model, tea.Batch(cmd, func() tea.Msg { return fmt.Errorf("model of type %T is not translatable", model) })
+	}
+	return t, cmd
 }
