@@ -16,47 +16,49 @@ type createForm struct {
 	tea.Model
 }
 
-func NewCreateForm(value cue.Value) tea.Cmd {
-	eachDefinition, err := cuebook.EachFieldDefinition(value)
-	if err != nil {
-		return func() tea.Msg { return err }
-	}
+type createFormFields []tea.Model
 
-	fields := make([]tea.Model, 9)
-	for selector, field := range eachDefinition {
-		name := selector.Unquoted()
-		fields = append(fields, listForm.NewField(name, field.Kind().String(), func(updated string) tea.Cmd {
-			original := "f.String()"
-			return tea.Batch(
-				func() tea.Msg {
-					return fieldChangedEvent{
-						Name:     name,
-						Value:    updated,
-						Original: original,
-					}
-				},
-			)
-		}))
+func emitCreateFormFields(value cue.Value) tea.Cmd {
+	return func() tea.Msg {
+		fields := make(createFormFields, 9)
+		for selector, field := range cuebook.EachFieldDefinition(value) {
+			name := selector.Unquoted()
+			fields = append(fields, listForm.NewField(name, field.Kind().String(), func(updated string) tea.Cmd {
+				original := "f.String()"
+				return tea.Batch(
+					func() tea.Msg {
+						return fieldChangedEvent{
+							Name:     name,
+							Value:    updated,
+							Original: original,
+						}
+					},
+				)
+			}))
+		}
+		return fields
 	}
-	f := listForm.New()
+}
+
+func NewCreateForm(value cue.Value) tea.Cmd {
 	return tea.Sequence(
 		func() tea.Msg {
-			return window.SwitchTo(createForm{
-				Model: f,
-			})
+			return window.SwitchTo(createForm{})
 		},
-		tea.RequestWindowSize(),
-		window.RequestLocalizer(),
+		emitCreateFormFields(value),
 	)
 }
 
 func (f createForm) Init() (_ tea.Model, cmd tea.Cmd) {
-	f.Model, cmd = f.Model.Init()
+	f.Model, cmd = listForm.New().Init()
 	return f, cmd
 }
 
 func (f createForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
+	case createFormFields:
+		f.Model, cmd = f.Model.Update(list.SetItems(msg...)())
+		return f, tea.Sequence(cmd, tea.RequestWindowSize(), window.RequestLocalizer())
 	case listForm.SaveChangesEvent:
 		fmt.Sprint(msg)
 		return f, func() tea.Msg { return window.BackEvent{} }
@@ -65,9 +67,9 @@ func (f createForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return f, cmd
 }
 
-func (f createForm) View() string {
-	return "<create form>"
-}
+// func (f createForm) View() string {
+// 	return fmt.Sprintf("%d", 45444444444)
+// }
 
 var createButtonText = &i18n.LocalizeConfig{
 	DefaultMessage: &i18n.Message{

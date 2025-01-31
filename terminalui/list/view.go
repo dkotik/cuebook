@@ -73,7 +73,7 @@ func (l List) reverseLineIterator() iter.Seq[string] {
 func (l List) View() string {
 	total := len(l.Items)
 	if total == 0 {
-		return "</>"
+		return "<empty list>"
 	}
 
 	view := l.Items[l.SelectedIndex].View()

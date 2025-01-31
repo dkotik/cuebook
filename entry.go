@@ -6,6 +6,7 @@ import (
 	"iter"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
 	"github.com/dkotik/cuebook/metadata"
 )
 
@@ -139,50 +140,21 @@ func EachField(value cue.Value, options ...cue.Option) iter.Seq2[cue.Selector, c
 
 // EachFieldDefinition emits abstract field definitions for structured entries
 // of a Cue list.
-func EachFieldDefinition(value cue.Value) (iter.Seq2[cue.Selector, cue.Value], error) {
-	// fmt.Println(value.Eval().LookupPath(cue.MakePath(cue.Index(0))))
-	// fmt.Println("================================================")
-
-	_, expr := value.Expr()
-	// if len(expr) == 0 {
-	// 	return nil, errors.New("there are definitions")
-	// }
-
-	for i := len(expr) - 1; i >= 0; i-- {
-		if expr[i].Kind() != cue.ListKind {
-			continue
-		}
-		abstract := expr[i].LookupPath(cue.MakePath(cue.AnyIndex))
-		if abstract.Kind() == cue.BottomKind {
-			// length, _ := abstract.Len().Int64()
-			// fmt.Println(
-			// 	abstract.Kind(), expr[i].Kind(), expr[i].Eval().LookupPath(cue.MakePath(cue.AnyIndex)).Kind(),
-			// 	length,
-			// )
-			// // next, err := abstract.Fields(cue.All())
-			// // v, ok := abstract.Eval()
-			// fmt.Println(abstract.Eval().Kind(), "================================================")
-			// fmt.Println(abstract.)
-
-			// this expressions contains 0 definitions
-			continue
-		}
-		next, err := abstract.Fields(cue.All())
-		if err != nil {
-			return nil, fmt.Errorf("given Cue value is not a list of structured entries: %w", err)
+func EachFieldDefinition(value cue.Value) iter.Seq2[cue.Selector, cue.Value] {
+	return func(yield func(_ cue.Selector, value cue.Value) bool) {
+		path := cue.MakePath(cue.Index(0))
+		if length, _ := value.Len().Uint64(); length == 0 {
+			// insert an empty item, so that field definitions are inheritted
+			// from conjuctions; otherwise field query will return cue.BottomKind
+			// without any way of enumerating the fields
+			value = value.FillPath(path, ast.NewStruct())
 		}
 
-		return func(yield func(_ cue.Selector, value cue.Value) bool) {
-			for next.Next() {
-				// value, _ = next.Value().Default()
-				// if !value.IsConcrete() {
-				// 	value, _ = next.Value().Default()
-				// }
-				if !yield(next.Selector(), next.Value()) {
-					break
-				}
+		next, _ := value.LookupPath(path).Fields(cue.All())
+		for next.Next() {
+			if !yield(next.Selector(), next.Value()) {
+				break
 			}
-		}, nil
+		}
 	}
-	return nil, errors.New("there are no abstract definition expressions associated with value")
 }
