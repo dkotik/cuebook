@@ -5,6 +5,7 @@ import (
 
 	"cuelang.org/go/cue"
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/dkotik/cuebook"
 	listForm "github.com/dkotik/cuebook/terminalui/form"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -16,14 +17,41 @@ type createForm struct {
 }
 
 func NewCreateForm(value cue.Value) tea.Cmd {
-
-	return func() tea.Msg {
-		return window.SwitchTo(createForm{})
+	eachDefinition, err := cuebook.EachFieldDefinition(value)
+	if err != nil {
+		return func() tea.Msg { return err }
 	}
+
+	fields := make([]tea.Model, 9)
+	for selector, field := range eachDefinition {
+		name := selector.Unquoted()
+		fields = append(fields, listForm.NewField(name, field.Kind().String(), func(updated string) tea.Cmd {
+			original := "f.String()"
+			return tea.Batch(
+				func() tea.Msg {
+					return fieldChangedEvent{
+						Name:     name,
+						Value:    updated,
+						Original: original,
+					}
+				},
+			)
+		}))
+	}
+	f := listForm.New()
+	return tea.Sequence(
+		func() tea.Msg {
+			return window.SwitchTo(createForm{
+				Model: f,
+			})
+		},
+		tea.RequestWindowSize(),
+		window.RequestLocalizer(),
+	)
 }
 
 func (f createForm) Init() (_ tea.Model, cmd tea.Cmd) {
-	f.Model, cmd = listForm.New().Init()
+	f.Model, cmd = f.Model.Init()
 	return f, cmd
 }
 

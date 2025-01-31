@@ -45,6 +45,7 @@
 
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
+	// current definition scanner cannot detect abstract definitions yet
 	Name: string @cuebook(title)
 	Email: #email | [...#email]
 	Notes?:    string @cuebook(detail)
