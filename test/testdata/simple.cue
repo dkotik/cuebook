@@ -136,4 +136,13 @@
 		Email:    "someEmail12@somehost.net"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$+UbhxEgDdvSIMPTboh8zZA$tcM8iddKv/rBdK8qM45LCAYmPzoVDswiocPITJhfDzA" @cuebook(detail,trim,argon2id)
 	},
+  {
+		Name:  "Someone!!!!"
+		Email: "someEmail@somehost.net"
+	},
+  {
+		Name:     "Someone!!!!" @cuebook(title)
+		Email:    "someEmail@somehost.net"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$xn0iI5NyMd+y2KPEMgQFww$EcbPNLn7rv24Qc+2s890+hiiEnGAkQJhnwqznYjHmEY"
+	}
 ]

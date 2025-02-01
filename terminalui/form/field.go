@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/list"
 	ta "github.com/dkotik/cuebook/terminalui/textarea"
+	"github.com/muesli/reflow/wrap"
 )
 
 type field struct {
@@ -36,10 +37,15 @@ func (f field) Init() (tea.Model, tea.Cmd) {
 	return f, nil
 }
 
+func (f field) resizeInput() {
+	maximumToConsider := min(len(f.Value), 200)
+	height := lipgloss.Height(wrap.String(f.Value[:maximumToConsider], f.Input.Width()-2))
+	f.Input.SetHeight(max(2, min(height, 6)))
+}
+
 func (f field) Focus() (tea.Model, tea.Cmd) {
 	f.selected = true
-	height := lipgloss.Height(f.Value)
-	f.Input.SetHeight(max(2, min(height, 6)))
+	f.resizeInput()
 	f.Input.Focus()
 	f.Input = ta.ScrollFix(f.Input)
 	return f, nil
@@ -66,30 +72,40 @@ func (f field) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		switch msg.Key().Code {
 		case tea.KeyUp:
-			if f.Input.Line() == 0 {
+			if f.Input.Line() == 0 && f.Input.LineInfo().RowOffset == 0 {
 				return f, nil
 			}
 		case tea.KeyLeft:
-			if f.Input.Line() == 0 && f.Input.LineInfo().ColumnOffset == 0 {
-				return f, nil
+			if f.Input.Line() == 0 {
+				if info := f.Input.LineInfo(); info.RowOffset == 0 && info.ColumnOffset == 0 {
+					return f, nil
+				}
 			}
 		case tea.KeyDown:
 			if f.Input.Line() == f.Input.LineCount()-1 {
-				return f, nil
+				if info := f.Input.LineInfo(); info.RowOffset+1 == info.Height {
+					return f, nil
+				}
 			}
 		case tea.KeyRight:
-			if line := f.Input.LineInfo(); f.Input.Line() == f.Input.LineCount()-1 && line.ColumnOffset == line.Width-1 {
+			if line := f.Input.LineInfo(); f.Input.Line() == f.Input.LineCount()-1 && line.ColumnOffset == line.Width-1 && line.RowOffset+1 == line.Height {
 				// info := f.Input.LineInfo()
 				return f, nil
 			}
 		}
 		f.Input, cmd = f.Input.Update(msg)
 		f.Value = f.Input.Value()
-		return f, tea.Batch(cmd, f.OnChange(f.Value))
+		f.resizeInput()
+		// info := f.Input.LineInfo()
+		return f, tea.Batch(
+			cmd,
+			f.OnChange(f.Value),
+			// window.NewDebugValueMessage(info),
+		)
 	}
-	if f.selected {
-		return f.Focus()
-	}
+	// if f.selected {
+	// 	return f.Focus()
+	// }
 	return f, nil
 }
 

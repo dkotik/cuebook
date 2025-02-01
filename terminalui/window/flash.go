@@ -1,6 +1,7 @@
 package window
 
 import (
+	"fmt"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -103,4 +104,13 @@ func NewFlashMessage(kind FlashMessageKind, text *i18n.LocalizeConfig) tea.Cmd {
 			}
 		})
 	}
+}
+
+func NewDebugValueMessage(v any) tea.Cmd {
+	return NewFlashMessage(FlashMessageKindInfo, &i18n.LocalizeConfig{
+		DefaultMessage: &i18n.Message{
+			ID:    "windowDebugValueMessage",
+			Other: fmt.Sprintf("Debug: %+v.", v),
+		},
+	})
 }
