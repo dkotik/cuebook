@@ -101,7 +101,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			updateCmd,
 		)
 	case entry.CreateEvent:
-		return l, entry.NewCreateForm(l.book.Document.Value)
+		return l, entry.NewCreateForm(l.book.Source, l.book.Document.Value)
 	case entrySelected:
 		// l.selected = int(msg) + 1
 		return l, tea.Sequence(
@@ -156,7 +156,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if msg.Key().Mod != tea.ModCtrl {
 				break
 			}
-			return l, entry.NewCreateForm(l.book.Document.Value)
+			return l, entry.NewCreateForm(l.book.Source, l.book.Document.Value)
 		}
 		l.Model, cmd = l.Model.Update(msg)
 		return l, cmd

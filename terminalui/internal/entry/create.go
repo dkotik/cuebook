@@ -1,49 +1,66 @@
 package entry
 
 import (
-	"fmt"
-
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
+	"cuelang.org/go/cue/cuecontext"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/patch"
 	listForm "github.com/dkotik/cuebook/terminalui/form"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+type createEntryPatch struct {
+	patch.Patch
+}
+
 type createForm struct {
 	tea.Model
+	Source []byte
 }
 
 type createFormFields []tea.Model
 
 func emitCreateFormFields(value cue.Value) tea.Cmd {
 	return func() tea.Msg {
-		fields := make(createFormFields, 9)
+		fields := make(createFormFields, 0, 9)
 		for selector, field := range cuebook.EachFieldDefinition(value) {
 			name := selector.Unquoted()
-			fields = append(fields, listForm.NewField(name, field.Kind().String(), func(updated string) tea.Cmd {
-				original := "f.String()"
-				return tea.Batch(
-					func() tea.Msg {
-						return fieldChangedEvent{
-							Name:     name,
-							Value:    updated,
-							Original: original,
-						}
-					},
-				)
-			}))
+			text, _ := field.String()
+			if text == "" {
+				def, _ := value.Default()
+				text, _ = def.String()
+				// TODO: apply @cuebook default
+			}
+
+			fields = append(fields,
+				listForm.NewField(name, text, func(updated string) tea.Cmd {
+					original := text
+					return tea.Batch(
+						func() tea.Msg {
+							return fieldChangedEvent{
+								Name:     name,
+								Value:    updated,
+								Original: original,
+							}
+						},
+					)
+				}),
+			)
 		}
 		return fields
 	}
 }
 
-func NewCreateForm(value cue.Value) tea.Cmd {
+func NewCreateForm(source []byte, value cue.Value) tea.Cmd {
 	return tea.Sequence(
 		func() tea.Msg {
-			return window.SwitchTo(createForm{})
+			return window.SwitchTo(createForm{
+				Source: source,
+			})
 		},
 		emitCreateFormFields(value),
 	)
@@ -59,17 +76,34 @@ func (f createForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case createFormFields:
 		f.Model, cmd = f.Model.Update(list.SetItems(msg...)())
 		return f, tea.Sequence(cmd, tea.RequestWindowSize(), window.RequestLocalizer())
+	case patch.Result:
+		f.Source = msg.Source
+		if _, ok := msg.LastChange.(createEntryPatch); ok {
+			return f, func() tea.Msg { return window.BackEvent{} }
+		}
 	case listForm.SaveChangesEvent:
-		fmt.Sprint(msg)
-		return f, func() tea.Msg { return window.BackEvent{} }
+		return f, func() tea.Msg {
+			p, err := patch.AppendToStructList(f.Source, cuecontext.New().BuildExpr(
+				ast.NewStruct(
+					&ast.Field{
+						Label: ast.NewString("Name"),
+						Value: ast.NewString("Someone!!!!"),
+					},
+					&ast.Field{
+						Label: ast.NewString("Email"),
+						Value: ast.NewString("someEmail@somehost.net"),
+					},
+				),
+			))
+			if err != nil {
+				return err
+			}
+			return createEntryPatch{p}
+		}
 	}
 	f.Model, cmd = f.Model.Update(msg)
 	return f, cmd
 }
-
-// func (f createForm) View() string {
-// 	return fmt.Sprintf("%d", 45444444444)
-// }
 
 var createButtonText = &i18n.LocalizeConfig{
 	DefaultMessage: &i18n.Message{
@@ -104,10 +138,6 @@ func (d createButton) Translate(lc *i18n.Localizer) (window.TranslatableModel, e
 func (d createButton) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	if d.Model == nil {
 		return d, nil
-	}
-	if _, ok := msg.(fieldChangedEvent); ok {
-		d.Model, cmd = cancelButton{}.Init()
-		return d.Model, tea.Batch(cmd, tea.RequestWindowSize(), window.RequestLocalizer())
 	}
 	d.Model, cmd = d.Model.Update(msg)
 	return d, cmd

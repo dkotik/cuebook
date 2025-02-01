@@ -144,4 +144,12 @@
 		z:        "sdfjdskf klvjclkvxcv"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$I4BZZ90hMBjpc1IoHTN3RQ$KW8S387rBMvBVN4J7KOoHuhdeiE8K54je04cy3Mcayk" @cuebook(detail,trim,argon2id)
 	},
+  {
+		Name:  "Someone!!!!"
+		Email: "someEmail@somehost.net"
+	},
+  {
+		Name:  "Someone!!!!"
+		Email: "someEmail@somehost.net"
+	}
 ]

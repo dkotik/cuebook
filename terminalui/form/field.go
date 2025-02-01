@@ -19,6 +19,7 @@ type field struct {
 
 func NewField(name, value string, onChange func(string) tea.Cmd) tea.Model {
 	input := textarea.New()
+	input.ShowLineNumbers = false
 	input.SetValue(value)
 	// input.SetHeight(max(2, min(lipgloss.Height(value), 6)))
 	return horizontalLabel{
@@ -85,6 +86,9 @@ func (f field) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		f.Input, cmd = f.Input.Update(msg)
 		f.Value = f.Input.Value()
 		return f, tea.Batch(cmd, f.OnChange(f.Value))
+	}
+	if f.selected {
+		return f.Focus()
 	}
 	return f, nil
 }

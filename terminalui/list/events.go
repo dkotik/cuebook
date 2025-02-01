@@ -66,7 +66,9 @@ func (l List) applySelection(index int) (tea.Model, tea.Cmd) {
 	}
 
 	var cmdPrevious, cmdNext tea.Cmd
+	// if l.SelectedIndex >= 0 && l.SelectedIndex < total {
 	l.Items[l.SelectedIndex], cmdPrevious = l.Items[l.SelectedIndex].Update(HighlightHintEvent(false))
+	// }
 	l.Items[index], cmdNext = l.Items[index].Update(HighlightHintEvent(true))
 	l.SelectedIndex = index
 	return l, tea.Batch(cmdPrevious, cmdNext) // , func() tea.Msg { return HighlightEvent(index) })
