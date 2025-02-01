@@ -55,7 +55,7 @@
 
 [...#contact] & [
 	{
-		Name:  "First11111"
+		Name:  "First11111aa"
 		Email: "test1@testdomain.com"
 	},
 	{
@@ -132,20 +132,8 @@
 		Email: "test@testdomain.com"
 	},
 	{
-		Name:     "Someone0011aa" @cuebook(title)
+		Name:     "Someone0011aazzz"
 		Email:    "someEmail12@somehost.net"
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$+UbhxEgDdvSIMPTboh8zZA$tcM8iddKv/rBdK8qM45LCAYmPzoVDswiocPITJhfDzA"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$+UbhxEgDdvSIMPTboh8zZA$tcM8iddKv/rBdK8qM45LCAYmPzoVDswiocPITJhfDzA" @cuebook(detail,trim,argon2id)
 	},
-	{
-		Name:     "Someoneas11"
-		Email:    "someEmail@somehost.net"
-		Custom:   "xc"
-		yayay:    "dsfjsdlkfjk"
-		z:        "sdfjdskf klvjclkvxcv"
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$I4BZZ90hMBjpc1IoHTN3RQ$KW8S387rBMvBVN4J7KOoHuhdeiE8K54je04cy3Mcayk" @cuebook(detail,trim,argon2id)
-	},
-  {
-		Name:  "Someone!!!!" @cuebook(title)
-		Email: "someEmail@somehost.net"
-	}
 ]

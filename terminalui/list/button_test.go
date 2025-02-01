@@ -20,8 +20,8 @@ func TestCreateForm(t *testing.T) {
 
 	tm := teatest.NewTestModel(t, button)
 	// tm.Send(emitCreateFormFields(book))
-	tm.Send(tea.WindowSizeMsg{Width: 20, Height: 20})
-	waitForString(t, tm, "Button")
+	tm.Send(tea.WindowSizeMsg{Width: 60, Height: 20})
+	waitForString(t, tm, "Test Button")
 	// tm.WaitFinished(t, teatest.WithFinalTimeout(time.Second))
 	t.Log("test model", tm)
 }

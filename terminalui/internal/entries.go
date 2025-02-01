@@ -66,6 +66,20 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return result
 		}
 	case patch.Result:
+		// if msg.LastChange != nil {
+		// 	target, err := msg.LastChange.Difference().Match(msg.Source)
+		// 	if err == nil {
+		// 		i := 0
+		// 		for entry := range msg.Document.EachValue() {
+		// 			i++
+		// 			r, err := patch.NewByteRange(entry)
+		// 			if err == nil && r == target {
+		// 				l.selected = i
+		// 				break
+		// 			}
+		// 		}
+		// 	}
+		// }
 		// switch p := msg.LastChange.(type) {
 		// case swapEntriesPatch:
 		// 	target, err := p.Difference().Match(msg.Source)
@@ -228,7 +242,7 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 					lastChange = nil // stop tracking
 				}
 				if bytes.Equal(lastChange, r.Source[at.Head:at.Tail]) {
-					result.SelectedIndex = index
+					result.SelectedIndex = index + 1
 					lastChangePreceedingDuplicates--
 				}
 			}

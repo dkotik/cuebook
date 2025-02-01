@@ -18,37 +18,44 @@ var deleteButtonText = &i18n.LocalizeConfig{
 type deleteEvent struct{}
 
 func NewDeleteButton() tea.Model {
-	return listForm.NewBlankResponsiveLabel(window.NewTranslatableModel(deleteButton{}))
+	return listForm.NewBlankResponsiveLabel(deleteButton{})
 }
 
 type deleteButton struct {
 	tea.Model
+	Cancel     tea.Model
+	ShowCancel bool
 }
 
 func (d deleteButton) Init() (tea.Model, tea.Cmd) {
-	return d, nil
-}
-
-func (d deleteButton) Translate(lc *i18n.Localizer) (window.TranslatableModel, error) {
-	d.Model = list.NewButton(deleteButtonText, func() tea.Msg { return deleteEvent{} })
+	d.Model = list.NewButton(deleteButtonText, func() tea.Msg {
+		return deleteEvent{}
+	})
+	d.Cancel = NewCancelButton()
 	return d, nil
 }
 
 func (d deleteButton) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
-	if d.Model == nil {
-		return d, nil
+	switch msg.(type) {
+	case fieldChangedEvent:
+		d.ShowCancel = true
+		return d, tea.Batch(window.RequestLocalizer(), tea.RequestWindowSize())
+	case cancelEvent:
+		d.ShowCancel = false
+		return d, tea.Batch(window.RequestLocalizer(), tea.RequestWindowSize())
 	}
-	if _, ok := msg.(fieldChangedEvent); ok {
-		d.Model, cmd = cancelButton{}.Init()
-		return d.Model, tea.Batch(cmd, tea.RequestWindowSize(), window.RequestLocalizer())
+
+	if d.ShowCancel {
+		d.Cancel, cmd = d.Cancel.Update(msg)
+	} else {
+		d.Model, cmd = d.Model.Update(msg)
 	}
-	d.Model, cmd = d.Model.Update(msg)
 	return d, cmd
 }
 
 func (d deleteButton) View() string {
-	if d.Model == nil {
-		return "..."
+	if d.ShowCancel {
+		return d.Cancel.View()
 	}
 	return d.Model.View()
 }
