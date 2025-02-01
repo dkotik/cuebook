@@ -29,11 +29,7 @@ func (d cancelButton) Init() (tea.Model, tea.Cmd) {
 }
 
 func (d cancelButton) Translate(lc *i18n.Localizer) (window.TranslatableModel, error) {
-	text, err := lc.Localize(cancelButtonText)
-	if err != nil {
-		return nil, err
-	}
-	d.Model = list.NewButton(text, func() tea.Msg { return window.BackEvent{} })
+	d.Model = list.NewButton(cancelButtonText, func() tea.Msg { return window.BackEvent{} })
 	return d, nil
 }
 

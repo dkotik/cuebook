@@ -37,7 +37,7 @@ func (d extendButton) Translate(lc *i18n.Localizer) (window.TranslatableModel, e
 	if err != nil {
 		return nil, err
 	}
-	d.Model = list.NewButton(text, func() tea.Msg {
+	d.Model = list.NewButton(extendButtonText, func() tea.Msg {
 		ta, err := textarea.New(
 			textarea.WithLabel(text),
 			textarea.WithOnSubmitCommand(func(value string) tea.Cmd {

@@ -30,11 +30,7 @@ func (d deleteButton) Init() (tea.Model, tea.Cmd) {
 }
 
 func (d deleteButton) Translate(lc *i18n.Localizer) (window.TranslatableModel, error) {
-	text, err := lc.Localize(deleteButtonText)
-	if err != nil {
-		return nil, err
-	}
-	d.Model = list.NewButton(text, func() tea.Msg { return deleteEvent{} })
+	d.Model = list.NewButton(deleteButtonText, func() tea.Msg { return deleteEvent{} })
 	return d, nil
 }
 

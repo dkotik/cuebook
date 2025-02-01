@@ -127,11 +127,7 @@ func (d createButton) Init() (tea.Model, tea.Cmd) {
 }
 
 func (d createButton) Translate(lc *i18n.Localizer) (window.TranslatableModel, error) {
-	text, err := lc.Localize(createButtonText)
-	if err != nil {
-		return nil, err
-	}
-	d.Model = list.NewButton(text, func() tea.Msg { return CreateEvent{} })
+	d.Model = list.NewButton(createButtonText, func() tea.Msg { return CreateEvent{} })
 	return d, nil
 }
 
