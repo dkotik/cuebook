@@ -119,29 +119,31 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 		return nil, errors.New("entry not a struct") // TODO: model error
 	}
 
-	lookup := make(map[string]int, len(fields.Elts))
-	for i, element := range fields.Elts {
-		field, ok := element.(*ast.Field)
-		if !ok {
-			return nil, errors.New("structure field is not a field")
+	all := make(map[string]cue.Value)
+	concrete := make(map[string]int, len(fields.Elts))
+	var (
+		label string
+		i     int
+	)
+	for selector, field := range cuebook.EachField(entry, cue.All()) {
+		label = selector.Unquoted()
+		all[label] = field
+		if field.IsConcrete() {
+			concrete[label] = i
+			i++
 		}
-		lookup[fmt.Sprintf("%s", field.Label)] = i
 	}
 
 	for label, value := range values {
-		for found, field := range cuebook.EachField(entry, cue.All()) {
-			// format both concrete and optional selectors by watching for "?" at the end:
-			// if selector := found.String(); selector == label || selector == label+"?" {
-			if found.Unquoted() == label {
-				value, err = metadata.FormatAccordingToAttributes(field, value)
-				if err != nil {
-					return nil, fmt.Errorf("failed to format field value: %w", err)
-				}
-				// if value == "" {
-				// 	value, _ = metadata.GetDefaultValue(field)
-				// }
-				// fmt.Println("sdfsdfsdf:", found.String(), value)
+		if known, ok := all[label]; ok {
+			value, err = metadata.FormatAccordingToAttributes(known, value)
+			if err != nil {
+				return nil, fmt.Errorf("failed to format field value: %w", err)
 			}
+			// if value == "" {
+			// 	value, _ = metadata.GetDefaultValue(field)
+			// }
+			// fmt.Println("sdfsdfsdf:", found.String(), value)
 		}
 
 		updated := &ast.Field{
@@ -154,12 +156,11 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 			),
 		}
 
-		index, ok := lookup[label]
+		index, ok := concrete[label]
 		if ok {
 			fields.Elts[index] = updated
 			continue
 		}
-
 		fields.Elts = append(fields.Elts, updated)
 	}
 

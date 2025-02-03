@@ -121,6 +121,7 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 			another: "ok"
 			seriously: "so far"
 			difficult: true
+			"12": "sure"
 		},
 		{	two: "ok" },
 		{	two: "ok" },
@@ -153,6 +154,7 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 		"seriously":   "545445",
 		"Notes":       "important to handle \nabstract optional definitions",
 		"entirelyNew": "new",
+		"12":          "updated",
 	})
 	if err != nil {
 		t.Fatal(err)

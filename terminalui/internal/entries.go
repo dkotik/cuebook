@@ -122,26 +122,22 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			entry.NewForm(l.book),
 			l.LoadEntry(int(msg)),
 		)
-	// case list.SwapOrderEvent:
-	// 	return l, func() tea.Msg {
-	// 		a, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1))))
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		b, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.DesiredIndex - 1))))
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		p, err := patch.SwapEntries(l.book.Source, a.Value, b.Value)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		// target, err := patch.NewByteRange(a.Value)
-	// 		// if err != nil {
-	// 		// 	return err
-	// 		// }
-	// 		return swapEntriesPatch{Patch: p}
-	// 	}
+	case list.SwapOrderEvent:
+		return l, func() tea.Msg {
+			a := l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1)))
+			if a.Kind() == cue.BottomKind {
+				return nil // does not exist
+			}
+			b := l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.DesiredIndex - 1)))
+			if b.Kind() == cue.BottomKind {
+				return nil // does not exist
+			}
+			p, err := patch.SwapEntries(l.book.Source, a, b)
+			if err != nil {
+				return err
+			}
+			return p
+		}
 	case tea.KeyMsg:
 		switch msg.Key().Code {
 		case 'x':

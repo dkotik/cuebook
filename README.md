@@ -21,14 +21,13 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] Ctrl+J and Ctrl+K entry reordering of entries
+- [x] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] add/delete entry button
 - [ ] add/delete field button
 - [ ] move default assigning logic from FormatAccordingToAttributes to entry form as auto-filled in value
 - [x] add `@cuebook(title)` attribute support
 - [x] add `@cuebook(details)` attribute support
-- [ ] add `@cuebook(multiline)` attribute support
 - [x] add Markdown metadata loading and editing
 - [x] add editing history tracking
 - [ ] add copy-paste support
@@ -38,12 +37,11 @@ changes in data to other users and, most importantly, programs.
     - [x] after patch, check if item at current index has the same byte signature as the last change
     - [x] count potential preceding duplicates
     - [x] locate the entry with identical byte content as the last change, taking duplicates into account
-- [ ] Add Datastar web user interface server.
 - [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
 - [x] Add `@cuebook(secret=argon2id)` attribute that hashes and salts input when saved
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute
 - [ ] turn replace patch into insert patch, if the original entry disappeared, but not without letting the user choose
-- [ ] Field name as a number prevents changes from being saved
+- [ ] Add Datastar web user interface server.
 
 ## Entry Latching
 

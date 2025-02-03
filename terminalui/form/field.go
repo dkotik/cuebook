@@ -22,7 +22,6 @@ func NewField(name, value string, onChange func(string) tea.Cmd) tea.Model {
 	input := textarea.New()
 	input.ShowLineNumbers = false
 	input.SetValue(value)
-	// input.SetHeight(max(2, min(lipgloss.Height(value), 6)))
 	return horizontalLabel{
 		Text: name,
 		Model: field{
