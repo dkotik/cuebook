@@ -42,21 +42,19 @@ type entryListCards struct {
 	SelectedIndex int
 }
 
-func (l EntryList) LoadEntry(index int) tea.Cmd {
-	return func() tea.Msg {
-		entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(index))))
-		if err != nil {
-			return err // TODO: fails on empty list?
-		}
-		return entry
-	}
-}
-
 func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case entryHighlighted:
 		l.selected = int(msg)
 		return l, nil
+	case entry.Update:
+		return l, func() tea.Msg {
+			patch, err := msg(l.book)
+			if err != nil {
+				return err
+			}
+			return patch
+		}
 	case patch.Patch:
 		return l, func() tea.Msg { // TODO: handle switch highlight
 			result, err := patch.Commit("test/testdata/simple.cue", "test/testdata", msg)
@@ -100,6 +98,9 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		// 	return l, nil
 		// }
 		l.book = msg
+		if msg.LastChange != nil {
+			return l, LoadEntries(msg, l.selected)
+		}
 		return l, LoadEntries(msg, l.selected)
 	case entryListCards:
 		l.selected = msg.SelectedIndex
@@ -117,11 +118,11 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case entry.CreateEvent:
 		return l, entry.NewCreateForm(l.book.Source, l.book.Document.Value)
 	case entrySelected:
-		// l.selected = int(msg) + 1
-		return l, tea.Sequence(
-			entry.NewForm(l.book),
-			l.LoadEntry(int(msg)),
-		)
+		selected, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(int(msg)))))
+		if err != nil {
+			return l, func() tea.Msg { return err } // TODO: fails on empty list?
+		}
+		return l, entry.NewForm(selected)
 	case list.SwapOrderEvent:
 		return l, func() tea.Msg {
 			a := l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1)))

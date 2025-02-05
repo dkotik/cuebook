@@ -1,6 +1,7 @@
 package entry
 
 import (
+	"bytes"
 	"slices"
 
 	"cuelang.org/go/cue"
@@ -50,65 +51,140 @@ type (
 	}
 )
 
-func NewForm(state patch.Result) tea.Cmd {
+func LoadFields(cueEntry cuebook.Entry) tea.Cmd {
 	return func() tea.Msg {
-		return window.SwitchTo(form{state: state})
+		expectedTotal := len(cueEntry.Fields) + len(cueEntry.Details) + 3
+		knownFieldNames := make([]string, 0, expectedTotal)
+		fields := make([]tea.Model, 0, expectedTotal)
+		// fields = append(fields, list.Title{
+		// 	Text:  entry.GetTitle() + fmt.Sprintf(" › %d/%d", index+1, total),
+		// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
+		// })
+		for _, f := range cueEntry.Fields {
+			fields = append(fields, createField(f))
+			knownFieldNames = append(knownFieldNames, f.Name)
+		}
+		for _, f := range cueEntry.Details {
+			fields = append(fields, createField(f))
+			knownFieldNames = append(knownFieldNames, f.Name)
+		}
+		if cueEntry.Value.Allows(cue.AnyString) {
+			fields = append(fields, NewExtendButton())
+		}
+		return fieldListCards{
+			Cards: append(
+				fields,
+				NewSaveButton(),
+				NewDeleteButton(),
+			),
+			KnownFieldNames: knownFieldNames,
+		}
 	}
+}
+
+func NewForm(entry cuebook.Entry) tea.Cmd {
+	return tea.Sequence(
+		func() tea.Msg {
+			return window.SwitchTo(form{Entry: entry})
+		},
+		LoadFields(entry),
+	)
 }
 
 type form struct {
 	tea.Model
 
-	changes     map[string]string
-	state       patch.Result
-	entry       cuebook.Entry
-	knownFields []string
-	selected    int
+	Entry       cuebook.Entry
+	Fields      []tea.Model
+	Buttons     []tea.Model
+	Changes     map[string]string
+	KnownFields []string
 }
 
-func (f form) Init() (_ tea.Model, cmd tea.Cmd) {
-	f.Model, cmd = listForm.New().Init()
-	f.changes = make(map[string]string)
-	return f, cmd
+func (f form) Init() (tea.Model, tea.Cmd) {
+	var (
+		listInit  tea.Cmd
+		buildInit tea.Cmd
+	)
+
+	f.Model, listInit = listForm.New().Init()
+	f.Changes = make(map[string]string)
+	fieldsInit := event.PropagateInit(f.Fields)
+	buttonsInit := event.PropagateInit(f.Buttons)
+	f, buildInit = f.buildForm()
+	return f, tea.Batch(
+		listInit,
+		fieldsInit,
+		buttonsInit,
+		buildInit,
+	)
+}
+
+func (f form) buildForm() (_ form, cmd tea.Cmd) {
+	f.Model, cmd = f.Model.Update(list.SetItems(
+		append(f.Fields, f.Buttons...)...)())
+	return f, tea.Batch(cmd, tea.RequestWindowSize(), window.RequestLocalizer())
 }
 
 func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case listForm.SaveChangesEvent:
 		return f, func() tea.Msg {
-			p, err := patch.MergeFieldValues(f.state.Source, f.entry.Value, f.changes)
-			if err != nil {
-				return err
-			}
-			return updateFieldPatch{
-				Patch: p,
-				Entry: f.entry,
-			}
+			return Update(func(state patch.Result) (patch.Patch, error) {
+				p, err := patch.MergeFieldValues(state.Source, f.Entry.Value, f.Changes)
+				if err != nil {
+					return nil, err
+				}
+				return updateFieldPatch{
+					Patch: p,
+					Entry: f.Entry,
+				}, nil
+			})
+		}
+	case list.SwapOrderEvent:
+		return f, func() tea.Msg {
+			return Update(func(state patch.Result) (patch.Patch, error) {
+				a, err := f.Entry.GetField(msg.CurrentIndex)
+				if err != nil {
+					return nil, err
+				}
+				b, err := f.Entry.GetField(msg.DesiredIndex)
+				if err != nil {
+					return nil, err
+				}
+				p, err := patch.SwapEntries(state.Source, a.Value, b.Value)
+				if err != nil {
+					return nil, err
+				}
+				return swapFieldsPatch{Patch: p}, nil
+			})
 		}
 	case deleteEvent:
 		return f, func() tea.Msg {
-			p, err := patch.DeleteFromStructList(f.state.Source, f.entry.Value)
-			if err != nil {
-				return err
-			}
-			return deleteEntryPatch{
-				Patch: p,
-				Entry: f.entry,
-			}
+			return Update(func(state patch.Result) (patch.Patch, error) {
+				p, err := patch.DeleteFromStructList(state.Source, f.Entry.Value)
+				if err != nil {
+					return nil, err
+				}
+				return deleteEntryPatch{ // TODO: restore matching to patch.Result.LastChange type
+					Patch: p,
+					Entry: f.Entry,
+				}, nil
+			})
 		}
 	case fieldChangedEvent:
 		if msg.Value == msg.Original {
-			delete(f.changes, msg.Name)
-			if len(f.changes) == 0 {
+			delete(f.Changes, msg.Name)
+			if len(f.Changes) == 0 {
 				f.Model, cmd = f.Model.Update(cancelEvent{})
 			}
 		} else {
-			f.changes[msg.Name] = msg.Value
+			f.Changes[msg.Name] = msg.Value
 			f.Model, cmd = f.Model.Update(msg)
 		}
 		return f, cmd
 	case extendEvent:
-		if slices.Index(f.knownFields, msg.Name) >= 0 {
+		if slices.Index(f.KnownFields, msg.Name) >= 0 {
 			return f, window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{
 					ID:    "bookEntryDuplicateFieldName",
@@ -119,7 +195,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				},
 			})
 		}
-		f.knownFields = append(f.knownFields, msg.Name)
+		f.KnownFields = append(f.KnownFields, msg.Name)
 		f.Model, cmd = f.Model.Update(list.AddItems(createField(cuebook.Field{
 			Name: msg.Name,
 		}))())
@@ -128,47 +204,15 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			tea.RequestWindowSize(),
 			func() tea.Msg { return window.BackEvent{} },
 		)
-	case fieldHighlighted:
-		f.selected = int(msg)
-		return f, nil
-	case patch.Result:
-		// if !f.state.IsEqual(msg) { }
-		f.state = msg
-		if _, ok := msg.LastChange.(updateFieldPatch); ok {
-			return f, func() tea.Msg { return window.BackEvent{} }
-		}
-		if _, ok := msg.LastChange.(deleteEntryPatch); ok {
-			return f, func() tea.Msg { return window.BackEvent{} }
-		}
-		return f, nil
-	case cuebook.Entry:
-		f.entry = msg
-		return f, LoadFields(f.state.Source, msg)
 	case fieldListCards:
-		f.knownFields = msg.KnownFieldNames
+		f.KnownFields = msg.KnownFieldNames
 		f.Model, cmd = listForm.New().Init()
 		initCmd := event.PropagateInit(msg.Cards)
 		var setCmd tea.Cmd
 		f.Model, setCmd = f.Model.Update(list.SetItems(msg.Cards...)())
 		return f, tea.Sequence(cmd, setCmd, initCmd, tea.RequestWindowSize(), window.RequestLocalizer())
-	case list.SwapOrderEvent:
-		return f, func() tea.Msg {
-			a, err := f.entry.GetField(msg.CurrentIndex)
-			if err != nil {
-				return err
-			}
-			b, err := f.entry.GetField(msg.DesiredIndex)
-			if err != nil {
-				return err
-			}
-			p, err := patch.SwapEntries(f.state.Source, a.Value, b.Value)
-			if err != nil {
-				return err
-			}
-			return swapFieldsPatch{Patch: p}
-		}
 	case tea.KeyMsg:
-		if msg.Key().Code == tea.KeyEscape && len(f.changes) > 0 {
+		if msg.Key().Code == tea.KeyEscape && len(f.Changes) > 0 {
 			return f, window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{
 					ID:    "bookEntryUnsavedChangesWarning",
@@ -176,10 +220,61 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 					Other: "There are {{ .Count }} changes that were not saved.",
 				},
 				TemplateData: map[string]any{
-					"Count": len(f.changes),
+					"Count": len(f.Changes),
 				},
-				PluralCount: len(f.changes),
+				PluralCount: len(f.Changes),
 			})
+		}
+	case patch.Result:
+		switch p := msg.LastChange.(type) {
+		case swapFieldsPatch:
+			return f, func() tea.Msg {
+				delta := p.Difference().Content
+				// duplicates := p.Difference().PreceedingDuplicates // they do not matter since bytes identical
+				if len(delta) > 0 {
+					for entry, err := range msg.Document.EachEntry() {
+						if err != nil {
+							return err
+						}
+						at, err := patch.NewByteRange(entry.Value)
+						if err != nil {
+							return err
+						}
+						// TODO: this currently does not work
+						if bytes.Equal(delta, msg.Source[at.Head:at.Tail]) {
+							return LoadFields(entry)
+						}
+					}
+				}
+				// return errors.New("no entries matched")
+				return window.BackEvent{}
+			}
+		case updateFieldPatch:
+			return f, tea.Batch(
+				window.NewFlashMessage(window.FlashMessageKindSuccess, &i18n.LocalizeConfig{
+					DefaultMessage: &i18n.Message{
+						ID:    "flashMessageEntryUpdated",
+						Other: "Entry `{{.Title}}` updated.",
+					},
+					TemplateData: map[string]interface{}{
+						"Title": p.Entry.GetTitle(), // TODO: old title, obtain new using swapFieldPatch algorithm
+					},
+				}),
+				func() tea.Msg { return window.BackEvent{} },
+			)
+		case deleteEntryPatch:
+			return f, tea.Batch(
+				window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{
+					DefaultMessage: &i18n.Message{
+						ID:    "flashMessageEntryDeleted",
+						Other: "Entry `{{.Title}}` deleted.",
+					},
+					TemplateData: map[string]interface{}{
+						"Title": p.Entry.GetTitle(),
+					},
+				}),
+				func() tea.Msg { return window.BackEvent{} },
+			)
 		}
 	}
 	f.Model, cmd = f.Model.Update(msg)
@@ -224,35 +319,4 @@ func createField(f cuebook.Field) tea.Model {
 			},
 		)
 	})
-}
-
-func LoadFields(source []byte, cueEntry cuebook.Entry) tea.Cmd {
-	return func() tea.Msg {
-		expectedTotal := len(cueEntry.Fields) + len(cueEntry.Details) + 3
-		knownFieldNames := make([]string, 0, expectedTotal)
-		fields := make([]tea.Model, 0, expectedTotal)
-		// fields = append(fields, list.Title{
-		// 	Text:  entry.GetTitle() + fmt.Sprintf(" › %d/%d", index+1, total),
-		// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
-		// })
-		for _, f := range cueEntry.Fields {
-			fields = append(fields, createField(f))
-			knownFieldNames = append(knownFieldNames, f.Name)
-		}
-		for _, f := range cueEntry.Details {
-			fields = append(fields, createField(f))
-			knownFieldNames = append(knownFieldNames, f.Name)
-		}
-		if cueEntry.Value.Allows(cue.AnyString) {
-			fields = append(fields, NewExtendButton())
-		}
-		return fieldListCards{
-			Cards: append(
-				fields,
-				NewSaveButton(),
-				NewDeleteButton(),
-			),
-			KnownFieldNames: knownFieldNames,
-		}
-	}
 }

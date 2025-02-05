@@ -7,6 +7,5 @@ import (
 func WithStateEventTransformers() window.Option {
 	return window.WithWatchers(
 		patchHistoryTracker{},
-		flashAnnouncer{},
 	)
 }

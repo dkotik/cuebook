@@ -9,10 +9,10 @@ func (p updateFieldPatch) LogValue() slog.Value {
 	)
 }
 
-func (f form) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.Any("entry", f.entry),
-		slog.Int("fieldCount", len(f.entry.Fields)),
-		slog.Int("detailCount", len(f.entry.Details)),
-	)
-}
+// func (f form) LogValue() slog.Value {
+// 	return slog.GroupValue(
+// 		slog.Any("entry", f.entry),
+// 		slog.Int("fieldCount", len(f.entry.Fields)),
+// 		slog.Int("detailCount", len(f.entry.Details)),
+// 	)
+// }
