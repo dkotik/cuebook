@@ -1,4 +1,4 @@
 default:
 	@go test ./...
 demo:
-	@cd htmx && go run -tags=demo -port=8080 .
+	@go run -tags=demo ./cmd/htmx-demo -port=8081
