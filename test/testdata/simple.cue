@@ -83,7 +83,7 @@
 			""" @cuebook(detail)
 	},
 	{
-		Name:  "3"
+		Name:  "33333"
 		Email: "test@testdomain.com"
 	},
 	{
@@ -135,4 +135,8 @@
 		Name:  "Someone!!!!a" @cuebook(title)
 		Email: "someEmai1l@somehost.net"
 	},
+  {
+		Name:  "Someone!!!!"
+		Email: "someEmail@somehost.net"
+	}
 ]

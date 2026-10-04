@@ -41,7 +41,6 @@ changes in data to other users and, most importantly, programs.
 - [x] Add `@cuebook(secret=argon2id)` attribute that hashes and salts input when saved
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute
 - [ ] turn replace patch into insert patch, if the original entry disappeared, but not without letting the user choose
-- [ ] Add Datastar web user interface server.
 
 ## Entry Latching
 
