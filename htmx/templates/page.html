@@ -1,0 +1,90 @@
+{{define "page" -}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":true,"error":false},{"code":"...","swap":false,"error":true}]}'>
+  <title>Cuebook</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/htmx-2.0.4.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a href="/">Cuebook</a><span>Structured CUE documents</span></header>
+  <div class="layout">
+    <nav class="file-nav" aria-label="CUE files">
+      <h1>Files</h1>
+      {{if .Files}}
+      <ul>
+        {{range .Files}}
+        <li><a href="{{.URL}}" hx-get="{{.URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true">{{.Name}}</a></li>
+        {{end}}
+      </ul>
+      {{else}}
+      <p class="muted">No CUE files found.</p>
+      {{end}}
+    </nav>
+    {{template "workspace" .}}
+  </div>
+</body>
+</html>
+{{end}}
+
+{{define "workspace" -}}
+<main id="workspace" tabindex="-1">
+  {{if .Error}}<p class="notice" role="alert">{{.Error}}</p>{{end}}
+  {{if .Selected}}
+    <h1 class="document-title">{{.Selected}}</h1>
+    {{if .ReadOnly}}<p class="muted">Read-only source</p>{{end}}
+    {{if .DocumentError}}
+      <p class="notice" role="alert">{{.DocumentError}}</p>
+    {{else if .Entries}}
+      {{range .Entries}}{{template "entry" .}}{{end}}
+    {{else}}
+      <p class="muted">This document has no entries.</p>
+    {{end}}
+  {{else}}
+    <h1>Select a CUE file</h1>
+    <p class="muted">Choose a file from the tree to view its entries.</p>
+  {{end}}
+</main>
+{{end}}
+
+{{define "entry" -}}
+<article class="entry" id="entry-{{.Index}}">
+  <h2>{{.Title}}</h2>
+  {{range .Fields}}{{template "field" .}}{{end}}
+  {{if .Details}}
+  <details class="details">
+    <summary>Details</summary>
+    {{range .Details}}{{template "field" .}}{{end}}
+  </details>
+  {{end}}
+</article>
+{{end}}
+
+{{define "field" -}}
+<div class="field">
+  {{if .ReadOnly}}
+    <span class="field-name">{{.Name}}</span>
+    <output>{{if .Secret}}••••••••{{else}}{{.Value}}{{end}}</output>
+  {{else}}
+    <form action="/edit" method="post" hx-post="/edit" hx-target="#workspace" hx-swap="outerHTML">
+      <input type="hidden" name="file" value="{{.File}}">
+      <input type="hidden" name="entry" value="{{.Index}}">
+      <input type="hidden" name="field" value="{{.Name}}">
+      <label>
+        <span class="field-name">{{.Name}}</span>
+        {{if .Secret}}
+          <input type="password" name="value" value="" autocomplete="new-password" placeholder="Leave blank to keep current value">
+        {{else if .MultiLine}}
+          <textarea name="value" rows="3">{{.Value}}</textarea>
+        {{else}}
+          <input type="text" name="value" value="{{.Value}}">
+        {{end}}
+      </label>
+      <button type="submit">Save</button>
+    </form>
+  {{end}}
+</div>
+{{end}}

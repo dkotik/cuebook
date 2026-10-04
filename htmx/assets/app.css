@@ -1,0 +1,164 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1.25rem;
+  border-bottom: 1px solid GrayText;
+}
+
+.topbar a {
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(13rem, 20rem) minmax(0, 1fr);
+  min-height: calc(100vh - 3.5rem);
+}
+
+.file-nav {
+  padding: 1rem;
+  border-right: 1px solid GrayText;
+  overflow-wrap: anywhere;
+}
+
+.file-nav h1,
+#workspace h1 {
+  font-size: 1.25rem;
+}
+
+.file-nav ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.file-nav li + li {
+  margin-top: 0.4rem;
+}
+
+#workspace {
+  min-width: 0;
+  padding: 1rem clamp(1rem, 4vw, 3rem);
+}
+
+.document-title {
+  overflow-wrap: anywhere;
+}
+
+.entry {
+  max-width: 56rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid GrayText;
+  border-radius: 0.5rem;
+}
+
+.entry h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.field {
+  padding: 0.5rem 0;
+}
+
+.field form,
+.field label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.field label {
+  min-width: 0;
+}
+
+.field-name {
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+input,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+textarea {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+}
+
+textarea {
+  resize: vertical;
+}
+
+button {
+  min-height: 2.4rem;
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+}
+
+.details {
+  margin-top: 0.75rem;
+  border-top: 1px solid GrayText;
+}
+
+.details summary {
+  padding: 0.6rem 0;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.notice {
+  padding: 0.75rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.4rem;
+}
+
+.muted {
+  opacity: 0.75;
+}
+
+@media (max-width: 42rem) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .file-nav {
+    border-right: 0;
+    border-bottom: 1px solid GrayText;
+  }
+
+  .file-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding-left: 1rem;
+  }
+
+  .file-nav li + li {
+    margin-top: 0;
+  }
+}

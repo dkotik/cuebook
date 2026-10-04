@@ -21,6 +21,7 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
+- [ ] replace Google UUID package with standard library 1.27 one
 - [x] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] add/delete entry button

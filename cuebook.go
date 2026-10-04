@@ -1,3 +1,6 @@
+/*
+Package cuebook provides a structured data model and parsing utilities for CUE (CUE Unified Expression) lists.
+*/
 package cuebook
 
 import (
