@@ -54,11 +54,11 @@ func TestReadOnlyHandler(t *testing.T) {
 		omits      []string
 	}{
 		{
-			name:       "index recursively lists cue files only",
+			name:       "index defaults to dark and offers a theme toggle",
 			method:     http.MethodGet,
 			path:       "/",
 			wantStatus: http.StatusOK,
-			contains:   []string{"core1.cue", "subfolder/sub1.cue", "file=subfolder%2Fsub1.cue", "htmx-2.0.4.min.js"},
+			contains:   []string{"core1.cue", "subfolder/sub1.cue", "file=subfolder%2Fsub1.cue", "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, "Dark mode"},
 			omits:      []string{"notes.txt", "First11111aa"},
 		},
 		{
@@ -154,8 +154,11 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", content: "htmx", wantStatus: http.StatusOK},
+		{name: "version-pinned Bulma", path: "/assets/bulma.css", content: "bulma.io v1.0.4", wantStatus: http.StatusOK},
+		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", content: "The MIT License", wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", content: "Zero-Clause BSD", wantStatus: http.StatusOK},
 		{name: "stylesheet", path: "/assets/app.css", content: "grid-template-columns", wantStatus: http.StatusOK},
+		{name: "theme controller", path: "/assets/theme.js", content: "localStorage.setItem", wantStatus: http.StatusOK},
 		{name: "unknown asset", path: "/assets/secret.txt", wantStatus: http.StatusNotFound},
 	}
 	for _, tt := range tests {

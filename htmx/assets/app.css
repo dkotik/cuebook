@@ -3,9 +3,16 @@
 }
 
 :root {
-  color-scheme: light dark;
   font-family: system-ui, sans-serif;
   line-height: 1.5;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 body {
