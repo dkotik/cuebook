@@ -182,24 +182,45 @@ file-tree-node {
   pointer-events: none;
 }
 
-.entry-content {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.entry-content .field-item {
+.card-content.entry-content {
   display: grid;
   grid-template-columns: minmax(7rem, 0.45fr) minmax(0, 1fr);
+  gap: 0.5rem 1rem;
+}
+
+.card-content.entry-content > .field.field-item,
+.card-content.entry-content > .details,
+.card-content.entry-content > .details > .field.field-item {
+  grid-column: 1 / -1;
+}
+
+.card-content.entry-content > .field.field-item,
+.card-content.entry-content > .details,
+.card-content.entry-content > .details > .field.field-item {
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: start;
-  column-gap: 1rem;
+}
+
+.card-content.entry-content > .field.field-item,
+.card-content.entry-content > .details > .field.field-item {
   padding: 0.35rem 0;
 }
 
-.entry-content .field-item > .field-name {
-  text-align: left;
+.card-content.entry-content > .details > summary {
+  grid-column: 1 / -1;
 }
 
-.entry-content .field-item > form {
+.card-content.entry-content .field-item > .field-name {
+  grid-column: 1;
+  text-align: right;
+}
+
+.card-content.entry-content .field-item > .field-item__value {
+  grid-column: 2;
+}
+
+.card-content.entry-content .field-item > form {
   grid-column: 1 / -1;
 }
 
@@ -210,16 +231,47 @@ file-tree-node {
 .field-item__value {
   display: flex;
   align-items: flex-start;
-  justify-content: flex-end;
   gap: 0.5rem;
 }
 
-.field-item__value output {
-  flex: 1;
+.field-item__value > output,
+.field-value-edit output {
   min-width: 0;
   overflow-wrap: anywhere;
   text-align: right;
   white-space: pre-wrap;
+}
+
+.field-item__value > output {
+  flex: 1;
+}
+
+.field-value-edit {
+  flex: 0 1 auto;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  text-align: right;
+}
+
+.field-value-edit output {
+  display: block;
+}
+
+.field-value-edit:hover output {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
+.field-value-edit:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 0.2rem;
 }
 
 .field-edit-button {

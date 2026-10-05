@@ -28,7 +28,10 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 		t.Fatalf("page status = %d, want %d; body: %s", pageResponse.Code, http.StatusOK, pageResponse.Body.String())
 	}
 	for _, want := range []string{
+		`<span class="field-name label">Name:</span>`,
 		`<output>First11111aa1</output>`,
+		`field-value-edit`,
+		`aria-label="Edit Name value"`,
 		`field-edit-button`,
 		`aria-label="Edit Name"`,
 		`hx-get="/edit?entry=0&amp;field=Name&amp;file=core1.cue"`,
@@ -50,6 +53,7 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 		t.Fatalf("form status = %d, want %d; body: %s", formResponse.Code, http.StatusOK, formResponse.Body.String())
 	}
 	for _, want := range []string{
+		`<span class="field-name label">Name:</span>`,
 		`<form action="/edit" method="post"`,
 		`hx-post="/edit"`,
 		`hx-target="#workspace"`,
@@ -108,7 +112,7 @@ func TestReadOnlyPageShowsStaticFieldsWithoutEditControls(t *testing.T) {
 	if !strings.Contains(body, `<output>First11111aa1</output>`) {
 		t.Fatal("read-only page should show the static field value")
 	}
-	for _, unwanted := range []string{`field-edit-button`, `hx-get="/edit`, `<form action="/edit"`} {
+	for _, unwanted := range []string{`field-edit-button`, `field-value-edit`, `hx-get="/edit`, `<form action="/edit"`} {
 		if strings.Contains(body, unwanted) {
 			t.Errorf("read-only page unexpectedly contains edit control %q", unwanted)
 		}
