@@ -10,6 +10,54 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
+func TestAppendToEmptyStructList(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		source string
+	}{
+		{
+			name:   "plain empty list",
+			source: "[]",
+		},
+		{
+			name:   "empty list with whitespace",
+			source: "[\n]\n",
+		},
+		{
+			name: "schema-constrained empty list",
+			source: `#entry: { Name: string }
+[...#entry] & []`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			entry := cuecontext.New().CompileString(`{Name: "Added"}`)
+			if err := entry.Err(); err != nil {
+				t.Fatal(err)
+			}
+			change, err := AppendToStructList([]byte(tt.source), entry)
+			if err != nil {
+				t.Fatal(err)
+			}
+			updated, err := change.ApplyToCueSource([]byte(tt.source))
+			if err != nil {
+				t.Fatal(err)
+			}
+			document, err := cuebook.New(updated)
+			if err != nil {
+				t.Fatalf("appended source is invalid: %v\n%s", err, updated)
+			}
+			if length, err := document.Len(); err != nil || length != 1 {
+				t.Fatalf("document length = %d, err = %v; want 1", length, err)
+			}
+		})
+	}
+}
+
 func TestInsertPatch(t *testing.T) {
 	source := []byte(`[
 		{ one: "ok" },

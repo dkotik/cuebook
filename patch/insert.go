@@ -48,14 +48,14 @@ func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 	if len(source) < 2 {
 		source = []byte("[\n]\n")
 	}
-	listEnd, commaFound, err := locateRootListEnd(source)
+	listEnd, commaFound, empty, err := locateRootListEnd(source)
 	if err != nil {
 		return nil, err
 	}
-	if !commaFound {
-		content = append([]byte(",\n  "), content...)
-	} else {
+	if empty || commaFound {
 		content = append([]byte("\n  "), content...)
+	} else {
+		content = append([]byte(",\n  "), content...)
 	}
 	return insertAfter{
 		Preceeding: ByteRange{
@@ -69,7 +69,10 @@ func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 	}, nil
 }
 
-func locateRootListEnd(source []byte) (i int, commaFound bool, err error) {
+func locateRootListEnd(source []byte) (i int, commaFound, empty bool, err error) {
+	if end, ok := emptyTrailingListEnd(source); ok {
+		return end, false, true, nil
+	}
 	listEndFound := false
 
 loop:
@@ -79,15 +82,15 @@ loop:
 			if commaFound {
 				i++
 			}
-			return i + 1, commaFound, nil
+			return i + 1, commaFound, false, nil
 		case ',':
 			if commaFound {
-				return 0, commaFound, errors.New("double comma at list end") // TODO: model
+				return 0, commaFound, false, errors.New("double comma at list end") // TODO: model
 			}
 			commaFound = true
 		case ']':
 			if listEndFound {
-				return 0, commaFound, errors.New("not a list of structs") // TODO: model error
+				return 0, commaFound, false, errors.New("not a list of structs") // TODO: model error
 			}
 			listEndFound = true
 		default:
@@ -97,5 +100,24 @@ loop:
 			break loop
 		}
 	}
-	return 0, commaFound, errors.New("root list end not found") // TODO: model error
+	return 0, commaFound, false, errors.New("root list end not found") // TODO: model error
+}
+
+func emptyTrailingListEnd(source []byte) (int, bool) {
+	close := len(source) - 1
+	for close >= 0 && unicode.IsSpace(rune(source[close])) {
+		close--
+	}
+	if close < 0 || source[close] != ']' {
+		return 0, false
+	}
+
+	open := close - 1
+	for open >= 0 && unicode.IsSpace(rune(source[open])) {
+		open--
+	}
+	if open >= 0 && source[open] == '[' {
+		return close, true
+	}
+	return 0, false
 }

@@ -75,6 +75,7 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", app.index)
 	mux.HandleFunc("POST /edit", app.edit)
+	mux.HandleFunc("POST /add", app.add)
 	mux.HandleFunc("GET /assets/{name}", app.asset)
 	return securityHeaders(mux), nil
 }
@@ -148,6 +149,9 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 	if status != http.StatusOK {
 		data.DocumentError = message
 		return data, status
+	}
+	if !data.ReadOnly {
+		data.AddFields = makeAddFieldViews(document)
 	}
 	entries, err := makeEntryViews(document, fileName, data.ReadOnly)
 	if err != nil {

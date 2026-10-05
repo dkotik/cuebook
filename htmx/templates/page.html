@@ -57,6 +57,30 @@
     {{else}}
       <p class="muted">This document has no entries.</p>
     {{end}}
+    {{if .AddFields}}
+    <section class="add-entry box" aria-labelledby="add-entry-heading">
+      <h2 id="add-entry-heading">Add entry</h2>
+      <form action="/add" method="post" hx-post="/add" hx-target="#workspace" hx-swap="outerHTML">
+        <input type="hidden" name="file" value="{{.Selected}}">
+        {{range .AddFields}}
+        <div class="field">
+          <label>
+            <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
+            {{if .Secret}}
+              <input class="input" type="password" name="value" value="{{.Value}}" autocomplete="new-password" {{if not .Optional}}required{{end}}>
+            {{else if .MultiLine}}
+              <textarea class="textarea" name="value" rows="3" {{if not .Optional}}required{{end}}>{{.Value}}</textarea>
+            {{else}}
+              <input class="input" type="text" name="value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
+            {{end}}
+          </label>
+          <input type="hidden" name="field" value="{{.Name}}">
+        </div>
+        {{end}}
+        <button class="button is-link" type="submit">Add entry</button>
+      </form>
+    </section>
+    {{end}}
   {{else}}
     <h1 class="title is-4">Select a CUE file</h1>
     <p class="muted">Choose a file from the tree to view its entries.</p>
