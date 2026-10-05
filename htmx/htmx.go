@@ -49,7 +49,8 @@ func New(source fs.FS) (http.Handler, error) {
 }
 
 // NewWithCommitter returns an HTTP handler that can save edits using committer.
-// The source and committer must refer to the same logical files.
+// The source and committer must refer to the same logical files. To enable
+// archiving entries, committer must also implement FileCreator.
 func NewWithCommitter(source fs.FS, committer Committer) (http.Handler, error) {
 	if committer == nil {
 		return nil, errors.New("htmx: committer is nil")
@@ -77,6 +78,7 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 	mux.HandleFunc("POST /edit", app.edit)
 	mux.HandleFunc("POST /add", app.add)
 	mux.HandleFunc("POST /move", app.move)
+	mux.HandleFunc("POST /delete", app.delete)
 	mux.HandleFunc("GET /assets/{name}", app.asset)
 	return securityHeaders(mux), nil
 }

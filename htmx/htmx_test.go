@@ -71,10 +71,15 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 
 	body := response.Body.String()
 	componentStart := strings.Index(body, `<remember-details data-storage-key="add-entry-optional">`)
-	componentEnd := strings.Index(body, `</remember-details>`)
-	if componentStart < 0 || componentEnd < componentStart {
+	if componentStart < 0 {
 		t.Fatalf("optional fields are not wrapped by the persistent details component: %s", body)
 	}
+	closingTag := `</remember-details>`
+	closingOffset := strings.Index(body[componentStart:], closingTag)
+	if closingOffset < 0 {
+		t.Fatalf("optional fields component is not closed: %s", body)
+	}
+	componentEnd := componentStart + closingOffset
 	optionalMarkup := body[componentStart:componentEnd]
 	for _, want := range []string{`name="field" value="Notes"`, `name="field" value="Password"`} {
 		if !strings.Contains(optionalMarkup, want) {

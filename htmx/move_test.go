@@ -24,6 +24,20 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	initialTitles, err := entryTitles(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	from := -1
+	for index, title := range initialTitles {
+		if title == "new entry" {
+			from = index
+			break
+		}
+	}
+	if from <= 0 {
+		t.Fatalf("new entry should have a movable nonzero index; titles: %v", initialTitles)
+	}
 	directory := t.TempDir()
 	filePath := filepath.Join(directory, "contacts.cue")
 	if err := os.WriteFile(filePath, source, 0o600); err != nil {
@@ -46,7 +60,7 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 		}
 	}
 
-	response := submitMove(t, handler, "contacts.cue", 2, 0, "http://example.test", true)
+	response := submitMove(t, handler, "contacts.cue", from, 0, "http://example.test", true)
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
@@ -54,7 +68,7 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 		t.Fatalf("expected an updated HTMX workspace response: %s", response.Body.String())
 	}
 	newEntryPosition := strings.Index(response.Body.String(), `<h2 class="card-header-title">new entry</h2>`)
-	firstEntryPosition := strings.Index(response.Body.String(), `<h2 class="card-header-title">First11111aa1</h2>`)
+	firstEntryPosition := strings.Index(response.Body.String(), `<h2 class="card-header-title">`+initialTitles[0]+`</h2>`)
 	if newEntryPosition < 0 || firstEntryPosition < newEntryPosition {
 		t.Fatalf("response did not reflect the new entry order: %s", response.Body.String())
 	}
@@ -67,7 +81,8 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantTitles := []string{"new entry", "First11111aa1", "First11111aa1", "First11111aa1axx"}
+	wantTitles := append([]string{"new entry"}, initialTitles[:from]...)
+	wantTitles = append(wantTitles, initialTitles[from+1:]...)
 	if len(titles) != len(wantTitles) {
 		t.Fatalf("entry count = %d, want %d: %v", len(titles), len(wantTitles), titles)
 	}

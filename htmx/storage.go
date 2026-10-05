@@ -3,6 +3,7 @@ package htmx
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -36,6 +37,12 @@ func NewDirectory(directory string) (http.Handler, error) {
 	return NewWithCommitter(os.DirFS(root), directoryCommitter{root: root})
 }
 
+// FileCreator creates a file only when it does not already exist. It is an
+// optional capability required for operations that archive entries.
+type FileCreator interface {
+	CreateFileIfNotExists(name string, content []byte) error
+}
+
 type directoryCommitter struct {
 	root string
 }
@@ -54,6 +61,48 @@ func (c directoryCommitter) Commit(name string, change patch.Patch) error {
 	}
 	_, err = patch.Commit(target, filepath.Dir(target), change)
 	return err
+}
+
+func (c directoryCommitter) CreateFileIfNotExists(name string, content []byte) error {
+	if !validFileName(name) {
+		return fs.ErrPermission
+	}
+
+	parts := strings.Split(name, "/")
+	current := c.root
+	for _, part := range parts[:len(parts)-1] {
+		current = filepath.Join(current, part)
+		if err := os.Mkdir(current, 0o755); err != nil && !errors.Is(err, fs.ErrExist) {
+			return err
+		}
+		info, err := os.Lstat(current)
+		if err != nil {
+			return err
+		}
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return fs.ErrPermission
+		}
+	}
+
+	target := filepath.Join(c.root, filepath.FromSlash(name))
+	file, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if errors.Is(err, fs.ErrExist) {
+		return c.verifyRegularFile(name)
+	}
+	if err != nil {
+		return err
+	}
+
+	written, writeErr := file.Write(content)
+	if writeErr == nil && written != len(content) {
+		writeErr = io.ErrShortWrite
+	}
+	closeErr := file.Close()
+	if writeErr != nil || closeErr != nil {
+		_ = os.Remove(target)
+		return errors.Join(writeErr, closeErr)
+	}
+	return nil
 }
 
 func (c directoryCommitter) verifyRegularFile(name string) error {
