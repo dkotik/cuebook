@@ -28,7 +28,7 @@ import (
 //go:embed templates/page.html
 var templateFiles embed.FS
 
-//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js
+//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/favicon.svg
 var assetFiles embed.FS
 
 // Committer applies a prepared Cuebook patch to a named source file.
@@ -104,6 +104,8 @@ func (a *handler) asset(w http.ResponseWriter, r *http.Request) {
 		contentType = "text/plain; charset=utf-8"
 	case "htmx-2.0.4.min.js":
 		contentType = "text/javascript; charset=utf-8"
+	case "favicon.svg":
+		contentType = "image/svg+xml"
 	case "htmx-LICENSE.txt":
 		contentType = "text/plain; charset=utf-8"
 	default:

@@ -68,6 +68,55 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 	}
 }
 
+func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
+	t.Parallel()
+
+	source := []byte(`#entry: {
+	Name: *"Default name" | string
+	Count: *42 | int
+	Enabled: *true | bool
+}
+[...#entry] & [{Name: "Existing", Count: 7, Enabled: true}]
+`)
+	handler, err := NewWithCommitter(fstest.MapFS{
+		"defaults.cue": &fstest.MapFile{Data: source},
+	}, &recordingCommitter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/?file=defaults.cue", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	body := response.Body.String()
+	start, end := strings.Index(body, `<section class="add-entry`), strings.Index(body, `</section>`)
+	if start < 0 || end < start {
+		t.Fatalf("add-entry form not found: %s", body)
+	}
+	form := body[start:end]
+	for _, want := range []string{
+		`name="field" value="Name"`,
+		`name="value" value="" required`,
+		`name="field" value="Count"`,
+		`type="number" name="value" value="0" step="any" required`,
+		`name="field" value="Enabled"`,
+		`<option value="false" selected>false</option>`,
+		`<option value="true">true</option>`,
+	} {
+		if !strings.Contains(form, want) {
+			t.Errorf("add-entry form does not contain %q: %s", want, form)
+		}
+	}
+	for _, unwanted := range []string{"Default name", `value="42"`, `<option value="true" selected>`} {
+		if strings.Contains(form, unwanted) {
+			t.Errorf("add-entry form unexpectedly contains %q", unwanted)
+		}
+	}
+}
+
 func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	t.Parallel()
 
@@ -163,6 +212,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", contains: []string{"htmx"}, wantStatus: http.StatusOK},
 		{name: "version-pinned Bulma", path: "/assets/bulma.css", contains: []string{"bulma.io v1.0.4"}, wantStatus: http.StatusOK},
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
+		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
 		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "file-tree-node", ".tree-chevron", ".tree-children[hidden]"}, wantStatus: http.StatusOK},
 		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},

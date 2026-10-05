@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"[45]..","swap":true,"error":false},{"code":"...","swap":false,"error":true}]}'>
   <title>Cuebook</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
   <script src="/assets/theme.js"></script>
   <link rel="stylesheet" href="/assets/bulma.css">
   <link rel="stylesheet" href="/assets/app.css">
@@ -30,7 +31,7 @@
     <nav class="file-nav menu" aria-label="CUE files">
       <h1 class="menu-label">Files</h1>
       {{if .Files}}
-      <ul class="file-tree"></ul>
+      <ul class="file-tree">
         {{range .Files}}{{template "file-tree-node" .}}{{end}}
       </ul>
       {{else}}
@@ -88,11 +89,18 @@
           <label>
             <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
             {{if .Secret}}
-              <input class="input" type="password" name="value" value="{{.Value}}" autocomplete="new-password" {{if not .Optional}}required{{end}}>
+              <input class="input" type="password" name="value" value="" autocomplete="new-password" {{if not .Optional}}required{{end}}>
+            {{else if .Boolean}}
+              <div class="select"><select name="value" {{if not .Optional}}required{{end}}>
+                <option value="false" selected>false</option>
+                <option value="true">true</option>
+              </select></div>
+            {{else if .Numeric}}
+              <input class="input" type="number" name="value" value="0" step="any" {{if not .Optional}}required{{end}}>
             {{else if .MultiLine}}
               <textarea class="textarea" name="value" rows="3" {{if not .Optional}}required{{end}}>{{.Value}}</textarea>
             {{else}}
-              <input class="input" type="text" name="value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
+              <input class="input" type="text" name="value" value="" {{if not .Optional}}required{{end}}>
             {{end}}
           </label>
           <input type="hidden" name="field" value="{{.Name}}">

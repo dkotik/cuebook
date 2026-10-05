@@ -11,6 +11,8 @@ type addFieldView struct {
 	Value     string
 	MultiLine bool
 	Secret    bool
+	Numeric   bool
+	Boolean   bool
 	Optional  bool
 }
 
@@ -24,21 +26,26 @@ func makeAddFieldViews(document cuebook.Document) []addFieldView {
 	for _, definition := range entryFieldDefinitions(document) {
 		field := definition.Field
 		_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
+		kind := field.Value.IncompleteKind()
 		view := addFieldView{
 			Name:      field.Name,
 			MultiLine: metadata.IsMultiLine(field.Value),
 			Secret:    secret,
 			Optional:  definition.Optional,
 		}
-		if !secret {
-			if value, ok := field.Default(); ok {
-				view.Value = value
-			} else if field.Value.IsConcrete() {
-				view.Value = field.String()
-			}
-		}
-		if field.Value.IncompleteKind()&cue.StringKind == 0 && field.Value.IncompleteKind()&(cue.ListKind|cue.StructKind) != 0 {
+		switch {
+		case kind&cue.NumberKind != 0:
+			view.Numeric = true
+			view.Value = "0"
+		case kind&cue.BoolKind != 0:
+			view.Boolean = true
+			view.Value = "false"
+		case kind&cue.ListKind != 0:
 			view.MultiLine = true
+			view.Value = "[]"
+		case kind&cue.StructKind != 0:
+			view.MultiLine = true
+			view.Value = "{}"
 		}
 		result = append(result, view)
 	}
