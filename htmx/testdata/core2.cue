@@ -13,4 +13,8 @@
 		Name:  "First11111aa"
 		Email: "test1@testdomain.com"
 	},
+  {
+		Name:  "sdf" @cuebook(title)
+		Email: "sdffsd@perfect.com"
+	}
 ]

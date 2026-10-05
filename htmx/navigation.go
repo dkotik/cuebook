@@ -8,11 +8,9 @@ import (
 	"net/url"
 	"path"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/metadata"
 )
 
 type fileTreeNode struct {
@@ -29,6 +27,7 @@ type pageData struct {
 	Selected      string
 	Entries       []entryView
 	AddFields     []addFieldView
+	AddError      string
 	ReadOnly      bool
 	Error         string
 	DocumentError string
@@ -40,18 +39,6 @@ type entryView struct {
 	Title   string
 	Fields  []fieldView
 	Details []fieldView
-}
-
-type fieldView struct {
-	File      string
-	Index     int
-	Name      string
-	Value     string
-	EditURL   string
-	ViewURL   string
-	MultiLine bool
-	Secret    bool
-	ReadOnly  bool
 }
 
 func (a *handler) index(w http.ResponseWriter, r *http.Request) {
@@ -115,32 +102,6 @@ func makeEntryViews(document cuebook.Document, fileName string, readOnly bool) (
 		index++
 	}
 	return result, nil
-}
-
-func fieldEditURL(fileName string, entryIndex int, fieldName string, view bool) string {
-	query := url.Values{}
-	query.Set("entry", strconv.Itoa(entryIndex))
-	query.Set("field", fieldName)
-	query.Set("file", fileName)
-	if view {
-		query.Set("mode", "view")
-	}
-	return "/edit?" + query.Encode()
-}
-
-func makeFieldView(field cuebook.Field, fileName string, index int, readOnly bool) fieldView {
-	_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
-	return fieldView{
-		File:      fileName,
-		Index:     index,
-		Name:      field.Name,
-		Value:     field.String(),
-		EditURL:   fieldEditURL(fileName, index, field.Name, false),
-		ViewURL:   fieldEditURL(fileName, index, field.Name, true),
-		MultiLine: metadata.IsMultiLine(field.Value),
-		Secret:    secret,
-		ReadOnly:  readOnly,
-	}
 }
 
 func (a *handler) fileNames() ([]string, error) {

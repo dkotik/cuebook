@@ -92,20 +92,21 @@
               <input class="input" type="password" name="value" value="" autocomplete="new-password" {{if not .Optional}}required{{end}}>
             {{else if .Boolean}}
               <div class="select"><select name="value" {{if not .Optional}}required{{end}}>
-                <option value="false" selected>false</option>
-                <option value="true">true</option>
+                <option value="false"{{if eq .Value "false"}} selected{{end}}>false</option>
+                <option value="true"{{if eq .Value "true"}} selected{{end}}>true</option>
               </select></div>
             {{else if .Numeric}}
-              <input class="input" type="number" name="value" value="0" step="any" {{if not .Optional}}required{{end}}>
+              <input class="input" type="number" name="value" value="{{.Value}}" step="any" {{if not .Optional}}required{{end}}>
             {{else if .MultiLine}}
               <textarea class="textarea" name="value" rows="3" {{if not .Optional}}required{{end}}>{{.Value}}</textarea>
             {{else}}
-              <input class="input" type="text" name="value" value="" {{if not .Optional}}required{{end}}>
+              <input class="input" type="text" name="value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
             {{end}}
           </label>
           <input type="hidden" name="field" value="{{.Name}}">
         </div>
         {{end}}
+        {{if .AddError}}<p class="notice notification is-danger add-entry-error" role="alert">{{.AddError}}</p>{{end}}
         <button class="button is-link" type="submit">Add entry</button>
       </form>
     </section>
