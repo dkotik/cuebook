@@ -3,6 +3,7 @@ package htmx
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -171,6 +172,85 @@ func TestReadOnlyHandler(t *testing.T) {
 				}
 			}
 			for _, unwanted := range tt.omits {
+				if strings.Contains(body, unwanted) {
+					t.Errorf("body unexpectedly contains %q", unwanted)
+				}
+			}
+		})
+	}
+}
+
+func TestArchiveFilesAppearInSeparateNavigationSection(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   fstest.MapFS
+		selected string
+		contains []string
+		omits    []string
+	}{
+		{
+			name: "archive files are listed separately and selected archive expands section",
+			source: fstest.MapFS{
+				"regular.cue":             &fstest.MapFile{Data: []byte(`[{Name: "Regular"}]`)},
+				".archive/2025-01-01.cue": &fstest.MapFile{Data: []byte(`[{Name: "Archived"}]`)},
+			},
+			selected: ".archive/2025-01-01.cue",
+			contains: []string{
+				`data-file="regular.cue"`,
+				`<remember-details data-storage-key="archive-files" open>`,
+				"<summary>Archive</summary>",
+				`data-file=".archive/2025-01-01.cue"`,
+				`aria-current="page"`,
+			},
+			omits: []string{`data-node-path=".archive"`},
+		},
+		{
+			name: "archive-only source does not show archive as a root folder or claim there are no files",
+			source: fstest.MapFS{
+				".archive/2025-01-01.cue": &fstest.MapFile{Data: []byte(`[{Name: "Archived"}]`)},
+			},
+			contains: []string{
+				"<summary>Archive</summary>",
+				`data-file=".archive/2025-01-01.cue"`,
+			},
+			omits: []string{`data-node-path=".archive"`, "No CUE files found."},
+		},
+		{
+			name: "empty archive section is still available",
+			source: fstest.MapFS{
+				"regular.cue": &fstest.MapFile{Data: []byte(`[{Name: "Regular"}]`)},
+			},
+			contains: []string{"<summary>Archive</summary>", "No archived files."},
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			handler, err := New(test.source)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			target := "/"
+			if test.selected != "" {
+				target += "?file=" + url.QueryEscape(test.selected)
+			}
+			request := httptest.NewRequest(http.MethodGet, "http://example.test"+target, nil)
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+
+			body := response.Body.String()
+			for _, want := range test.contains {
+				if !strings.Contains(body, want) {
+					t.Errorf("body does not contain %q", want)
+				}
+			}
+			for _, unwanted := range test.omits {
 				if strings.Contains(body, unwanted) {
 					t.Errorf("body unexpectedly contains %q", unwanted)
 				}

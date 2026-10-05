@@ -38,9 +38,21 @@
       <ul class="file-tree">
         {{range .Files}}{{template "file-tree-node" .}}{{end}}
       </ul>
-      {{else}}
+      {{else if not .ArchiveFiles}}
       <p class="muted">No CUE files found.</p>
       {{end}}
+      <remember-details data-storage-key="archive-files" {{if .ArchiveOpen}}open{{end}}>
+        <summary>Archive</summary>
+        <div id="archive-files" data-details-content>
+          {{if .ArchiveFiles}}
+          <ul class="file-tree archive-tree">
+            {{range .ArchiveFiles}}{{template "file-tree-node" .}}{{end}}
+          </ul>
+          {{else}}
+          <p class="muted">No archived files.</p>
+          {{end}}
+        </div>
+      </remember-details>
     </nav>
     {{template "workspace" .}}
   </div>

@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const archiveDirectory = ".archive/"
+
 func (a *handler) delete(w http.ResponseWriter, r *http.Request) {
 	if !sameOrigin(r) {
 		a.renderPage(w, r, pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
@@ -30,8 +32,8 @@ func (a *handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileName := r.PostForm.Get("file")
-	if strings.HasPrefix(fileName, "garbage/") {
-		a.editFailure(w, r, fileName, "Entries in the garbage folder cannot be deleted.", http.StatusForbidden)
+	if strings.HasPrefix(fileName, archiveDirectory) {
+		a.editFailure(w, r, fileName, "Entries in the archive cannot be deleted.", http.StatusForbidden)
 		return
 	}
 
@@ -53,7 +55,7 @@ func (a *handler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	archiveName := "garbage/" + time.Now().Format("2006-01-02") + ".cue"
+	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
 	if err := creator.CreateFileIfNotExists(archiveName, []byte("[]\n")); err != nil {
 		a.editFailure(w, r, fileName, "Unable to create the archive file.", http.StatusInternalServerError)
 		return

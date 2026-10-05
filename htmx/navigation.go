@@ -26,6 +26,8 @@ type fileTreeNode struct {
 
 type pageData struct {
 	Files             []fileTreeNode
+	ArchiveFiles      []fileTreeNode
+	ArchiveOpen       bool
 	Selected          string
 	FileTitle         string
 	FileDescription   string
@@ -62,7 +64,8 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 		data.Error = "Unable to list CUE files."
 		return data, http.StatusInternalServerError
 	}
-	data.Files = makeFileTree(fileNames, fileName)
+	data.Files, data.ArchiveFiles = makeSidebarTrees(fileNames, fileName)
+	data.ArchiveOpen = strings.HasPrefix(fileName, archiveDirectory)
 
 	if fileName == "" {
 		return data, http.StatusOK
@@ -99,7 +102,7 @@ func makeEntryViews(document cuebook.Document, fileName string, readOnly bool) (
 			File:      fileName,
 			Title:     entry.GetTitle(),
 			CanMove:   !readOnly,
-			CanDelete: !readOnly && !strings.HasPrefix(fileName, "garbage/"),
+			CanDelete: !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
 		}
 		if view.Title == "" {
 			view.Title = fmt.Sprintf("Entry %d", index+1)
@@ -217,6 +220,17 @@ func makeFileTree(fileNames []string, selected string) []fileTreeNode {
 	return roots
 }
 
+func makeSidebarTrees(fileNames []string, selected string) (files, archiveFiles []fileTreeNode) {
+	for _, node := range makeFileTree(fileNames, selected) {
+		if node.IsDir && node.Path == strings.TrimSuffix(archiveDirectory, "/") {
+			archiveFiles = node.Children
+			continue
+		}
+		files = append(files, node)
+	}
+	return files, archiveFiles
+}
+
 func sortFileTree(nodes []fileTreeNode) {
 	sort.Slice(nodes, func(i, j int) bool {
 		if nodes[i].IsDir != nodes[j].IsDir {
@@ -259,9 +273,12 @@ func setFileFrontmatter(data *pageData, fileName string, source []byte) {
 }
 
 func (a *handler) basePage(fileNames []string, selected, notice string) pageData {
+	files, archiveFiles := makeSidebarTrees(fileNames, selected)
 	return pageData{
-		ReadOnly: a.committer == nil,
-		Error:    notice,
-		Files:    makeFileTree(fileNames, selected),
+		ReadOnly:     a.committer == nil,
+		Error:        notice,
+		Files:        files,
+		ArchiveFiles: archiveFiles,
+		ArchiveOpen:  strings.HasPrefix(selected, archiveDirectory),
 	}
 }

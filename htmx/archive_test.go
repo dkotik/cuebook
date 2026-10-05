@@ -38,7 +38,7 @@ func TestDeleteArchivesEntries(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			files := transferTestDocuments()
-			archiveName := "garbage/" + time.Now().Format("2006-01-02") + ".cue"
+			archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
 			if test.initialArchive != nil {
 				files[archiveName] = test.initialArchive
 			}
@@ -123,11 +123,11 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 			wantNotice: "The entry position is invalid.",
 		},
 		{
-			name:       "entry already in garbage folder",
-			file:       "garbage/old.cue",
+			name:       "entry already in archive",
+			file:       archiveDirectory + "old.cue",
 			origin:     "http://example.test",
 			wantStatus: http.StatusForbidden,
-			wantNotice: "Entries in the garbage folder cannot be deleted.",
+			wantNotice: "Entries in the archive cannot be deleted.",
 		},
 		{
 			name:       "cross-origin request",
@@ -142,8 +142,8 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			documents := transferTestDocuments()
-			if test.file == "garbage/old.cue" {
-				documents = map[string][]byte{"garbage/old.cue": documents["source.cue"]}
+			if test.file == archiveDirectory+"old.cue" {
+				documents = map[string][]byte{archiveDirectory + "old.cue": documents["source.cue"]}
 			}
 			files := transferSourceFS(documents)
 
@@ -191,7 +191,7 @@ func TestDeleteRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	originalSource := append([]byte(nil), files["source.cue"].Data...)
-	archiveName := "garbage/" + time.Now().Format("2006-01-02") + ".cue"
+	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
 
 	response := submitDelete(t, handler, "source.cue", 0, "http://example.test")
 	if response.Code != http.StatusInternalServerError {
@@ -209,7 +209,7 @@ func TestDeleteRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 	}
 }
 
-func TestDeleteDoesNotFollowGarbageDirectorySymlink(t *testing.T) {
+func TestDeleteDoesNotFollowArchiveDirectorySymlink(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
@@ -220,7 +220,7 @@ func TestDeleteDoesNotFollowGarbageDirectorySymlink(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "source.cue"), source, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, filepath.Join(root, "garbage")); err != nil {
+	if err := os.Symlink(outside, filepath.Join(root, strings.TrimSuffix(archiveDirectory, "/"))); err != nil {
 		t.Fatal(err)
 	}
 	handler, err := NewDirectory(root)
