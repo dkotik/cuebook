@@ -2,6 +2,7 @@ package htmx
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 	"testing/fstest"
 
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/patch"
 )
 
 func TestWritableDirectoryMovesEntries(t *testing.T) {
@@ -38,7 +40,7 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 	if pageResponse.Code != http.StatusOK {
 		t.Fatalf("page status = %d, want %d; body: %s", pageResponse.Code, http.StatusOK, pageResponse.Body.String())
 	}
-	for _, want := range []string{`data-entry-drag-handle`, `draggable="true"`, `data-entry-index="0"`, `data-file="contacts.cue"`} {
+	for _, want := range []string{`data-entry-drag-handle`, `draggable="true"`, `data-entry-index="0"`, `<a class="tree-file-link" data-file="contacts.cue"`} {
 		if !strings.Contains(pageResponse.Body.String(), want) {
 			t.Errorf("writable page does not contain %q", want)
 		}
@@ -147,6 +149,229 @@ func TestEntryMovePatchInverts(t *testing.T) {
 	if !bytes.Equal(restored, source) {
 		t.Fatalf("inverse move patch did not restore original source:\n%s", restored)
 	}
+}
+
+func TestMoveTransfersEntriesBetweenFiles(t *testing.T) {
+	t.Parallel()
+
+	documents := transferTestDocuments()
+	committer := &transferCommitter{files: transferSourceFS(documents)}
+	handler, err := NewWithCommitter(committer.files, committer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response := submitTransfer(t, handler, "source.cue", 0, "destination.cue", true)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	body := response.Body.String()
+	if !strings.Contains(body, `<main id="workspace"`) || !strings.Contains(body, `destination.cue`) {
+		t.Fatalf("response does not display the destination workspace: %s", body)
+	}
+	existingPosition := strings.Index(body, `Existing destination`)
+	movedPosition := strings.Index(body, `Move me`)
+	if existingPosition < 0 || movedPosition < 0 || movedPosition < existingPosition {
+		t.Fatalf("transferred entry was not appended after existing destination entries: %s", body)
+	}
+
+	if want := []string{"destination.cue", "source.cue"}; !equalStrings(committer.calls, want) {
+		t.Fatalf("commit order = %v, want %v", committer.calls, want)
+	}
+	assertEntryTitles(t, committer.files["source.cue"].Data, []string{"Keep me", "Third source"})
+	assertEntryTitles(t, committer.files["destination.cue"].Data, []string{"Existing destination", "Move me"})
+}
+
+func TestMoveTransferFailures(t *testing.T) {
+	tests := []struct {
+		name        string
+		documents   map[string][]byte
+		readOnly    bool
+		destination string
+		from        int
+		failCalls   map[int]error
+		wantStatus  int
+		wantCalls   []string
+		wantNotice  string
+	}{
+		{
+			name:        "read-only source",
+			documents:   transferTestDocuments(),
+			readOnly:    true,
+			destination: "destination.cue",
+			wantStatus:  http.StatusForbidden,
+			wantNotice:  "This source is read-only.",
+		},
+		{
+			name:        "unknown destination",
+			documents:   transferTestDocuments(),
+			destination: "../outside.cue",
+			wantStatus:  http.StatusNotFound,
+			wantNotice:  "CUE file not found.",
+		},
+		{
+			name: "destination constraint failure leaves both files unchanged",
+			documents: map[string][]byte{
+				"source.cue": []byte(`#entry: {Name: string @cuebook(title)}
+[...#entry] & [{Name: "Move me"}]
+`),
+				"destination.cue": []byte(`#entry: {Name: "Allowed" @cuebook(title)}
+[...#entry] & [{Name: "Allowed"}]
+`),
+			},
+			destination: "destination.cue",
+			wantStatus:  http.StatusUnprocessableEntity,
+			wantNotice:  "does not satisfy the destination file",
+		},
+		{
+			name: "source deletion constraint failure leaves both files unchanged",
+			documents: map[string][]byte{
+				"source.cue": []byte(`#entry: {Name: string @cuebook(title)}
+[...#entry] & [{Name: "Move me"}, {Name: "Keep me"}] & [_, _, ...]
+`),
+				"destination.cue": []byte(`#entry: {Name: string @cuebook(title)}
+[...#entry] & [{Name: "Existing destination"}]
+`),
+			},
+			destination: "destination.cue",
+			wantStatus:  http.StatusUnprocessableEntity,
+			wantNotice:  "does not satisfy the source file",
+		},
+		{
+			name:        "source commit failure rolls back destination",
+			documents:   transferTestDocuments(),
+			destination: "destination.cue",
+			failCalls:   map[int]error{2: errors.New("source storage failure")},
+			wantStatus:  http.StatusInternalServerError,
+			wantCalls:   []string{"destination.cue", "source.cue", "destination.cue"},
+			wantNotice:  "destination change was rolled back",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			files := transferSourceFS(test.documents)
+			var handler http.Handler
+			var committer *transferCommitter
+			var err error
+			if test.readOnly {
+				handler, err = New(files)
+			} else {
+				committer = &transferCommitter{files: files, failCalls: test.failCalls}
+				handler, err = NewWithCommitter(files, committer)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			originalSource := append([]byte(nil), files["source.cue"].Data...)
+			originalDestination := append([]byte(nil), files["destination.cue"].Data...)
+
+			response := submitTransfer(t, handler, "source.cue", test.from, test.destination, true)
+			if response.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, test.wantStatus, response.Body.String())
+			}
+			if !strings.Contains(response.Body.String(), test.wantNotice) {
+				t.Errorf("response missing notice %q: %s", test.wantNotice, response.Body.String())
+			}
+			if committer != nil && !equalStrings(committer.calls, test.wantCalls) {
+				t.Errorf("commit calls = %v, want %v", committer.calls, test.wantCalls)
+			}
+			if !bytes.Equal(files["source.cue"].Data, originalSource) {
+				t.Errorf("source file changed after rejected transfer:\n%s", files["source.cue"].Data)
+			}
+			if !bytes.Equal(files["destination.cue"].Data, originalDestination) {
+				t.Errorf("destination file changed after rejected transfer:\n%s", files["destination.cue"].Data)
+			}
+		})
+	}
+}
+
+func transferTestDocuments() map[string][]byte {
+	return map[string][]byte{
+		"source.cue": []byte(`#entry: {Name: string @cuebook(title)}
+[...#entry] & [{Name: "Move me"}, {Name: "Keep me"}, {Name: "Third source"}]
+`),
+		"destination.cue": []byte(`#entry: {Name: string @cuebook(title)}
+[...#entry] & [{Name: "Existing destination"}]
+`),
+	}
+}
+
+func transferSourceFS(documents map[string][]byte) fstest.MapFS {
+	files := make(fstest.MapFS, len(documents))
+	for name, content := range documents {
+		files[name] = &fstest.MapFile{Data: append([]byte(nil), content...)}
+	}
+	return files
+}
+
+type transferCommitter struct {
+	files     fstest.MapFS
+	calls     []string
+	failCalls map[int]error
+}
+
+func (c *transferCommitter) Commit(name string, change patch.Patch) error {
+	c.calls = append(c.calls, name)
+	if err := c.failCalls[len(c.calls)]; err != nil {
+		return err
+	}
+	file, ok := c.files[name]
+	if !ok {
+		return os.ErrNotExist
+	}
+	updated, err := change.ApplyToCueSource(file.Data)
+	if err != nil {
+		return err
+	}
+	if _, err := cuebook.New(updated); err != nil {
+		return err
+	}
+	file.Data = updated
+	return nil
+}
+
+func submitTransfer(t *testing.T, handler http.Handler, file string, from int, destination string, htmx bool) *httptest.ResponseRecorder {
+	t.Helper()
+	values := url.Values{
+		"file":        {file},
+		"from":        {strconv.Itoa(from)},
+		"destination": {destination},
+	}
+	request := httptest.NewRequest(http.MethodPost, "http://example.test/move", strings.NewReader(values.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Origin", "http://example.test")
+	if htmx {
+		request.Header.Set("HX-Request", "true")
+	}
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	return response
+}
+
+func assertEntryTitles(t *testing.T, source []byte, want []string) {
+	t.Helper()
+	titles, err := entryTitles(source)
+	if err != nil {
+		t.Fatalf("entryTitles(%q): %v", source, err)
+	}
+	if !equalStrings(titles, want) {
+		t.Fatalf("entry titles = %v, want %v", titles, want)
+	}
+}
+
+func equalStrings(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for index := range got {
+		if got[index] != want[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func submitMove(t *testing.T, handler http.Handler, file string, from, to int, origin string, htmx bool) *httptest.ResponseRecorder {

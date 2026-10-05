@@ -117,6 +117,12 @@ file-tree-node {
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
+.tree-file-link.is-drop-target {
+  outline: 2px dashed currentColor;
+  outline-offset: -2px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+}
+
 .tree-children[hidden] {
   display: none;
 }

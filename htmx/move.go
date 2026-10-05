@@ -39,10 +39,19 @@ func (a *handler) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	from, fromErr := strconv.Atoi(r.PostForm.Get("from"))
-	to, toErr := strconv.Atoi(r.PostForm.Get("to"))
+	from, err := strconv.Atoi(r.PostForm.Get("from"))
 	length, _ := document.Len()
-	if fromErr != nil || toErr != nil || from < 0 || to < 0 || from >= length || to >= length {
+	if err != nil || from < 0 || from >= length {
+		a.editFailure(w, r, fileName, "The entry position is invalid.", http.StatusBadRequest)
+		return
+	}
+	if destination := r.PostForm.Get("destination"); destination != "" {
+		a.transferEntry(w, r, fileName, destination, raw, document, from, fileNames)
+		return
+	}
+
+	to, err := strconv.Atoi(r.PostForm.Get("to"))
+	if err != nil || to < 0 || to >= length {
 		a.editFailure(w, r, fileName, "The entry position is invalid.", http.StatusBadRequest)
 		return
 	}
@@ -82,6 +91,81 @@ func (a *handler) move(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.finishEdit(w, r, fileName)
+}
+
+func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Document, from int, fileNames []string) {
+	if sourceName == destinationName {
+		a.finishEdit(w, r, sourceName)
+		return
+	}
+
+	destinationRaw, _, status, message := a.readDocument(destinationName, fileNames)
+	if status != http.StatusOK {
+		a.editFailure(w, r, destinationName, message, status)
+		return
+	}
+	entryValue, err := sourceDocument.GetValue(from)
+	if err != nil {
+		a.editFailure(w, r, sourceName, "The source entry could not be found.", http.StatusNotFound)
+		return
+	}
+
+	appendChange, err := patch.AppendToStructList(destinationRaw, entryValue)
+	if err != nil {
+		a.editFailure(w, r, destinationName, "The entry could not be added to the destination file.", http.StatusUnprocessableEntity)
+		return
+	}
+	destinationCandidate, err := appendChange.ApplyToCueSource(destinationRaw)
+	if err != nil {
+		a.editFailure(w, r, destinationName, "The destination file changed before the entry could be added. Reload and try again.", http.StatusConflict)
+		return
+	}
+	if _, err := cuebook.New(destinationCandidate); err != nil {
+		a.editFailure(w, r, destinationName, "The entry does not satisfy the destination file's CUE constraints.", http.StatusUnprocessableEntity)
+		return
+	}
+
+	deleteChange, err := patch.DeleteFromStructList(sourceRaw, entryValue)
+	if err != nil {
+		a.editFailure(w, r, sourceName, "The entry could not be removed from the source file.", http.StatusUnprocessableEntity)
+		return
+	}
+	sourceCandidate, err := deleteChange.ApplyToCueSource(sourceRaw)
+	if err != nil {
+		a.editFailure(w, r, sourceName, "The source file changed before the entry could be removed. Reload and try again.", http.StatusConflict)
+		return
+	}
+	if _, err := cuebook.New(sourceCandidate); err != nil {
+		a.editFailure(w, r, sourceName, "Removing the entry does not satisfy the source file's CUE constraints.", http.StatusUnprocessableEntity)
+		return
+	}
+
+	if err := a.committer.Commit(destinationName, patch.Validated(appendChange)); err != nil {
+		status := http.StatusInternalServerError
+		notice := "The entry could not be added to the destination file."
+		if errors.Is(err, patch.ErrByteRangeNotFound) {
+			status = http.StatusConflict
+			notice = "The destination file changed before the entry could be added. Reload and try again."
+		}
+		a.editFailure(w, r, destinationName, notice, status)
+		return
+	}
+	if err := a.committer.Commit(sourceName, patch.Validated(deleteChange)); err != nil {
+		rollbackErr := a.committer.Commit(destinationName, patch.Validated(appendChange.Invert()))
+		if rollbackErr != nil {
+			a.editFailure(w, r, destinationName, "The entry was added to the destination, but the source could not be updated and the destination change could not be rolled back. It may now exist in both files.", http.StatusInternalServerError)
+			return
+		}
+		status := http.StatusInternalServerError
+		notice := "The transfer could not be completed; the destination change was rolled back."
+		if errors.Is(err, patch.ErrByteRangeNotFound) {
+			status = http.StatusConflict
+			notice = "The source file changed before the entry could be removed. The destination change was rolled back; reload and try again."
+		}
+		a.editFailure(w, r, sourceName, notice, status)
+		return
+	}
+	a.finishEdit(w, r, destinationName)
 }
 
 func entryMovePatch(source []byte, from, to int) (patch.Patch, error) {

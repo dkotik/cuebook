@@ -9,9 +9,17 @@
       : null;
   }
 
+  function fileLinkFromEvent(event) {
+    const target = event.target;
+    return target instanceof Element ? target.closest(".tree-file-link[data-file]") : null;
+  }
+
   function clearDropIndicators() {
     for (const card of document.querySelectorAll(".entry.drop-before, .entry.drop-after")) {
       card.classList.remove("drop-before", "drop-after");
+    }
+    for (const link of document.querySelectorAll(".tree-file-link.is-drop-target")) {
+      link.classList.remove("is-drop-target");
     }
   }
 
@@ -19,6 +27,26 @@
     clearDropIndicators();
     draggedCard?.classList.remove("is-dragging");
     draggedCard = null;
+  }
+
+  async function submitMove(sourceCard, values) {
+    pending = true;
+    document.getElementById("workspace")?.setAttribute("aria-busy", "true");
+    clearDropIndicators();
+    try {
+      await window.htmx.ajax("POST", "/move", {
+        target: "#workspace",
+        swap: "outerHTML",
+        values,
+      });
+    } catch (_) {
+      window.location.reload();
+    } finally {
+      pending = false;
+      document.getElementById("workspace")?.removeAttribute("aria-busy");
+      sourceCard.classList.remove("is-dragging");
+      clearDragState();
+    }
   }
 
   document.addEventListener("dragstart", (event) => {
@@ -42,8 +70,26 @@
   });
 
   document.addEventListener("dragover", (event) => {
+    if (!draggedCard || pending) {
+      return;
+    }
+
+    const targetFileLink = fileLinkFromEvent(event);
+    if (targetFileLink) {
+      event.preventDefault();
+      clearDropIndicators();
+      if (targetFileLink.dataset.file !== draggedCard.dataset.file) {
+        targetFileLink.classList.add("is-drop-target");
+      }
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+      }
+      return;
+    }
+
     const targetCard = cardFromEvent(event);
-    if (!draggedCard || pending || !targetCard || targetCard === draggedCard) {
+    if (!targetCard || targetCard === draggedCard) {
+      clearDropIndicators();
       return;
     }
 
@@ -63,6 +109,21 @@
     event.preventDefault();
 
     const sourceCard = draggedCard;
+    const targetFileLink = fileLinkFromEvent(event);
+    if (targetFileLink) {
+      const destination = targetFileLink.dataset.file;
+      if (destination && destination !== sourceCard.dataset.file) {
+        await submitMove(sourceCard, {
+          file: sourceCard.dataset.file,
+          from: sourceCard.dataset.entryIndex,
+          destination,
+        });
+      } else {
+        clearDragState();
+      }
+      return;
+    }
+
     const targetCard = cardFromEvent(event);
     if (!targetCard || targetCard === sourceCard) {
       clearDragState();
@@ -89,26 +150,11 @@
       return;
     }
 
-    pending = true;
-    document.getElementById("workspace")?.setAttribute("aria-busy", "true");
-    clearDropIndicators();
-    try {
-      await window.htmx.ajax("POST", "/move", {
-        target: "#workspace",
-        swap: "outerHTML",
-        values: {
-          file: sourceCard.dataset.file,
-          from: String(from),
-          to: String(to),
-        },
-      });
-    } catch (_) {
-      window.location.reload();
-    } finally {
-      pending = false;
-      document.getElementById("workspace")?.removeAttribute("aria-busy");
-      clearDragState();
-    }
+    await submitMove(sourceCard, {
+      file: sourceCard.dataset.file,
+      from: String(from),
+      to: String(to),
+    });
   });
 
   document.addEventListener("dragend", () => {
