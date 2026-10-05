@@ -15,8 +15,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
-	"path"
-	"sort"
+
 	"strconv"
 	"strings"
 
@@ -118,106 +117,6 @@ func (a *handler) asset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	_, _ = w.Write(content)
-}
-
-func (a *handler) index(w http.ResponseWriter, r *http.Request) {
-	fileName := r.URL.Query().Get("file")
-	data, status := a.loadPage(fileName, "")
-	a.renderPage(w, r, data, status)
-}
-
-func (a *handler) loadPage(fileName, notice string) (pageData, int) {
-	data := pageData{ReadOnly: a.committer == nil, Error: notice}
-	fileNames, err := a.fileNames()
-	if err != nil {
-		data.Error = "Unable to list CUE files."
-		return data, http.StatusInternalServerError
-	}
-	data.Files = make([]fileLink, 0, len(fileNames))
-	for _, name := range fileNames {
-		data.Files = append(data.Files, fileLink{
-			Name: name,
-			URL:  fileURL(name),
-		})
-	}
-
-	if fileName == "" {
-		return data, http.StatusOK
-	}
-	data.Selected = fileName
-	_, document, status, message := a.readDocument(fileName, fileNames)
-	if status != http.StatusOK {
-		data.DocumentError = message
-		return data, status
-	}
-	if !data.ReadOnly {
-		data.AddFields = makeAddFieldViews(document)
-	}
-	entries, err := makeEntryViews(document, fileName, data.ReadOnly)
-	if err != nil {
-		data.DocumentError = "Unable to display this CUE document: " + err.Error()
-		return data, http.StatusUnprocessableEntity
-	}
-	data.Entries = entries
-	return data, http.StatusOK
-}
-
-func (a *handler) fileNames() ([]string, error) {
-	var names []string
-	err := fs.WalkDir(a.source, ".", func(name string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if name == "." || entry.IsDir() {
-			return nil
-		}
-		if entry.Type()&fs.ModeType != 0 && !entry.Type().IsRegular() {
-			return nil
-		}
-		if path.Ext(name) == ".cue" && validFileName(name) {
-			names = append(names, name)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(names)
-	return names, nil
-}
-
-func (a *handler) readDocument(name string, knownFiles []string) ([]byte, cuebook.Document, int, string) {
-	if !validFileName(name) || !containsFile(knownFiles, name) {
-		return nil, cuebook.Document{}, http.StatusNotFound, "CUE file not found."
-	}
-	raw, err := fs.ReadFile(a.source, name)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil, cuebook.Document{}, http.StatusNotFound, "CUE file not found."
-		}
-		return nil, cuebook.Document{}, http.StatusInternalServerError, "Unable to read this CUE file."
-	}
-	document, err := cuebook.New(raw)
-	if err != nil {
-		return raw, cuebook.Document{}, http.StatusUnprocessableEntity, "Unable to parse or validate this CUE document: " + err.Error()
-	}
-	return raw, document, http.StatusOK, ""
-}
-
-func validFileName(name string) bool {
-	return name != "" && name != "." && fs.ValidPath(name) &&
-		!strings.Contains(name, `\`) && path.Ext(name) == ".cue"
-}
-
-func containsFile(names []string, name string) bool {
-	index := sort.SearchStrings(names, name)
-	return index < len(names) && names[index] == name
-}
-
-func fileURL(name string) string {
-	query := url.Values{}
-	query.Set("file", name)
-	return "/?" + query.Encode()
 }
 
 func isHTMX(r *http.Request) bool {
