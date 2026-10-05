@@ -338,6 +338,49 @@ button {
   cursor: pointer;
 }
 
+remember-details {
+  display: block;
+  margin-top: 0.75rem;
+  border-top: 1px solid GrayText;
+}
+
+remember-details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0;
+  cursor: pointer;
+  font-weight: 650;
+  list-style: none;
+}
+
+remember-details > summary::before {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  content: "";
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+}
+
+remember-details[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+remember-details > summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 0.2rem;
+}
+
+remember-details > [data-details-content] {
+  padding-bottom: 0.5rem;
+}
+
+remember-details > [data-details-content][hidden] {
+  display: none;
+}
+
 .details {
   margin-top: 0.75rem;
   border-top: 1px solid GrayText;

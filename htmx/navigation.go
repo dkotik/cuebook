@@ -23,14 +23,16 @@ type fileTreeNode struct {
 }
 
 type pageData struct {
-	Files         []fileTreeNode
-	Selected      string
-	Entries       []entryView
-	AddFields     []addFieldView
-	AddError      string
-	ReadOnly      bool
-	Error         string
-	DocumentError string
+	Files             []fileTreeNode
+	Selected          string
+	Entries           []entryView
+	AddFields         []addFieldView
+	RequiredAddFields []addFieldView
+	OptionalAddFields []addFieldView
+	AddError          string
+	ReadOnly          bool
+	Error             string
+	DocumentError     string
 }
 
 type entryView struct {

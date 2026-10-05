@@ -28,7 +28,7 @@ import (
 //go:embed templates/page.html
 var templateFiles embed.FS
 
-//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/favicon.svg
+//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/favicon.svg
 var assetFiles embed.FS
 
 // Committer applies a prepared Cuebook patch to a named source file.
@@ -99,7 +99,7 @@ func (a *handler) asset(w http.ResponseWriter, r *http.Request) {
 	switch name {
 	case "app.css", "bulma.css":
 		contentType = "text/css; charset=utf-8"
-	case "theme.js", "file-tree.js", "entry-move.js":
+	case "theme.js", "file-tree.js", "entry-move.js", "remember-details.js":
 		contentType = "text/javascript; charset=utf-8"
 	case "bulma-LICENSE.txt":
 		contentType = "text/plain; charset=utf-8"
@@ -128,6 +128,7 @@ func isHTMX(r *http.Request) bool {
 }
 
 func (a *handler) renderPage(w http.ResponseWriter, r *http.Request, data pageData, status int) {
+	data.RequiredAddFields, data.OptionalAddFields = splitAddFieldViews(data.AddFields)
 	var output strings.Builder
 	name := "page"
 	if isHTMX(r) {

@@ -52,6 +52,17 @@ func makeAddFieldViews(document cuebook.Document) []addFieldView {
 	return result
 }
 
+func splitAddFieldViews(fields []addFieldView) (required, optional []addFieldView) {
+	for _, field := range fields {
+		if field.Optional {
+			optional = append(optional, field)
+			continue
+		}
+		required = append(required, field)
+	}
+	return required, optional
+}
+
 func entryFieldDefinitions(document cuebook.Document) []entryFieldDefinition {
 	var result []entryFieldDefinition
 	for selector, value := range cuebook.EachFieldDefinition(document.Value) {

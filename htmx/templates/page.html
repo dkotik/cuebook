@@ -13,6 +13,7 @@
   <script src="/assets/htmx-2.0.4.min.js" defer></script>
   <script src="/assets/file-tree.js" defer></script>
   <script src="/assets/entry-move.js" defer></script>
+  <script src="/assets/remember-details.js" defer></script>
 </head>
 <body>
   <header class="topbar navbar">
@@ -85,27 +86,14 @@
       <h2 id="add-entry-heading">Add entry</h2>
       <form action="/add" method="post" hx-post="/add" hx-target="#workspace" hx-swap="outerHTML">
         <input type="hidden" name="file" value="{{.Selected}}">
-        {{range .AddFields}}
-        <div class="field">
-          <label>
-            <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
-            {{if .Secret}}
-              <input class="input" type="password" name="value" value="" autocomplete="new-password" {{if not .Optional}}required{{end}}>
-            {{else if .Boolean}}
-              <div class="select"><select name="value" {{if not .Optional}}required{{end}}>
-                <option value="false"{{if eq .Value "false"}} selected{{end}}>false</option>
-                <option value="true"{{if eq .Value "true"}} selected{{end}}>true</option>
-              </select></div>
-            {{else if .Numeric}}
-              <input class="input" type="number" name="value" value="{{.Value}}" step="any" {{if not .Optional}}required{{end}}>
-            {{else if .MultiLine}}
-              <textarea class="textarea" name="value" rows="3" {{if not .Optional}}required{{end}}>{{.Value}}</textarea>
-            {{else}}
-              <input class="input" type="text" name="value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
-            {{end}}
-          </label>
-          <input type="hidden" name="field" value="{{.Name}}">
-        </div>
+        {{range .RequiredAddFields}}{{template "add-entry-field" .}}{{end}}
+        {{if .OptionalAddFields}}
+        <remember-details data-storage-key="add-entry-optional">
+          <summary>Optional fields</summary>
+          <div id="add-entry-optional-content" data-details-content>
+            {{range .OptionalAddFields}}{{template "add-entry-field" .}}{{end}}
+          </div>
+        </remember-details>
         {{end}}
         {{if .AddError}}<p class="notice notification is-danger add-entry-error" role="alert">{{.AddError}}</p>{{end}}
         <button class="button is-link" type="submit">Add entry</button>
@@ -117,6 +105,29 @@
     <p class="muted">Choose a file from the tree to view its entries.</p>
   {{end}}
 </main>
+{{end}}
+
+{{define "add-entry-field" -}}
+<div class="field">
+  <label>
+    <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
+    {{if .Secret}}
+      <input class="input" type="password" name="value" value="" autocomplete="new-password" {{if not .Optional}}required{{end}}>
+    {{else if .Boolean}}
+      <div class="select"><select name="value" {{if not .Optional}}required{{end}}>
+        <option value="false"{{if eq .Value "false"}} selected{{end}}>false</option>
+        <option value="true"{{if eq .Value "true"}} selected{{end}}>true</option>
+      </select></div>
+    {{else if .Numeric}}
+      <input class="input" type="number" name="value" value="{{.Value}}" step="any" {{if not .Optional}}required{{end}}>
+    {{else if .MultiLine}}
+      <textarea class="textarea" name="value" rows="3" {{if not .Optional}}required{{end}}>{{.Value}}</textarea>
+    {{else}}
+      <input class="input" type="text" name="value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
+    {{end}}
+  </label>
+  <input type="hidden" name="field" value="{{.Name}}">
+</div>
 {{end}}
 
 {{define "entry" -}}

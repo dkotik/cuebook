@@ -58,10 +58,32 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 		`name="field" value="Notes"`,
 		`name="field" value="Password"`,
 		"(optional)",
+		`<remember-details data-storage-key="add-entry-optional:core1.cue">`,
+		"<summary>Optional fields</summary>",
+		`<div id="add-entry-optional-content" data-details-content>`,
+		`<script src="/assets/remember-details.js" defer></script>`,
 		"Add entry",
 	} {
 		if !strings.Contains(response.Body.String(), want) {
 			t.Errorf("page does not contain %q", want)
+		}
+	}
+
+	body := response.Body.String()
+	componentStart := strings.Index(body, `<remember-details data-storage-key="add-entry-optional:core1.cue">`)
+	componentEnd := strings.Index(body, `</remember-details>`)
+	if componentStart < 0 || componentEnd < componentStart {
+		t.Fatalf("optional fields are not wrapped by the persistent details component: %s", body)
+	}
+	optionalMarkup := body[componentStart:componentEnd]
+	for _, want := range []string{`name="field" value="Notes"`, `name="field" value="Password"`} {
+		if !strings.Contains(optionalMarkup, want) {
+			t.Errorf("persistent optional fields do not contain %q: %s", want, optionalMarkup)
+		}
+	}
+	for _, notWant := range []string{`name="field" value="Name"`, `name="field" value="Email"`} {
+		if strings.Contains(optionalMarkup, notWant) {
+			t.Errorf("required field %q is inside the optional fields component: %s", notWant, optionalMarkup)
 		}
 	}
 }
@@ -169,9 +191,10 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".entry-content {", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", ".tree-children[hidden]"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".entry-content {", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".tree-children[hidden]"}, wantStatus: http.StatusOK},
 		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},
 		{name: "entry move controller", path: "/assets/entry-move.js", contains: []string{"data-entry-drag-handle", `htmx.ajax("POST", "/move"`, "drop-before", "drop-after", "await window.htmx.ajax", "destination", "is-drop-target"}, wantStatus: http.StatusOK},
+		{name: "remember details component", path: "/assets/remember-details.js", contains: []string{`customElements.define("remember-details"`, "localStorage.getItem", "localStorage.setItem", "dataset.storageKey", "aria-expanded", "keydown"}, wantStatus: http.StatusOK},
 		{name: "theme controller", path: "/assets/theme.js", contains: []string{"localStorage.setItem", `querySelectorAll("[data-theme-icon]")`, `? "moon" : "sun"`, `icon.style.display`, `? "inline-block" : "none"`}, wantStatus: http.StatusOK},
 		{name: "unknown asset", path: "/assets/secret.txt", wantStatus: http.StatusNotFound},
 	}
