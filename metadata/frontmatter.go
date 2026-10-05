@@ -3,9 +3,8 @@ package metadata
 import (
 	"bytes"
 
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/ast"
-	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/v2/ast"
+	"github.com/yuin/goldmark/v2/parser"
 )
 
 type Frontmatter struct {
@@ -16,8 +15,21 @@ type Frontmatter struct {
 
 func (m Frontmatter) Title() string {
 	if m.Node != nil && m.Node.HasChildren() {
-		first := m.Node.FirstChild()
-		return string(first.Lines().Value(m.Source))
+		first, ok := m.Node.FirstChild().(ast.BlockNode)
+		if !ok {
+			return ""
+		}
+
+		var title bytes.Buffer
+		for i, segment := range first.Source() {
+			if i > 0 {
+				_ = title.WriteByte('\n')
+			}
+			value := bytes.TrimSuffix(segment.Bytes(m.Source), []byte("\n"))
+			value = bytes.TrimSuffix(value, []byte("\r"))
+			_, _ = title.Write(value)
+		}
+		return title.String()
 	}
 	return ""
 }
@@ -26,34 +38,36 @@ func (m Frontmatter) Description() string {
 	if m.Node == nil {
 		return ""
 	}
-	if total := m.Node.ChildCount(); total > 1 {
-		b := bytes.Buffer{}
-		next := m.Node.FirstChild()
-		for range total - 1 {
-			next = next.NextSibling()
-			lines := next.Lines()
-			for i := range lines.Len() {
-				line := lines.At(i)
-				// _, _ = b.Write(m.Source[line.Start:line.Stop])
-				_, _ = b.Write(line.Value(m.Source))
-				_, _ = b.WriteRune('\n')
+	if m.Node.ChildCount() > 1 {
+		var description bytes.Buffer
+		for next := m.Node.FirstChild().NextSibling(); next != nil; next = next.NextSibling() {
+			block, ok := next.(ast.BlockNode)
+			if !ok {
+				continue
+			}
+			for _, segment := range block.Source() {
+				value := bytes.TrimSuffix(segment.Bytes(m.Source), []byte("\n"))
+				value = bytes.TrimSuffix(value, []byte("\r"))
+				_, _ = description.Write(value)
+				_, _ = description.WriteRune('\n')
 			}
 		}
-		return b.String()
+		return description.String()
 	}
 	return ""
 }
 
 func (m Frontmatter) Get(frontMatterFieldName string) any {
-	return m.Node.OwnerDocument().Meta()[frontMatterFieldName]
-	// value, _ := m.Node.OwnerDocument().Meta()[frontMatterFieldName]
-	// return value
+	if m.Node == nil {
+		return nil
+	}
+	return m.Node.OwnerDocument().Metadata()[frontMatterFieldName]
 }
 
 func NewFrontmatter(source []byte) Frontmatter {
 	source, tail := ReadLeadingComments(source)
 	return Frontmatter{
-		Node:             goldmark.New().Parser().Parse(text.NewReader(source)),
+		Node:             parser.New().Parse(source),
 		Source:           source,
 		TailBytePosition: tail,
 	}
