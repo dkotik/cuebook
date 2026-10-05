@@ -193,18 +193,30 @@ func TestEditFailures(t *testing.T) {
 	}
 
 	tests := []struct {
-		name       string
-		values     url.Values
-		origin     string
-		wantStatus int
-		wantNotice string
+		name          string
+		values        url.Values
+		origin        string
+		htmx          bool
+		wantStatus    int
+		wantNotice    string
+		preserveValue string
 	}{
 		{
-			name:       "invalid email is rejected by cue validation",
-			values:     editValues("core1.cue", "0", "Email", "not-an-email"),
-			origin:     "http://example.test",
-			wantStatus: http.StatusUnprocessableEntity,
-			wantNotice: "does not satisfy the CUE constraints",
+			name:          "invalid email is rejected by cue validation",
+			values:        editValues("core1.cue", "0", "Email", "not-an-email"),
+			origin:        "http://example.test",
+			wantStatus:    http.StatusUnprocessableEntity,
+			wantNotice:    "does not satisfy the CUE constraints",
+			preserveValue: "not-an-email",
+		},
+		{
+			name:          "htmx validation error retains the submitted value",
+			values:        editValues("core1.cue", "0", "Email", "not-an-email"),
+			origin:        "http://example.test",
+			htmx:          true,
+			wantStatus:    http.StatusUnprocessableEntity,
+			wantNotice:    "does not satisfy the CUE constraints",
+			preserveValue: "not-an-email",
 		},
 		{
 			name:       "missing field is not found",
@@ -238,12 +250,15 @@ func TestEditFailures(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := submitEditWithOrigin(t, handler, false, tt.values, tt.origin)
+			response := submitEditWithOrigin(t, handler, tt.htmx, tt.values, tt.origin)
 			if response.Code != tt.wantStatus {
 				t.Fatalf("status = %d, want %d; body: %s", response.Code, tt.wantStatus, response.Body.String())
 			}
 			if !strings.Contains(response.Body.String(), tt.wantNotice) {
 				t.Errorf("body does not contain %q", tt.wantNotice)
+			}
+			if tt.preserveValue != "" && !strings.Contains(response.Body.String(), `name="value" value="`+tt.preserveValue+`"`) {
+				t.Errorf("validation response does not preserve the submitted value %q: %s", tt.preserveValue, response.Body.String())
 			}
 		})
 	}

@@ -119,19 +119,26 @@
 {{end}}
 
 {{define "entry" -}}
-<article class="entry box" id="entry-{{.Index}}">
-  <h2>{{.Title}}</h2>
-  {{range .Fields}}{{template "field" .}}{{end}}
-  {{if .Details}}
-  <details class="details">
-    <summary>Details</summary>
-    {{range .Details}}{{template "field" .}}{{end}}
-  </details>
-  {{end}}
+<article class="entry card" id="entry-{{.Index}}">
+  <header class="card-header">
+    <h2 class="card-header-title">{{.Title}}</h2>
+  </header>
+  <div class="card-content entry-content">
+    {{range .Fields}}{{template "field" .}}{{end}}
+    {{if .Details}}
+    <details class="details">
+      <summary>Details</summary>
+      {{range .Details}}{{template "field" .}}{{end}}
+    </details>
+    {{end}}
+  </div>
 </article>
 {{end}}
 
 {{define "field" -}}
+{{if .Editing}}
+  {{template "field-form" .}}
+{{else}}
 <div class="field field-item">
   <span class="field-name label">{{.Name}}</span>
   <div class="field-item__value">
@@ -147,6 +154,7 @@
   </div>
 </div>
 {{end}}
+{{end}}
 
 {{define "field-form" -}}
 <div class="field field-item">
@@ -157,7 +165,7 @@
     <label>
       <span class="field-name label">{{.Name}}</span>
       {{if .Secret}}
-        <input class="input" type="password" name="value" value="" autocomplete="new-password" placeholder="Leave blank to keep current value">
+        <input class="input" type="password" name="value" value="{{if .Editing}}{{.Value}}{{end}}" autocomplete="new-password" placeholder="Leave blank to keep current value">
       {{else if .MultiLine}}
         <textarea class="textarea" name="value" rows="3">{{.Value}}</textarea>
       {{else}}

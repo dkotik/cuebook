@@ -35,7 +35,7 @@ func TestReadOnlyHandler(t *testing.T) {
 			method:     http.MethodGet,
 			path:       "/?file=subfolder%2Fsub1.cue",
 			wantStatus: http.StatusOK,
-			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source", `aria-current="page"`},
+			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source", `aria-current="page"`, `<article class="entry card" id="entry-0">`, `<header class="card-header">`, `<div class="card-content entry-content">`, `<h2 class="card-header-title">`},
 			omits:      []string{`hx-post="/add"`},
 		},
 		{

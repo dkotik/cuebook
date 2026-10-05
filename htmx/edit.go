@@ -135,16 +135,16 @@ func (a *handler) edit(w http.ResponseWriter, r *http.Request) {
 
 	change, err := patch.UpdateFieldValue(raw, entryValue, field.Value, value)
 	if err != nil {
-		a.renderPage(w, r, withNotice(page, "The field value could not be formatted."), http.StatusUnprocessableEntity)
+		a.renderEditInputFailure(w, r, page, entryIndex, fieldName, value, "The field value could not be formatted.", http.StatusUnprocessableEntity)
 		return
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		a.renderPage(w, r, withNotice(page, "The entry changed before the edit could be applied. Reload and try again."), http.StatusConflict)
+		a.renderEditInputFailure(w, r, page, entryIndex, fieldName, value, "The entry changed before the edit could be applied. Reload and try again.", http.StatusConflict)
 		return
 	}
 	if _, err = cuebook.New(candidate); err != nil {
-		a.renderPage(w, r, withNotice(page, "The submitted value does not satisfy the CUE constraints: "+err.Error()), http.StatusUnprocessableEntity)
+		a.renderEditInputFailure(w, r, page, entryIndex, fieldName, value, "The submitted value does not satisfy the CUE constraints: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 	if err = a.committer.Commit(fileName, change); err != nil {
@@ -158,6 +158,31 @@ func (a *handler) edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.finishEdit(w, r, fileName)
+}
+
+func (a *handler) renderEditInputFailure(w http.ResponseWriter, r *http.Request, page pageData, entryIndex int, fieldName, value, notice string, status int) {
+	for i := range page.Entries {
+		entry := &page.Entries[i]
+		if entry.Index != entryIndex {
+			continue
+		}
+		if markEditingField(entry.Fields, fieldName, value) || markEditingField(entry.Details, fieldName, value) {
+			break
+		}
+	}
+	a.renderPage(w, r, withNotice(page, notice), status)
+}
+
+func markEditingField(fields []fieldView, fieldName, value string) bool {
+	for i := range fields {
+		if fields[i].Name != fieldName {
+			continue
+		}
+		fields[i].Editing = true
+		fields[i].Value = value
+		return true
+	}
+	return false
 }
 
 func (a *handler) finishEdit(w http.ResponseWriter, r *http.Request, fileName string) {
@@ -217,6 +242,7 @@ type fieldView struct {
 	MultiLine bool
 	Secret    bool
 	ReadOnly  bool
+	Editing   bool
 }
 
 func fieldEditURL(fileName string, entryIndex int, fieldName string, view bool) string {
