@@ -20,9 +20,9 @@
       return;
     }
     button.setAttribute("aria-pressed", String(theme === "dark"));
-    const label = button.querySelector("[data-theme-label]");
-    if (label) {
-      label.textContent = theme === "dark" ? "Dark mode" : "Light mode";
+    const activeIcon = theme === "dark" ? "moon" : "sun";
+    for (const icon of button.querySelectorAll("[data-theme-icon]")) {
+      icon.style.display = icon.getAttribute("data-theme-icon") === activeIcon ? "inline-block" : "none";
     }
   }
 

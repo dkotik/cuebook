@@ -12,7 +12,19 @@
   <script src="/assets/htmx-2.0.4.min.js" defer></script>
 </head>
 <body>
-  <header class="topbar navbar"><a href="/">Cuebook</a><span>Structured CUE documents</span><button id="theme-toggle" class="button is-small is-ghost" type="button" aria-label="Toggle color theme" aria-pressed="true"><span data-theme-label>Dark mode</span></button></header>
+  <header class="topbar navbar">
+    <a href="/">Cuebook</a>
+    <span>Structured CUE documents</span>
+    <button id="theme-toggle" class="button is-small is-ghost" type="button" aria-label="Toggle color theme" aria-pressed="true">
+      <svg data-theme-icon="moon" style="display: inline-block" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      <svg data-theme-icon="sun" style="display: none" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>
+      </svg>
+    </button>
+  </header>
   <div class="layout">
     <nav class="file-nav menu" aria-label="CUE files">
       <h1 class="menu-label">Files</h1>

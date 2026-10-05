@@ -58,8 +58,8 @@ func TestReadOnlyHandler(t *testing.T) {
 			method:     http.MethodGet,
 			path:       "/",
 			wantStatus: http.StatusOK,
-			contains:   []string{"core1.cue", "subfolder/sub1.cue", "file=subfolder%2Fsub1.cue", "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, "Dark mode"},
-			omits:      []string{"notes.txt", "First11111aa"},
+			contains:   []string{"core1.cue", "subfolder/sub1.cue", "file=subfolder%2Fsub1.cue", "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, `data-theme-icon="moon" style="display: inline-block"`, `d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"`, `data-theme-icon="sun" style="display: none"`, `<circle cx="12" cy="12" r="4"/>`},
+			omits:      []string{"notes.txt", "First11111aa", "Dark mode", "Light mode"},
 		},
 		{
 			name:       "selected nested file renders entries",
@@ -150,15 +150,15 @@ func TestAssetsAreServedLocally(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
-		content    string
+		contains   []string
 		wantStatus int
 	}{
-		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", content: "htmx", wantStatus: http.StatusOK},
-		{name: "version-pinned Bulma", path: "/assets/bulma.css", content: "bulma.io v1.0.4", wantStatus: http.StatusOK},
-		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", content: "The MIT License", wantStatus: http.StatusOK},
-		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", content: "Zero-Clause BSD", wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", content: "grid-template-columns", wantStatus: http.StatusOK},
-		{name: "theme controller", path: "/assets/theme.js", content: "localStorage.setItem", wantStatus: http.StatusOK},
+		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", contains: []string{"htmx"}, wantStatus: http.StatusOK},
+		{name: "version-pinned Bulma", path: "/assets/bulma.css", contains: []string{"bulma.io v1.0.4"}, wantStatus: http.StatusOK},
+		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
+		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns"}, wantStatus: http.StatusOK},
+		{name: "theme controller", path: "/assets/theme.js", contains: []string{"localStorage.setItem", `querySelectorAll("[data-theme-icon]")`, `? "moon" : "sun"`, `icon.style.display`, `? "inline-block" : "none"`}, wantStatus: http.StatusOK},
 		{name: "unknown asset", path: "/assets/secret.txt", wantStatus: http.StatusNotFound},
 	}
 	for _, tt := range tests {
@@ -169,8 +169,10 @@ func TestAssetsAreServedLocally(t *testing.T) {
 			if response.Code != tt.wantStatus {
 				t.Fatalf("status = %d, want %d", response.Code, tt.wantStatus)
 			}
-			if tt.content != "" && !strings.Contains(response.Body.String(), tt.content) {
-				t.Errorf("asset body does not contain %q", tt.content)
+			for _, content := range tt.contains {
+				if !strings.Contains(response.Body.String(), content) {
+					t.Errorf("asset body does not contain %q", content)
+				}
 			}
 		})
 	}
