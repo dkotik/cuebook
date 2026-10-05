@@ -39,7 +39,7 @@ func (a *handler) add(w http.ResponseWriter, r *http.Request) {
 		a.editFailure(w, r, fileName, message, status)
 		return
 	}
-	page, _ := a.pageForDocument(fileName, fileNames, document, "")
+	page, _ := a.pageForDocument(fileName, fileNames, raw, document, "")
 	fieldNames, fieldsPresent := r.PostForm["field"]
 	values, valuesPresent := r.PostForm["value"]
 

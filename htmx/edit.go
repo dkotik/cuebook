@@ -100,7 +100,7 @@ func (a *handler) edit(w http.ResponseWriter, r *http.Request) {
 		a.editFailure(w, r, fileName, message, status)
 		return
 	}
-	page, _ := a.pageForDocument(fileName, fileNames, document, "")
+	page, _ := a.pageForDocument(fileName, fileNames, raw, document, "")
 
 	entryIndex, err := strconv.Atoi(r.PostForm.Get("entry"))
 	if err != nil || entryIndex < 0 {

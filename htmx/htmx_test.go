@@ -58,7 +58,7 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 		`name="field" value="Notes"`,
 		`name="field" value="Password"`,
 		"(optional)",
-		`<remember-details data-storage-key="add-entry-optional:core1.cue">`,
+		`<remember-details data-storage-key="add-entry-optional">`,
 		"<summary>Optional fields</summary>",
 		`<div id="add-entry-optional-content" data-details-content>`,
 		`<script src="/assets/remember-details.js" defer></script>`,
@@ -70,7 +70,7 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 	}
 
 	body := response.Body.String()
-	componentStart := strings.Index(body, `<remember-details data-storage-key="add-entry-optional:core1.cue">`)
+	componentStart := strings.Index(body, `<remember-details data-storage-key="add-entry-optional">`)
 	componentEnd := strings.Index(body, `</remember-details>`)
 	if componentStart < 0 || componentEnd < componentStart {
 		t.Fatalf("optional fields are not wrapped by the persistent details component: %s", body)

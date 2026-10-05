@@ -5,7 +5,76 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
+
+func TestFileFrontmatterView(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		fileName    string
+		source      string
+		wantTitle   string
+		wantDetails string
+	}{
+		{
+			name:        "frontmatter title and description",
+			fileName:    "described.cue",
+			source:      "// Document title\n//\n// Description with <em>markup</em>.\n[{Name: \"entry\"}]\n",
+			wantTitle:   "Document title",
+			wantDetails: "Description with &lt;em&gt;markup&lt;/em&gt;.",
+		},
+		{
+			name:      "filename fallback when title is absent",
+			fileName:  "plain.cue",
+			source:    `[{Name: "entry"}]`,
+			wantTitle: "plain.cue",
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			handler, err := New(fstest.MapFS{
+				test.fileName: &fstest.MapFile{Data: []byte(test.source)},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			request := httptest.NewRequest(http.MethodGet, "http://example.test/?file="+test.fileName, nil)
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+
+			body := response.Body.String()
+			if !strings.Contains(body, `<h1 class="document-title title is-4">`+test.wantTitle+`</h1>`) {
+				t.Errorf("file title %q not shown: %s", test.wantTitle, body)
+			}
+			componentStart := strings.Index(body, `<remember-details data-storage-key="view-file-frontmatter">`)
+			componentEnd := strings.Index(body, `</remember-details>`)
+			if test.wantDetails == "" {
+				if componentStart >= 0 {
+					t.Errorf("unexpected frontmatter details component: %s", body)
+				}
+				return
+			}
+			if componentStart < 0 || componentEnd < componentStart {
+				t.Fatalf("frontmatter description is not inside remember-details: %s", body)
+			}
+			component := body[componentStart:componentEnd]
+			if !strings.Contains(component, "<summary>Description</summary>") || !strings.Contains(component, test.wantDetails) {
+				t.Errorf("description component missing expected content: %s", component)
+			}
+			if titlePosition := strings.Index(body, test.wantTitle); titlePosition > componentStart {
+				t.Errorf("title should appear before the collapsible description: %s", body)
+			}
+		})
+	}
+}
 
 func TestReadOnlyHandler(t *testing.T) {
 	handler, err := New(testSource())
@@ -27,8 +96,8 @@ func TestReadOnlyHandler(t *testing.T) {
 			method:     http.MethodGet,
 			path:       "/",
 			wantStatus: http.StatusOK,
-			contains:   []string{"core1.cue", "subfolder", "sub1.cue", "file=subfolder%2Fsub1.cue", `<file-tree-node class="file-tree-node" data-node-path="subfolder">`, `class="tree-folder-icon"`, `class="tree-file-icon"`, `class="tree-children"`, `<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">`, "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", "/assets/file-tree.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, `data-theme-icon="moon" style="display: inline-block"`, `d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"`, `data-theme-icon="sun" style="display: none"`, `<circle cx="12" cy="12" r="4"/>`},
-			omits:      []string{"notes.txt", "First11111aa", "Dark mode", "Light mode"},
+			contains:   []string{"core1.cue", "subfolder", "sub1.cue", `<span>core1</span>`, `<span>sub1</span>`, `data-file="core1.cue"`, `data-file="subfolder/sub1.cue"`, `href="/?file=subfolder%2Fsub1.cue"`, `<file-tree-node class="file-tree-node" data-node-path="subfolder">`, `class="tree-folder-icon"`, `class="tree-file-icon"`, `class="tree-children"`, `<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">`, "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", "/assets/file-tree.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, `data-theme-icon="moon" style="display: inline-block"`, `d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"`, `data-theme-icon="sun" style="display: none"`, `<circle cx="12" cy="12" r="4"/>`},
+			omits:      []string{"notes.txt", `<span>core1.cue</span>`, `<span>sub1.cue</span>`, "First11111aa", "Dark mode", "Light mode"},
 		},
 		{
 			name:       "selected nested file renders entries",

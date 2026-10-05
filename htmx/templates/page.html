@@ -61,7 +61,7 @@
     {{else}}
     <a class="tree-file-link" data-file="{{.Path}}" href="{{.URL}}" hx-get="{{.URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" {{if .Selected}}aria-current="page"{{end}}>
       <svg class="tree-file-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.75h8l4 4v12.5H6z"/><path d="M14 3.75v4h4M9 12h6m-6 3h6"/></svg>
-      <span>{{.Name}}</span>
+      <span>{{.DisplayName}}</span>
     </a>
     {{end}}
   </file-tree-node>
@@ -72,7 +72,13 @@
 <main id="workspace" tabindex="-1">
   {{if .Error}}<p class="notice notification is-danger" role="alert">{{.Error}}</p>{{end}}
   {{if .Selected}}
-    <h1 class="document-title title is-4">{{.Selected}}</h1>
+    <h1 class="document-title title is-4">{{.FileTitle}}</h1>
+    {{if .FileDescription}}
+    <remember-details data-storage-key="view-file-frontmatter">
+      <summary>Description</summary>
+      <div id="file-frontmatter-description" class="file-description" data-details-content>{{.FileDescription}}</div>
+    </remember-details>
+    {{end}}
     {{if .ReadOnly}}<p class="muted">Read-only source</p>{{end}}
     {{if .DocumentError}}
       <p class="notice notification is-danger" role="alert">{{.DocumentError}}</p>

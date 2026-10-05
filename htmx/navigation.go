@@ -11,20 +11,24 @@ import (
 	"strings"
 
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/metadata"
 )
 
 type fileTreeNode struct {
-	Name     string
-	Path     string
-	URL      string
-	IsDir    bool
-	Selected bool
-	Children []fileTreeNode
+	Name        string
+	DisplayName string
+	Path        string
+	URL         string
+	IsDir       bool
+	Selected    bool
+	Children    []fileTreeNode
 }
 
 type pageData struct {
 	Files             []fileTreeNode
 	Selected          string
+	FileTitle         string
+	FileDescription   string
 	Entries           []entryView
 	AddFields         []addFieldView
 	RequiredAddFields []addFieldView
@@ -63,7 +67,9 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 		return data, http.StatusOK
 	}
 	data.Selected = fileName
-	_, document, status, message := a.readDocument(fileName, fileNames)
+	data.FileTitle = fileName
+	raw, document, status, message := a.readDocument(fileName, fileNames)
+	setFileFrontmatter(&data, fileName, raw)
 	if status != http.StatusOK {
 		data.DocumentError = message
 		return data, status
@@ -187,7 +193,14 @@ func makeFileTree(fileNames []string, selected string) []fileTreeNode {
 				}
 			}
 			if childIndex == -1 {
-				node := fileTreeNode{Name: name, Path: currentPath, IsDir: isDir}
+				displayName := name
+				if !isDir {
+					displayName = strings.TrimSuffix(name, ".cue")
+					if displayName == "" {
+						displayName = name
+					}
+				}
+				node := fileTreeNode{Name: name, DisplayName: displayName, Path: currentPath, IsDir: isDir}
 				if !isDir {
 					node.URL = fileURL(currentPath)
 					node.Selected = currentPath == selected
@@ -218,9 +231,10 @@ func sortFileTree(nodes []fileTreeNode) {
 	}
 }
 
-func (a *handler) pageForDocument(fileName string, fileNames []string, document cuebook.Document, notice string) (pageData, int) {
+func (a *handler) pageForDocument(fileName string, fileNames []string, raw []byte, document cuebook.Document, notice string) (pageData, int) {
 	data := a.basePage(fileNames, fileName, notice)
 	data.Selected = fileName
+	setFileFrontmatter(&data, fileName, raw)
 	if !data.ReadOnly {
 		data.AddFields = makeAddFieldViews(document)
 	}
@@ -231,6 +245,15 @@ func (a *handler) pageForDocument(fileName string, fileNames []string, document 
 	}
 	data.Entries = entries
 	return data, http.StatusOK
+}
+
+func setFileFrontmatter(data *pageData, fileName string, source []byte) {
+	data.FileTitle = fileName
+	frontmatter := metadata.NewFrontmatter(source)
+	if title := frontmatter.Title(); strings.TrimSpace(title) != "" {
+		data.FileTitle = title
+	}
+	data.FileDescription = frontmatter.Description()
 }
 
 func (a *handler) basePage(fileNames []string, selected, notice string) pageData {

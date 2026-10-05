@@ -136,6 +136,11 @@ file-tree-node {
   overflow-wrap: anywhere;
 }
 
+.file-description {
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
 .entry.card {
   position: relative;
   max-width: 56rem;
