@@ -9,16 +9,20 @@
 }
 
 [...#contact] & [
-	{
+  {
+		Name:  "2378"
+		Email: "sdf@sdf.com"
+	},
+  {
+		Name:  "First11111aa"
+		Email: "test1@testdomain"
+	},
+  {
 		Name:  "First11111aaDDD"
 		Email: "test1@testdomain.com"
 	},
   {
-		Name:  "third and final"
-		Email: "third@some.email"
-	},
-  {
-		Name:  "2378"
-		Email: "sdf@sdf.com"
+		Name:  "First11111aa1"
+		Email: "test1@testdomain.com"
 	}
 ]

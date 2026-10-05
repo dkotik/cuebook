@@ -151,6 +151,43 @@ func TestEntryMovePatchInverts(t *testing.T) {
 	}
 }
 
+func TestEntryValueWithoutConstraintsRoundTripsPlainJSON(t *testing.T) {
+	t.Parallel()
+
+	source, err := fixtures.ReadFile("testdata/core1.cue")
+	if err != nil {
+		t.Fatal(err)
+	}
+	document, err := cuebook.New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entryValue, err := document.GetValue(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decoded, intermediate, err := entryValueWithoutConstraints(entryValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(intermediate, "_#def") {
+		t.Fatalf("intermediate entry encoding contains source definition references: %s", intermediate)
+	}
+
+	originalJSON, err := entryValue.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	decodedJSON, err := decoded.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(decodedJSON, originalJSON) {
+		t.Fatalf("round-tripped entry changed its concrete value: got %s, want %s", decodedJSON, originalJSON)
+	}
+}
+
 func TestMoveTransfersEntriesBetweenFiles(t *testing.T) {
 	t.Parallel()
 

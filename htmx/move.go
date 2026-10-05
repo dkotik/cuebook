@@ -104,13 +104,18 @@ func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceNa
 		a.editFailure(w, r, destinationName, message, status)
 		return
 	}
-	entryValue, err := sourceDocument.GetValue(from)
+	sourceEntryValue, err := sourceDocument.GetValue(from)
 	if err != nil {
 		a.editFailure(w, r, sourceName, "The source entry could not be found.", http.StatusNotFound)
 		return
 	}
+	destinationEntryValue, _, err := entryValueWithoutConstraints(sourceEntryValue)
+	if err != nil {
+		a.editFailure(w, r, sourceName, "The source entry could not be converted for transfer.", http.StatusUnprocessableEntity)
+		return
+	}
 
-	appendChange, err := patch.AppendToStructList(destinationRaw, entryValue)
+	appendChange, err := patch.AppendToStructList(destinationRaw, destinationEntryValue)
 	if err != nil {
 		a.editFailure(w, r, destinationName, "The entry could not be added to the destination file.", http.StatusUnprocessableEntity)
 		return
@@ -125,7 +130,7 @@ func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceNa
 		return
 	}
 
-	deleteChange, err := patch.DeleteFromStructList(sourceRaw, entryValue)
+	deleteChange, err := patch.DeleteFromStructList(sourceRaw, sourceEntryValue)
 	if err != nil {
 		a.editFailure(w, r, sourceName, "The entry could not be removed from the source file.", http.StatusUnprocessableEntity)
 		return
@@ -166,6 +171,20 @@ func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceNa
 		return
 	}
 	a.finishEdit(w, r, destinationName)
+}
+
+func entryValueWithoutConstraints(value cue.Value) (cue.Value, string, error) {
+	encoded, err := value.MarshalJSON()
+	if err != nil {
+		return cue.Value{}, "", err
+	}
+
+	intermediate := string(encoded)
+	decoded := cuecontext.New().CompileString(intermediate)
+	if err := decoded.Err(); err != nil {
+		return cue.Value{}, intermediate, err
+	}
+	return decoded, intermediate, nil
 }
 
 func entryMovePatch(source []byte, from, to int) (patch.Patch, error) {

@@ -9,12 +9,12 @@
 }
 
 [...#contact] & [
-	{
-		Name:  "sdf"
-		Email: "sdffsd@perfect.com"
+
+  {
+		Name:  "third and final"
+		Email: "third@some.email"
 	},
   {
-		Name:  "First11111aa"
-		Email: "test1@testdomain"
-	}
-]
+		Name:  "12sdf"
+		Email: "sdffsd@perfect.com"
+	}]

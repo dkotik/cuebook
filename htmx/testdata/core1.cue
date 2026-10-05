@@ -9,10 +9,6 @@
 }
 
 [...#contact] & [
-	{
-		Name:  "First11111aa1"
-		Email: "test1@testdomain.com"
-	},
   {
 		Name:  "First11111aa1"
 		Email: "test1@testdomain.com"
