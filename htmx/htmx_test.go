@@ -169,8 +169,9 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", ".entry-content {", "text-align: right", "file-tree-node", ".tree-chevron", ".tree-children[hidden]"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", ".entry-content {", "text-align: right", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-children[hidden]"}, wantStatus: http.StatusOK},
 		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},
+		{name: "entry move controller", path: "/assets/entry-move.js", contains: []string{"data-entry-drag-handle", `htmx.ajax("POST", "/move"`, "drop-before", "drop-after", "await window.htmx.ajax"}, wantStatus: http.StatusOK},
 		{name: "theme controller", path: "/assets/theme.js", contains: []string{"localStorage.setItem", `querySelectorAll("[data-theme-icon]")`, `? "moon" : "sun"`, `icon.style.display`, `? "inline-block" : "none"`}, wantStatus: http.StatusOK},
 		{name: "unknown asset", path: "/assets/secret.txt", wantStatus: http.StatusNotFound},
 	}

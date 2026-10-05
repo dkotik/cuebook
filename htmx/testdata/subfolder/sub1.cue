@@ -10,6 +10,10 @@
 
 [...#contact] & [
 	{
+		Name:  "third and final"
+		Email: "third@some.email"
+	},
+  {
 		Name:  "First11111aaDDD" @cuebook(title)
 		Email: "test1@testdomain.com"
 	},

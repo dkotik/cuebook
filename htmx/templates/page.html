@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/assets/app.css">
   <script src="/assets/htmx-2.0.4.min.js" defer></script>
   <script src="/assets/file-tree.js" defer></script>
+  <script src="/assets/entry-move.js" defer></script>
 </head>
 <body>
   <header class="topbar navbar">
@@ -119,9 +120,16 @@
 {{end}}
 
 {{define "entry" -}}
-<article class="entry card" id="entry-{{.Index}}">
+<article class="entry card" id="entry-{{.Index}}" data-entry-index="{{.Index}}" data-file="{{.File}}">
   <header class="card-header">
     <h2 class="card-header-title">{{.Title}}</h2>
+    {{if .CanMove}}
+    <button class="card-header-icon entry-drag-handle" type="button" draggable="true" data-entry-drag-handle aria-label="Drag to move {{.Title}}" title="Drag to move {{.Title}}">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v18m0-18-3 3m3-3 3 3m-3 15-3-3m3 3 3-3M3 12h18m-18 0 3-3m-3 3 3 3m15-3-3-3m3 3-3 3"/>
+      </svg>
+    </button>
+    {{end}}
   </header>
   <div class="card-content entry-content">
     {{range .Fields}}{{template "field" .}}{{end}}

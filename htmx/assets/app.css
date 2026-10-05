@@ -131,6 +131,7 @@ file-tree-node {
 }
 
 .entry.card {
+  position: relative;
   max-width: 56rem;
   margin: 1rem 0;
 }
@@ -138,6 +139,47 @@ file-tree-node {
 .entry .card-header-title {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.entry-drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.entry-drag-handle:active {
+  cursor: grabbing;
+}
+
+.entry-drag-handle svg {
+  display: block;
+}
+
+.entry.is-dragging {
+  opacity: 0.45;
+}
+
+.entry.drop-before::before,
+.entry.drop-after::after {
+  position: absolute;
+  right: 0.75rem;
+  left: 0.75rem;
+  z-index: 2;
+  border-top: 3px solid currentColor;
+  content: "";
+  pointer-events: none;
+}
+
+.entry.drop-before::before {
+  top: -0.35rem;
+}
+
+.entry.drop-after::after {
+  bottom: -0.35rem;
+}
+
+#workspace[aria-busy="true"] .entry-drag-handle {
+  cursor: wait;
+  pointer-events: none;
 }
 
 .entry-content {

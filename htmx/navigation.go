@@ -37,6 +37,7 @@ type entryView struct {
 	Index   int
 	File    string
 	Title   string
+	CanMove bool
 	Fields  []fieldView
 	Details []fieldView
 }
@@ -85,9 +86,10 @@ func makeEntryViews(document cuebook.Document, fileName string, readOnly bool) (
 			return nil, fmt.Errorf("entry %d: %w", index, err)
 		}
 		view := entryView{
-			Index: index,
-			File:  fileName,
-			Title: entry.GetTitle(),
+			Index:   index,
+			File:    fileName,
+			Title:   entry.GetTitle(),
+			CanMove: !readOnly,
 		}
 		if view.Title == "" {
 			view.Title = fmt.Sprintf("Entry %d", index+1)

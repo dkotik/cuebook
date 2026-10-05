@@ -28,7 +28,7 @@ import (
 //go:embed templates/page.html
 var templateFiles embed.FS
 
-//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/favicon.svg
+//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/favicon.svg
 var assetFiles embed.FS
 
 // Committer applies a prepared Cuebook patch to a named source file.
@@ -76,6 +76,7 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 	mux.HandleFunc("GET /edit", app.editForm)
 	mux.HandleFunc("POST /edit", app.edit)
 	mux.HandleFunc("POST /add", app.add)
+	mux.HandleFunc("POST /move", app.move)
 	mux.HandleFunc("GET /assets/{name}", app.asset)
 	return securityHeaders(mux), nil
 }
@@ -98,7 +99,7 @@ func (a *handler) asset(w http.ResponseWriter, r *http.Request) {
 	switch name {
 	case "app.css", "bulma.css":
 		contentType = "text/css; charset=utf-8"
-	case "theme.js", "file-tree.js":
+	case "theme.js", "file-tree.js", "entry-move.js":
 		contentType = "text/javascript; charset=utf-8"
 	case "bulma-LICENSE.txt":
 		contentType = "text/plain; charset=utf-8"
