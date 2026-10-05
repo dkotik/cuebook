@@ -73,6 +73,7 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", app.index)
+	mux.HandleFunc("GET /edit", app.editForm)
 	mux.HandleFunc("POST /edit", app.edit)
 	mux.HandleFunc("POST /add", app.add)
 	mux.HandleFunc("GET /assets/{name}", app.asset)
@@ -137,6 +138,67 @@ func (a *handler) renderPage(w http.ResponseWriter, r *http.Request, data pageDa
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
+	_, _ = w.Write([]byte(output.String()))
+}
+
+func (a *handler) editForm(w http.ResponseWriter, r *http.Request) {
+	if a.committer == nil {
+		http.Error(w, "This source is read-only.", http.StatusForbidden)
+		return
+	}
+
+	fileName := r.URL.Query().Get("file")
+	fileNames, err := a.fileNames()
+	if err != nil {
+		http.Error(w, "Unable to list CUE files.", http.StatusInternalServerError)
+		return
+	}
+	_, document, status, message := a.readDocument(fileName, fileNames)
+	if status != http.StatusOK {
+		http.Error(w, message, status)
+		return
+	}
+
+	entryIndex, err := strconv.Atoi(r.URL.Query().Get("entry"))
+	if err != nil || entryIndex < 0 {
+		http.Error(w, "The entry index is invalid.", http.StatusBadRequest)
+		return
+	}
+	entryValue, err := document.GetValue(entryIndex)
+	if err != nil {
+		http.Error(w, "Entry not found.", http.StatusNotFound)
+		return
+	}
+	entry, err := cuebook.NewEntry(entryValue)
+	if err != nil {
+		http.Error(w, "Unable to read this entry.", http.StatusUnprocessableEntity)
+		return
+	}
+	fieldName := r.URL.Query().Get("field")
+	field, ok := entry.GetFieldByName(fieldName)
+	if !ok || fieldName == "" {
+		http.Error(w, "Field not found.", http.StatusNotFound)
+		return
+	}
+
+	view := makeFieldView(field, fileName, entryIndex, false)
+	templateName := "field-form"
+	if r.URL.Query().Get("mode") == "view" {
+		templateName = "field"
+	}
+	a.renderFieldTemplate(w, r, templateName, view)
+}
+
+func (a *handler) renderFieldTemplate(w http.ResponseWriter, r *http.Request, name string, view fieldView) {
+	var output strings.Builder
+	if err := a.templates.ExecuteTemplate(&output, name, view); err != nil {
+		http.Error(w, "Unable to render the field.", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Add("Vary", "HX-Request")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(output.String()))
 }
 

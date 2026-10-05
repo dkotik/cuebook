@@ -147,6 +147,35 @@ file-tree-node {
   padding: 0.5rem 0;
 }
 
+.field-item__value {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.field-item__value output {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.field-edit-button {
+  flex: 0 0 auto;
+  min-height: 2rem;
+  padding: 0.25rem;
+}
+
+.field-edit-button svg {
+  display: block;
+}
+
+.field-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .field form,
 .field label {
   display: grid;

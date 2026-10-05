@@ -68,6 +68,86 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 	}
 }
 
+func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
+	t.Parallel()
+
+	handler, err := NewWithCommitter(testSource(), &recordingCommitter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pageRequest := httptest.NewRequest(http.MethodGet, "http://example.test/?file=core1.cue", nil)
+	pageResponse := httptest.NewRecorder()
+	handler.ServeHTTP(pageResponse, pageRequest)
+	if pageResponse.Code != http.StatusOK {
+		t.Fatalf("page status = %d, want %d; body: %s", pageResponse.Code, http.StatusOK, pageResponse.Body.String())
+	}
+	for _, want := range []string{
+		`<output>First11111aa1</output>`,
+		`field-edit-button`,
+		`aria-label="Edit Name"`,
+		`hx-get="/edit?entry=0&amp;field=Name&amp;file=core1.cue"`,
+	} {
+		if !strings.Contains(pageResponse.Body.String(), want) {
+			t.Errorf("writable page does not contain %q; body: %s", want, pageResponse.Body.String())
+		}
+	}
+	if strings.Contains(pageResponse.Body.String(), `hx-post="/edit"`) {
+		t.Fatal("field edit forms should only be rendered after clicking the pencil")
+	}
+
+	formQuery := url.Values{"entry": {"0"}, "field": {"Name"}, "file": {"core1.cue"}}
+	formRequest := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+formQuery.Encode(), nil)
+	formRequest.Header.Set("HX-Request", "true")
+	formResponse := httptest.NewRecorder()
+	handler.ServeHTTP(formResponse, formRequest)
+	if formResponse.Code != http.StatusOK {
+		t.Fatalf("form status = %d, want %d; body: %s", formResponse.Code, http.StatusOK, formResponse.Body.String())
+	}
+	for _, want := range []string{
+		`<form action="/edit" method="post"`,
+		`hx-post="/edit"`,
+		`hx-target="#workspace"`,
+		`name="value" value="First11111aa1"`,
+		`hx-get="/edit?entry=0&amp;field=Name&amp;file=core1.cue&amp;mode=view"`,
+		"Cancel",
+	} {
+		if !strings.Contains(formResponse.Body.String(), want) {
+			t.Errorf("edit form does not contain %q", want)
+		}
+	}
+	if strings.Contains(formResponse.Body.String(), "<!doctype html>") || strings.Contains(formResponse.Body.String(), `<main id="workspace"`) {
+		t.Fatal("expected a field-level fragment, not a full page")
+	}
+
+	formQuery.Set("mode", "view")
+	viewRequest := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+formQuery.Encode(), nil)
+	viewResponse := httptest.NewRecorder()
+	handler.ServeHTTP(viewResponse, viewRequest)
+	if viewResponse.Code != http.StatusOK {
+		t.Fatalf("view status = %d, want %d; body: %s", viewResponse.Code, http.StatusOK, viewResponse.Body.String())
+	}
+	if !strings.Contains(viewResponse.Body.String(), `<output>First11111aa1</output>`) || !strings.Contains(viewResponse.Body.String(), `field-edit-button`) {
+		t.Fatalf("cancel response did not restore the static field view: %s", viewResponse.Body.String())
+	}
+	if strings.Contains(viewResponse.Body.String(), `<form action="/edit"`) {
+		t.Fatal("cancel response unexpectedly contains an edit form")
+	}
+}
+
+func TestReadOnlySourceRejectsOpeningEditForm(t *testing.T) {
+	handler, err := New(testSource())
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/edit?entry=0&field=Name&file=core1.cue", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusForbidden, response.Body.String())
+	}
+}
+
 func TestAssetsAreServedLocally(t *testing.T) {
 	handler, err := New(testSource())
 	if err != nil {

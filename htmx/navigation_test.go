@@ -36,7 +36,7 @@ func TestReadOnlyHandler(t *testing.T) {
 			path:       "/?file=subfolder%2Fsub1.cue",
 			wantStatus: http.StatusOK,
 			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source", `aria-current="page"`},
-			omits:      []string{`hx-post="/edit"`, `hx-post="/add"`},
+			omits:      []string{`hx-post="/edit"`, `hx-get="/edit`, `hx-post="/add"`},
 		},
 		{
 			name:       "htmx request gets workspace fragment",
