@@ -407,6 +407,136 @@ remember-details > [data-details-content][hidden] {
   opacity: 0.75;
 }
 
+.delete-confirmation-card,
+.move-confirmation-card {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 5rem rgb(0 0 0 / 35%);
+  animation: delete-confirmation-enter 180ms ease-out both;
+}
+
+.delete-confirmation-head,
+.move-confirmation-head {
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.delete-confirmation-heading,
+.move-confirmation-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.delete-confirmation-icon,
+.move-confirmation-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 0.9rem;
+}
+
+.delete-confirmation-icon {
+  background: color-mix(in srgb, var(--bulma-danger) 14%, transparent);
+  color: var(--bulma-danger);
+}
+
+.move-confirmation-icon {
+  background: color-mix(in srgb, var(--bulma-link) 14%, transparent);
+  color: var(--bulma-link);
+}
+
+.delete-confirmation-eyebrow,
+.move-confirmation-eyebrow {
+  margin-bottom: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.delete-confirmation-eyebrow {
+  color: var(--bulma-danger);
+}
+
+.move-confirmation-eyebrow {
+  color: var(--bulma-link);
+}
+
+.delete-confirmation-head .modal-card-title,
+.move-confirmation-head .modal-card-title {
+  overflow-wrap: anywhere;
+}
+
+.delete-confirmation-close,
+.move-confirmation-close {
+  flex: 0 0 auto;
+  min-height: auto;
+  padding: 0.1rem 0.55rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  font-size: 1.7rem;
+  line-height: 1;
+  opacity: 0.65;
+}
+
+.delete-confirmation-close:hover,
+.move-confirmation-close:hover {
+  background: color-mix(in srgb, currentColor 9%, transparent);
+  opacity: 1;
+}
+
+.delete-confirmation-description,
+.move-confirmation-description {
+  line-height: 1.65;
+}
+
+.delete-confirmation-entry,
+.move-confirmation-entry {
+  margin-top: 0.9rem;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.move-confirmation-route {
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+  font-size: 0.95em;
+  opacity: 0.8;
+}
+
+.delete-confirmation-submit,
+.move-confirmation-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@keyframes delete-confirmation-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .delete-confirmation-card,
+  .move-confirmation-card {
+    animation: none;
+  }
+}
+
 @media (max-width: 42rem) {
   .layout {
     grid-template-columns: 1fr;

@@ -54,6 +54,18 @@ func TestDeleteArchivesEntries(t *testing.T) {
 			if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), `action="/delete"`) {
 				t.Fatalf("writable entry page does not show the archive button: status %d, body: %s", pageResponse.Code, pageResponse.Body.String())
 			}
+			for _, want := range []string{
+				`id="delete-confirmation"`,
+				`role="dialog" aria-modal="true"`,
+				`aria-labelledby="delete-confirmation-title"`,
+				`aria-describedby="delete-confirmation-description"`,
+				`<p class="delete-confirmation-eyebrow">Confirm archive</p>`,
+				`<script src="/assets/delete-confirm.js" defer></script>`,
+			} {
+				if !strings.Contains(pageResponse.Body.String(), want) {
+					t.Errorf("writable entry page does not contain confirmation markup %q", want)
+				}
+			}
 
 			response := submitDelete(t, handler, "source.cue", 0, "http://example.test")
 			if response.Code != http.StatusOK {

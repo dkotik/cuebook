@@ -113,11 +113,22 @@
     if (targetFileLink) {
       const destination = targetFileLink.dataset.file;
       if (destination && destination !== sourceCard.dataset.file) {
-        await submitMove(sourceCard, {
+        const values = {
           file: sourceCard.dataset.file,
           from: sourceCard.dataset.entryIndex,
           destination,
+        };
+        const request = new CustomEvent("cuebook:move-confirmation-request", {
+          cancelable: true,
+          detail: {
+            sourceCard,
+            destinationLink: targetFileLink,
+            confirm: () => submitMove(sourceCard, values),
+          },
         });
+        if (document.dispatchEvent(request)) {
+          await submitMove(sourceCard, values);
+        }
       } else {
         clearDragState();
       }

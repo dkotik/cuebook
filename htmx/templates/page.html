@@ -14,6 +14,8 @@
   <script src="/assets/file-tree.js" defer></script>
   <script src="/assets/entry-move.js" defer></script>
   <script src="/assets/remember-details.js" defer></script>
+  <script src="/assets/delete-confirm.js" defer></script>
+  <script src="/assets/move-confirm.js" defer></script>
 </head>
 <body>
   <header class="topbar navbar">
@@ -41,6 +43,67 @@
       {{end}}
     </nav>
     {{template "workspace" .}}
+  </div>
+  <div id="delete-confirmation" class="modal" aria-hidden="true">
+    <div class="modal-background" data-confirmation-dismiss></div>
+    <div class="modal-card delete-confirmation-card" role="dialog" aria-modal="true" aria-labelledby="delete-confirmation-title" aria-describedby="delete-confirmation-description">
+      <header class="modal-card-head delete-confirmation-head">
+        <div class="delete-confirmation-heading">
+          <span class="delete-confirmation-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/>
+            </svg>
+          </span>
+          <div>
+            <p class="delete-confirmation-eyebrow">Confirm archive</p>
+            <p id="delete-confirmation-title" class="modal-card-title">Archive this entry?</p>
+          </div>
+        </div>
+        <button class="delete-confirmation-close" type="button" aria-label="Cancel archive" data-confirmation-dismiss>×</button>
+      </header>
+      <section class="modal-card-body">
+        <p id="delete-confirmation-description" class="delete-confirmation-description">This entry will be removed from this document and added to today's archive.</p>
+        <p class="delete-confirmation-entry" data-confirmation-entry></p>
+      </section>
+      <footer class="modal-card-foot is-justify-content-flex-end">
+        <button class="button is-light delete-confirmation-cancel" type="button" data-confirmation-dismiss>Keep entry</button>
+        <button class="button is-danger delete-confirmation-submit" type="button" data-confirmation-confirm>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/></svg>
+          Archive entry
+        </button>
+      </footer>
+    </div>
+  </div>
+  <div id="move-confirmation" class="modal" aria-hidden="true">
+    <div class="modal-background" data-move-confirmation-dismiss></div>
+    <div class="modal-card move-confirmation-card" role="dialog" aria-modal="true" aria-labelledby="move-confirmation-title" aria-describedby="move-confirmation-description">
+      <header class="modal-card-head move-confirmation-head">
+        <div class="move-confirmation-heading">
+          <span class="move-confirmation-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 7h14m0 0-4-4m4 4-4 4M19 17H5m0 0 4 4m-4-4 4-4"/>
+            </svg>
+          </span>
+          <div>
+            <p class="move-confirmation-eyebrow">Confirm move</p>
+            <p id="move-confirmation-title" class="modal-card-title">Move this entry to another file?</p>
+          </div>
+        </div>
+        <button class="move-confirmation-close" type="button" aria-label="Cancel move" data-move-confirmation-dismiss>×</button>
+      </header>
+      <section class="modal-card-body">
+        <p id="move-confirmation-description" class="move-confirmation-description">This entry will be removed from its current CUE file and added to the selected file.</p>
+        <p class="move-confirmation-entry" data-move-confirmation-entry></p>
+        <p class="move-confirmation-route"><span data-move-confirmation-source></span> → <span data-move-confirmation-destination></span></p>
+      </section>
+      <footer class="modal-card-foot is-justify-content-flex-end">
+        <button class="button is-light move-confirmation-cancel" type="button" data-move-confirmation-dismiss>Cancel</button>
+        <button class="button is-link move-confirmation-submit" type="button" data-move-confirmation-confirm>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14m0 0-4-4m4 4-4 4M19 17H5m0 0 4 4m-4-4 4-4"/></svg>
+          Move entry
+        </button>
+      </footer>
+    </div>
   </div>
 </body>
 </html>

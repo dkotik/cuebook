@@ -54,7 +54,7 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 	if pageResponse.Code != http.StatusOK {
 		t.Fatalf("page status = %d, want %d; body: %s", pageResponse.Code, http.StatusOK, pageResponse.Body.String())
 	}
-	for _, want := range []string{`data-entry-drag-handle`, `draggable="true"`, `data-entry-index="0"`, `<a class="tree-file-link" data-file="contacts.cue"`} {
+	for _, want := range []string{`data-entry-drag-handle`, `draggable="true"`, `data-entry-index="0"`, `<a class="tree-file-link" data-file="contacts.cue"`, `id="move-confirmation"`, `aria-labelledby="move-confirmation-title"`, `data-move-confirmation-entry`, `data-move-confirmation-source`, `data-move-confirmation-destination`, `<script src="/assets/move-confirm.js" defer></script>`} {
 		if !strings.Contains(pageResponse.Body.String(), want) {
 			t.Errorf("writable page does not contain %q", want)
 		}
