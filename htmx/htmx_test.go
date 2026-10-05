@@ -84,7 +84,8 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "version-pinned Bulma", path: "/assets/bulma.css", contains: []string{"bulma.io v1.0.4"}, wantStatus: http.StatusOK},
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "file-tree-node", ".tree-chevron", ".tree-children[hidden]"}, wantStatus: http.StatusOK},
+		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},
 		{name: "theme controller", path: "/assets/theme.js", contains: []string{"localStorage.setItem", `querySelectorAll("[data-theme-icon]")`, `? "moon" : "sun"`, `icon.style.display`, `? "inline-block" : "none"`}, wantStatus: http.StatusOK},
 		{name: "unknown asset", path: "/assets/secret.txt", wantStatus: http.StatusNotFound},
 	}

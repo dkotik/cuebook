@@ -27,7 +27,7 @@ func TestReadOnlyHandler(t *testing.T) {
 			method:     http.MethodGet,
 			path:       "/",
 			wantStatus: http.StatusOK,
-			contains:   []string{"core1.cue", "subfolder/sub1.cue", "file=subfolder%2Fsub1.cue", "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, `data-theme-icon="moon" style="display: inline-block"`, `d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"`, `data-theme-icon="sun" style="display: none"`, `<circle cx="12" cy="12" r="4"/>`},
+			contains:   []string{"core1.cue", "subfolder", "sub1.cue", "file=subfolder%2Fsub1.cue", `<file-tree-node class="file-tree-node" data-node-path="subfolder">`, `class="tree-folder-icon"`, `class="tree-file-icon"`, `class="tree-children"`, "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", "/assets/file-tree.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, `data-theme-icon="moon" style="display: inline-block"`, `d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"`, `data-theme-icon="sun" style="display: none"`, `<circle cx="12" cy="12" r="4"/>`},
 			omits:      []string{"notes.txt", "First11111aa", "Dark mode", "Light mode"},
 		},
 		{
@@ -35,7 +35,7 @@ func TestReadOnlyHandler(t *testing.T) {
 			method:     http.MethodGet,
 			path:       "/?file=subfolder%2Fsub1.cue",
 			wantStatus: http.StatusOK,
-			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source"},
+			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source", `aria-current="page"`},
 			omits:      []string{`hx-post="/edit"`, `hx-post="/add"`},
 		},
 		{

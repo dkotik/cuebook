@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/assets/bulma.css">
   <link rel="stylesheet" href="/assets/app.css">
   <script src="/assets/htmx-2.0.4.min.js" defer></script>
+  <script src="/assets/file-tree.js" defer></script>
 </head>
 <body>
   <header class="topbar navbar">
@@ -29,10 +30,8 @@
     <nav class="file-nav menu" aria-label="CUE files">
       <h1 class="menu-label">Files</h1>
       {{if .Files}}
-      <ul class="menu-list">
-        {{range .Files}}
-        <li><a href="{{.URL}}" hx-get="{{.URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true">{{.Name}}</a></li>
-        {{end}}
+      <ul class="file-tree"></ul>
+        {{range .Files}}{{template "file-tree-node" .}}{{end}}
       </ul>
       {{else}}
       <p class="muted">No CUE files found.</p>
@@ -42,6 +41,28 @@
   </div>
 </body>
 </html>
+{{end}}
+
+{{define "file-tree-node" -}}
+<li>
+  <file-tree-node class="file-tree-node" data-node-path="{{.Path}}">
+    {{if .IsDir}}
+    <button class="tree-node-toggle" type="button" aria-expanded="true">
+      <svg class="tree-chevron" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 5 5-5 5"/></svg>
+      <svg class="tree-folder-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3.5 9h17"/></svg>
+      <span>{{.Name}}</span>
+    </button>
+    <ul class="tree-children">
+      {{range .Children}}{{template "file-tree-node" .}}{{end}}
+    </ul>
+    {{else}}
+    <a class="tree-file-link" href="{{.URL}}" hx-get="{{.URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" {{if .Selected}}aria-current="page"{{end}}>
+      <svg class="tree-file-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.75h8l4 4v12.5H6z"/><path d="M14 3.75v4h4M9 12h6m-6 3h6"/></svg>
+      <span>{{.Name}}</span>
+    </a>
+    {{end}}
+  </file-tree-node>
+</li>
 {{end}}
 
 {{define "workspace" -}}

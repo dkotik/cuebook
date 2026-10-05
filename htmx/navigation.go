@@ -14,13 +14,17 @@ import (
 	"github.com/dkotik/cuebook/metadata"
 )
 
-type fileLink struct {
-	Name string
-	URL  string
+type fileTreeNode struct {
+	Name     string
+	Path     string
+	URL      string
+	IsDir    bool
+	Selected bool
+	Children []fileTreeNode
 }
 
 type pageData struct {
-	Files         []fileLink
+	Files         []fileTreeNode
 	Selected      string
 	Entries       []entryView
 	AddFields     []addFieldView
@@ -60,13 +64,7 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 		data.Error = "Unable to list CUE files."
 		return data, http.StatusInternalServerError
 	}
-	data.Files = make([]fileLink, 0, len(fileNames))
-	for _, name := range fileNames {
-		data.Files = append(data.Files, fileLink{
-			Name: name,
-			URL:  fileURL(name),
-		})
-	}
+	data.Files = makeFileTree(fileNames, fileName)
 
 	if fileName == "" {
 		return data, http.StatusOK
@@ -187,8 +185,60 @@ func fileURL(name string) string {
 	return "/?" + query.Encode()
 }
 
+func makeFileTree(fileNames []string, selected string) []fileTreeNode {
+	var roots []fileTreeNode
+	for _, fileName := range fileNames {
+		parts := strings.Split(fileName, "/")
+		children := &roots
+		currentPath := ""
+		for index, name := range parts {
+			if currentPath == "" {
+				currentPath = name
+			} else {
+				currentPath += "/" + name
+			}
+			isDir := index < len(parts)-1
+			childIndex := -1
+			for i := range *children {
+				if (*children)[i].Name == name {
+					childIndex = i
+					break
+				}
+			}
+			if childIndex == -1 {
+				node := fileTreeNode{Name: name, Path: currentPath, IsDir: isDir}
+				if !isDir {
+					node.URL = fileURL(currentPath)
+					node.Selected = currentPath == selected
+				}
+				*children = append(*children, node)
+				childIndex = len(*children) - 1
+			}
+			children = &(*children)[childIndex].Children
+		}
+	}
+	sortFileTree(roots)
+	return roots
+}
+
+func sortFileTree(nodes []fileTreeNode) {
+	sort.Slice(nodes, func(i, j int) bool {
+		if nodes[i].IsDir != nodes[j].IsDir {
+			return nodes[i].IsDir
+		}
+		left, right := strings.ToLower(nodes[i].Name), strings.ToLower(nodes[j].Name)
+		if left == right {
+			return nodes[i].Name < nodes[j].Name
+		}
+		return left < right
+	})
+	for i := range nodes {
+		sortFileTree(nodes[i].Children)
+	}
+}
+
 func (a *handler) pageForDocument(fileName string, fileNames []string, document cuebook.Document, notice string) (pageData, int) {
-	data := a.basePage(fileNames, notice)
+	data := a.basePage(fileNames, fileName, notice)
 	data.Selected = fileName
 	if !data.ReadOnly {
 		data.AddFields = makeAddFieldViews(document)
@@ -202,14 +252,10 @@ func (a *handler) pageForDocument(fileName string, fileNames []string, document 
 	return data, http.StatusOK
 }
 
-func (a *handler) basePage(fileNames []string, notice string) pageData {
-	data := pageData{
+func (a *handler) basePage(fileNames []string, selected, notice string) pageData {
+	return pageData{
 		ReadOnly: a.committer == nil,
 		Error:    notice,
-		Files:    make([]fileLink, 0, len(fileNames)),
+		Files:    makeFileTree(fileNames, selected),
 	}
-	for _, name := range fileNames {
-		data.Files = append(data.Files, fileLink{Name: name, URL: fileURL(name)})
-	}
-	return data
 }
