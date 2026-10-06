@@ -214,7 +214,7 @@
 {{define "entry" -}}
 <article class="entry card" id="entry-{{.Index}}" data-entry-index="{{.Index}}" data-file="{{.File}}">
   <header class="card-header">
-    <h2 class="card-header-title">{{.Title}}</h2>
+    <h2 class="card-header-title"><a href="{{.ItemURL}}" hx-get="{{.ItemURL}}" hx-target="#workspace" hx-swap="innerHTML" hx-push-url="true">{{.Title}}</a></h2>
     {{if .CanMove}}
     <button class="card-header-icon entry-drag-handle" type="button" draggable="true" data-entry-drag-handle aria-label="Drag to move {{.Title}}" title="Drag to move {{.Title}}">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

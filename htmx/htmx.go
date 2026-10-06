@@ -75,6 +75,7 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", app.index)
 	mux.HandleFunc("GET /edit", app.editForm)
+	mux.HandleFunc("GET /item", app.item)
 	mux.HandleFunc("POST /edit", app.edit)
 	mux.HandleFunc("POST /add", app.add)
 	mux.HandleFunc("POST /move", app.move)

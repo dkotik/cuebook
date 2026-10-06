@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/dkotik/cuebook"
@@ -44,6 +45,7 @@ type pageData struct {
 type entryView struct {
 	Index     int
 	File      string
+	ItemURL   string
 	Title     string
 	CanMove   bool
 	CanDelete bool
@@ -97,26 +99,35 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 		if err != nil {
 			return nil, fmt.Errorf("entry %d: %w", index, err)
 		}
-		view := entryView{
-			Index:     index,
-			File:      fileName,
-			Title:     entry.GetTitle(),
-			CanMove:   !readOnly,
-			CanDelete: !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
+		entryRange, err := cuebook.NewByteRange(entry.Value)
+		if err != nil {
+			return nil, fmt.Errorf("entry %d: unable to locate item in CUE file: %w", index, err)
 		}
-		if view.Title == "" {
-			view.Title = fmt.Sprintf("Entry %d", index+1)
-		}
-		for _, field := range entry.Fields {
-			view.Fields = append(view.Fields, makeFieldView(field, fileName, index, readOnly))
-		}
-		for _, field := range entry.Details {
-			view.Details = append(view.Details, makeFieldView(field, fileName, index, readOnly))
-		}
-		result = append(result, view)
+		result = append(result, makeEntryView(entry, fileName, index, entryRange, readOnly))
 		index++
 	}
 	return result, nil
+}
+
+func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange cuebook.ByteRange, readOnly bool) entryView {
+	view := entryView{
+		Index:     index,
+		File:      fileName,
+		ItemURL:   itemURL(fileName, entryRange),
+		Title:     entry.GetTitle(),
+		CanMove:   !readOnly,
+		CanDelete: !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
+	}
+	if view.Title == "" {
+		view.Title = fmt.Sprintf("Entry %d", index+1)
+	}
+	for _, field := range entry.Fields {
+		view.Fields = append(view.Fields, makeFieldView(field, fileName, index, readOnly))
+	}
+	for _, field := range entry.Details {
+		view.Details = append(view.Details, makeFieldView(field, fileName, index, readOnly))
+	}
+	return view
 }
 
 func (a *handler) fileNames() ([]string, error) {
@@ -175,6 +186,14 @@ func fileURL(name string) string {
 	query := url.Values{}
 	query.Set("file", name)
 	return "/?" + query.Encode()
+}
+
+func itemURL(fileName string, entryRange cuebook.ByteRange) string {
+	query := url.Values{}
+	query.Set("path", fileName)
+	query.Set("head", strconv.Itoa(entryRange.Head))
+	query.Set("tail", strconv.Itoa(entryRange.Tail))
+	return "/item?" + query.Encode()
 }
 
 func makeFileTree(fileNames []string, selected string) []fileTreeNode {
