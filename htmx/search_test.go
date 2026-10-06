@@ -17,6 +17,42 @@ import (
 	"github.com/dkotik/cuebook/search"
 )
 
+func TestSearchFormIsInHeaderAndTargetsMainContent(t *testing.T) {
+	handler, err := New(fstest.MapFS{
+		"people.cue": &fstest.MapFile{Data: []byte(`[{Name: "Ada"}]`)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+
+	body := response.Body.String()
+	headerEnd := strings.Index(body, "</header>")
+	formStart := strings.Index(body, `<form class="topbar-search`)
+	if formStart < 0 || headerEnd < 0 || formStart > headerEnd {
+		t.Fatalf("search form is not inside the page header: %s", body)
+	}
+	navStart := strings.Index(body, `<nav class="file-nav`)
+	navEnd := strings.Index(body, "</nav>")
+	if navStart >= 0 && navEnd > navStart && formStart > navStart && formStart < navEnd {
+		t.Errorf("search form is still inside the file navigation: %s", body)
+	}
+	for _, want := range []string{`hx-target="#workspace"`, `<main id="workspace"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("page does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, `id="search-results"`) {
+		t.Errorf("page still has a separate search results target: %s", body)
+	}
+}
+
 func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
 	tests := []struct {
 		name       string

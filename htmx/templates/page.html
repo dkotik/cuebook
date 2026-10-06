@@ -20,7 +20,14 @@
 <body>
   <header class="topbar navbar">
     <a href="/">Cuebook</a>
-    <span>Structured CUE documents</span>
+    <form class="topbar-search field has-addons" action="/search" method="get" hx-get="/search" hx-target="#workspace" hx-swap="innerHTML">
+      <div class="control is-expanded">
+        <input class="input" type="search" name="q" placeholder="Search entries" aria-label="Search entries">
+      </div>
+      <div class="control">
+        <button class="button" type="submit">Search</button>
+      </div>
+    </form>
     <button id="theme-toggle" class="button is-small is-ghost" type="button" aria-label="Toggle color theme" aria-pressed="true">
       <svg data-theme-icon="moon" style="display: inline-block" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
@@ -34,15 +41,6 @@
   <div class="layout">
     <nav class="file-nav menu" aria-label="CUE files">
       <h1 class="menu-label">Files</h1>
-      <form class="field has-addons" action="/search" method="get" hx-get="/search" hx-target="#search-results" hx-swap="innerHTML">
-        <div class="control is-expanded">
-          <input class="input" type="search" name="q" placeholder="Search entries" aria-label="Search entries">
-        </div>
-        <div class="control">
-          <button class="button" type="submit">Search</button>
-        </div>
-      </form>
-      <div id="search-results" aria-live="polite"></div>
       {{if .Files}}
       <ul class="file-tree">
         {{range .Files}}{{template "file-tree-node" .}}{{end}}
@@ -173,7 +171,7 @@
 {{end}}
 
 {{define "workspace" -}}
-<main id="workspace" tabindex="-1">
+<main id="workspace" tabindex="-1" aria-live="polite">
   {{if .Error}}<p class="notice notification is-danger" role="alert">{{.Error}}</p>{{end}}
   {{if .Selected}}
     <h1 class="document-title title is-4">{{.FileTitle}}</h1>
