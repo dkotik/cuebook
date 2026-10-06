@@ -192,7 +192,9 @@
     {{if .DocumentError}}
       <p class="notice notification is-danger" role="alert">{{.DocumentError}}</p>
     {{else if .Entries}}
-      {{range .Entries}}{{template "entry" .}}{{end}}
+      <div class="entries-grid">
+        {{range .Entries}}{{template "entry" .}}{{end}}
+      </div>
     {{else}}
       <p class="muted">This document has no entries.</p>
     {{end}}

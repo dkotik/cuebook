@@ -68,6 +68,9 @@ func TestIndexEntryLinksOpenMatchingItem(t *testing.T) {
 			}
 
 			body := indexResponse.Body.String()
+			if !strings.Contains(body, `<div class="entries-grid">`) {
+				t.Fatalf("entry list is not wrapped in the grid: %s", body)
+			}
 			titlePosition := strings.Index(body, "Second entry")
 			if titlePosition < 0 {
 				t.Fatalf("selected entry title not found in index: %s", body)
