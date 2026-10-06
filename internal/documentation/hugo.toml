@@ -1,0 +1,17 @@
+baseURL = 'https://dkotik.github.io/cuebook/'
+locale = 'en-US'
+title = 'Cuebook'
+disableKinds = ['taxonomy', 'term']
+author = 'Dmitry Kotik'
+uglyURLs = true
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[menu]
+  [[menu.main]]
+    name = 'Overview'
+    pageRef = '/'
+    weight = 10
