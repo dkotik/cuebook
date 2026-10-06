@@ -9,7 +9,7 @@ import (
 
 const archiveDirectory = ".archive/"
 
-func (a *handler) delete(w http.ResponseWriter, r *http.Request) {
+func (a *handler) archive(w http.ResponseWriter, r *http.Request) {
 	if !sameOrigin(r) {
 		a.renderPage(w, r, pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
 		return

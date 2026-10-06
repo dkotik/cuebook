@@ -21,6 +21,9 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
+- [ ] HTMX interface
+  - [ ] divide @detail decorated properties from the rest of the properties in cards. They should show only when card is :target?
+- [ ] Search facility through bleve
 - [x] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] add/delete entry button

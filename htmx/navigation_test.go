@@ -56,16 +56,20 @@ func TestFileFrontmatterView(t *testing.T) {
 				t.Errorf("file title %q not shown: %s", test.wantTitle, body)
 			}
 			componentStart := strings.Index(body, `<remember-details data-storage-key="view-file-frontmatter">`)
-			componentEnd := strings.Index(body, `</remember-details>`)
 			if test.wantDetails == "" {
 				if componentStart >= 0 {
 					t.Errorf("unexpected frontmatter details component: %s", body)
 				}
 				return
 			}
-			if componentStart < 0 || componentEnd < componentStart {
+			if componentStart < 0 {
 				t.Fatalf("frontmatter description is not inside remember-details: %s", body)
 			}
+			componentEndOffset := strings.Index(body[componentStart:], `</remember-details>`)
+			if componentEndOffset < 0 {
+				t.Fatalf("frontmatter description is not inside remember-details: %s", body)
+			}
+			componentEnd := componentStart + componentEndOffset
 			component := body[componentStart:componentEnd]
 			if !strings.Contains(component, "<summary>Description</summary>") || !strings.Contains(component, test.wantDetails) {
 				t.Errorf("description component missing expected content: %s", component)

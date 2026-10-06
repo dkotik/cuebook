@@ -1,9 +1,13 @@
-package cuebook
+package search
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/dkotik/cuebook"
+)
 
 func TestBleveSearch(t *testing.T) {
-	book, err := New([]byte(`[
+	book, err := cuebook.New([]byte(`[
 		{ "key": "valueGreat" },
 		{ "key2": "value2" }
 	]`))

@@ -78,7 +78,7 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 	mux.HandleFunc("POST /edit", app.edit)
 	mux.HandleFunc("POST /add", app.add)
 	mux.HandleFunc("POST /move", app.move)
-	mux.HandleFunc("POST /delete", app.delete)
+	mux.HandleFunc("POST /delete", app.archive)
 	mux.HandleFunc("GET /assets/{name}", app.asset)
 	return securityHeaders(mux), nil
 }

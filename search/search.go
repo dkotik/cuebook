@@ -1,4 +1,4 @@
-package cuebook
+package search
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/blevesearch/bleve/v2"
+	"github.com/dkotik/cuebook"
 )
 
 type IndexKey struct {
@@ -18,8 +19,8 @@ func (k IndexKey) String() string {
 }
 
 type Index interface {
-	Include(IndexKey, Entry) error
-	Query(string) ([]Entry, error)
+	Include(IndexKey, cuebook.Entry) error
+	Query(string) ([]cuebook.Entry, error)
 }
 
 func NewBleveIndex() Index {
@@ -39,7 +40,7 @@ type bleveIndex struct {
 	Entries *sync.Map
 }
 
-func (i *bleveIndex) Include(key IndexKey, entry Entry) error {
+func (i *bleveIndex) Include(key IndexKey, entry cuebook.Entry) error {
 	// TODO: rewrite this as custom bleve.DocumentMapping to avoid having to serialize
 	jsonBytes, err := entry.Value.MarshalJSON()
 	if err != nil {
@@ -54,15 +55,15 @@ func (i *bleveIndex) Include(key IndexKey, entry Entry) error {
 	return i.Index.Index(k, jsonDoc)
 }
 
-func (i *bleveIndex) Query(searchQuery string) (result []Entry, err error) {
+func (i *bleveIndex) Query(searchQuery string) (result []cuebook.Entry, err error) {
 	found, err := i.Index.Search(bleve.NewSearchRequest(bleve.NewQueryStringQuery(searchQuery)))
 	if err != nil {
 		return nil, err
 	}
-	result = make([]Entry, 0, found.Total)
+	result = make([]cuebook.Entry, 0, found.Total)
 	for _, hit := range found.Hits {
 		if entry, ok := i.Entries.Load(hit.ID); ok {
-			result = append(result, entry.(Entry))
+			result = append(result, entry.(cuebook.Entry))
 		}
 	}
 	return result, nil

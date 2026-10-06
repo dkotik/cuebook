@@ -10,12 +10,12 @@
 
 [...#contact] & [
   {
-		Name:  "2378"
-		Email: "sdf@sdf.com"
-	},
-  {
 		Name:  "First11111aaDDD"
 		Email: "test1@testdomain.com"
+	},
+  {
+		Name:  "2378" @cuebook(title)
+		Email: "sdf@sdf.com1"
 	},
   {
 		Name:  "1 really great"
