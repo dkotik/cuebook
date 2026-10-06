@@ -56,7 +56,9 @@ func (a *handler) archive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
-	if err := creator.CreateFileIfNotExists(archiveName, []byte("[]\n")); err != nil {
+	if err := a.applyFileChange(archiveName, func() error {
+		return creator.CreateFileIfNotExists(archiveName, []byte("[]\n"))
+	}); err != nil {
 		a.editFailure(w, r, fileName, "Unable to create the archive file.", http.StatusInternalServerError)
 		return
 	}

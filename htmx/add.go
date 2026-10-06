@@ -111,7 +111,7 @@ func (a *handler) add(w http.ResponseWriter, r *http.Request) {
 		a.renderAddFormError(w, r, page, fieldNames, values, "The submitted entry does not satisfy the CUE constraints: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
-	if err := a.committer.Commit(fileName, change); err != nil {
+	if err := a.commitFile(fileName, change); err != nil {
 		status := http.StatusInternalServerError
 		notice := "The entry could not be saved."
 		if errors.Is(err, patch.ErrByteRangeNotFound) {

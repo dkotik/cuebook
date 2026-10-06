@@ -1,10 +1,10 @@
 package htmx
 
 import (
-	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
+
+	"github.com/dkotik/cuebook/patch"
 )
 
 type searchResultsView struct {
@@ -18,39 +18,26 @@ type searchResultView struct {
 	URL   string
 }
 
-func (a *handler) buildSearchIndex() {
-	defer a.searchIndexReady.Store(true)
+func (a *handler) applyFileChange(filePath string, change func() error) error {
+	if a.searchFS == nil {
+		return change()
+	}
+	return a.searchFS.ApplyFileChange(filePath, change)
+}
 
-	fileNames, err := a.fileNames()
-	if err != nil {
-		a.searchIndexErr = fmt.Errorf("list CUE files for search index: %w", err)
-		return
-	}
-	for _, filePath := range fileNames {
-		_, document, status, message := a.readDocument(filePath, fileNames)
-		if status != http.StatusOK {
-			slog.Debug("skipping CUE file while building search index", "path", filePath, "status", status, "error", message)
-			continue
-		}
-		for entry, err := range document.EachEntry() {
-			if err != nil {
-				slog.Warn("skipping CUE entry while building search index", "path", filePath, "error", err)
-				continue
-			}
-			if err := a.searchIndex.Include(filePath, entry); err != nil {
-				slog.Warn("unable to index CUE entry", "path", filePath, "error", err)
-			}
-		}
-	}
+func (a *handler) commitFile(filePath string, change patch.Patch) error {
+	return a.applyFileChange(filePath, func() error {
+		return a.committer.Commit(filePath, change)
+	})
 }
 
 func (a *handler) search(w http.ResponseWriter, r *http.Request) {
-	if !a.searchIndexReady.Load() {
+	if a.searchFS == nil || !a.searchFS.IndexReady() {
 		w.Header().Set("Retry-After", "1")
 		http.Error(w, "The search index is still being built.", http.StatusServiceUnavailable)
 		return
 	}
-	if a.searchIndexErr != nil {
+	if a.searchFS.IndexError() != nil {
 		http.Error(w, "Unable to build the search index.", http.StatusInternalServerError)
 		return
 	}
@@ -64,7 +51,7 @@ func (a *handler) search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results, err := a.searchIndex.Query(query)
+	results, err := a.searchFS.Query(query)
 	if err != nil {
 		http.Error(w, "The search query is invalid.", http.StatusBadRequest)
 		return

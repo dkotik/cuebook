@@ -147,7 +147,7 @@ func (a *handler) edit(w http.ResponseWriter, r *http.Request) {
 		a.renderEditInputFailure(w, r, page, entryIndex, fieldName, value, "The submitted value does not satisfy the CUE constraints: "+err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
-	if err = a.committer.Commit(fileName, change); err != nil {
+	if err = a.commitFile(fileName, change); err != nil {
 		status = http.StatusInternalServerError
 		notice := "The edit could not be saved."
 		if errors.Is(err, patch.ErrByteRangeNotFound) {
@@ -186,6 +186,10 @@ func markEditingField(fields []fieldView, fieldName, value string) bool {
 }
 
 func (a *handler) finishEdit(w http.ResponseWriter, r *http.Request, fileName string) {
+	a.renderEditedFile(w, r, fileName)
+}
+
+func (a *handler) renderEditedFile(w http.ResponseWriter, r *http.Request, fileName string) {
 	if !isHTMX(r) {
 		http.Redirect(w, r, fileURL(fileName), http.StatusSeeOther)
 		return

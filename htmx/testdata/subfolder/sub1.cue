@@ -22,7 +22,7 @@
 		Email: "1dfjd@kekeke.kekeke"
 	},
   {
-		Name:  "First11111aa"
-		Email: "test1@testdomain"
+		Name:  "Super Rambo 123" @cuebook(title)
+		Email: "test1@testdomain.com"
 	}
 ]

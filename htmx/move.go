@@ -80,7 +80,7 @@ func (a *handler) move(w http.ResponseWriter, r *http.Request) {
 		a.editFailure(w, r, fileName, "The reordered document does not satisfy the CUE constraints.", http.StatusUnprocessableEntity)
 		return
 	}
-	if err := a.committer.Commit(fileName, change); err != nil {
+	if err := a.commitFile(fileName, change); err != nil {
 		status := http.StatusInternalServerError
 		notice := "The entries could not be saved."
 		if errors.Is(err, patch.ErrByteRangeNotFound) {
@@ -145,7 +145,7 @@ func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceNa
 		return
 	}
 
-	if err := a.committer.Commit(destinationName, patch.Validated(appendChange)); err != nil {
+	if err := a.commitFile(destinationName, patch.Validated(appendChange)); err != nil {
 		status := http.StatusInternalServerError
 		notice := "The entry could not be added to the destination file."
 		if errors.Is(err, patch.ErrByteRangeNotFound) {
@@ -155,8 +155,8 @@ func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceNa
 		a.editFailure(w, r, destinationName, notice, status)
 		return
 	}
-	if err := a.committer.Commit(sourceName, patch.Validated(deleteChange)); err != nil {
-		rollbackErr := a.committer.Commit(destinationName, patch.Validated(appendChange.Invert()))
+	if err := a.commitFile(sourceName, patch.Validated(deleteChange)); err != nil {
+		rollbackErr := a.commitFile(destinationName, patch.Validated(appendChange.Invert()))
 		if rollbackErr != nil {
 			a.editFailure(w, r, destinationName, "The entry was added to the destination, but the source could not be updated and the destination change could not be rolled back. It may now exist in both files.", http.StatusInternalServerError)
 			return
@@ -170,7 +170,7 @@ func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceNa
 		a.editFailure(w, r, sourceName, notice, status)
 		return
 	}
-	a.finishEdit(w, r, destinationName)
+	a.renderEditedFile(w, r, destinationName)
 }
 
 func entryValueWithoutConstraints(value cue.Value) (cue.Value, string, error) {

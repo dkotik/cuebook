@@ -2,6 +2,7 @@ package htmx
 
 import (
 	"html"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/patch"
+	"github.com/dkotik/cuebook/search"
 )
 
 func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
@@ -42,7 +45,9 @@ func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			app := &handler{}
-			app.searchIndexReady.Store(test.ready)
+			if test.ready {
+				app.searchFS = completedSearchFS{FS: fstest.MapFS{}}
+			}
 			request := httptest.NewRequest(http.MethodGet, "http://example.test"+test.path, nil)
 			response := httptest.NewRecorder()
 			app.search(response, request)
@@ -54,6 +59,102 @@ func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
 			}
 		})
 	}
+}
+
+type completedSearchFS struct {
+	fs.FS
+}
+
+func (completedSearchFS) IndexReady() bool  { return true }
+func (completedSearchFS) IndexError() error { return nil }
+func (completedSearchFS) Query(string) ([]search.Result, error) {
+	return nil, nil
+}
+func (completedSearchFS) UpdateFile(string) error                    { return nil }
+func (completedSearchFS) ApplyFileChange(string, func() error) error { return nil }
+func (completedSearchFS) RemoveFile(string) error                    { return nil }
+
+func TestSearchIndexRefreshesAfterCommittedEdit(t *testing.T) {
+	t.Parallel()
+
+	const filePath = "people.cue"
+	files := fstest.MapFS{
+		filePath: {
+			Data: []byte(`[{Name: "Target entry", Text: "oldtoken"}]`),
+		},
+	}
+	handler, err := NewWithCommitter(files, mapFileCommitter{files: files})
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitForSearchResponse(t, handler, "oldtoken")
+
+	form := url.Values{
+		"file":  {filePath},
+		"entry": {"0"},
+		"field": {"Text"},
+		"value": {"newtoken"},
+	}
+	request := httptest.NewRequest(http.MethodPost, "http://example.test/edit", strings.NewReader(form.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Origin", "http://example.test")
+	request.Header.Set("HX-Request", "true")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("edit status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+
+	oldResults := issueSearchRequest(t, handler, "oldtoken")
+	if strings.Contains(oldResults.Body.String(), "Target entry") {
+		t.Errorf("stale search result remained after edit: %s", oldResults.Body.String())
+	}
+	newResults := issueSearchRequest(t, handler, "newtoken")
+	if !strings.Contains(newResults.Body.String(), "Target entry") {
+		t.Errorf("updated search result missing after edit: %s", newResults.Body.String())
+	}
+}
+
+type mapFileCommitter struct {
+	files fstest.MapFS
+}
+
+func (c mapFileCommitter) Commit(name string, change patch.Patch) error {
+	file, ok := c.files[name]
+	if !ok {
+		return fs.ErrNotExist
+	}
+	updated, err := change.ApplyToCueSource(file.Data)
+	if err != nil {
+		return err
+	}
+	file.Data = updated
+	return nil
+}
+
+func waitForSearchResponse(t *testing.T, handler http.Handler, query string) *httptest.ResponseRecorder {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		response := issueSearchRequest(t, handler, query)
+		if response.Code != http.StatusServiceUnavailable {
+			return response
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("search index did not finish building")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func issueSearchRequest(t *testing.T, handler http.Handler, query string) *httptest.ResponseRecorder {
+	t.Helper()
+	values := url.Values{}
+	values.Set("q", query)
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/search?"+values.Encode(), nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	return response
 }
 
 func TestSearchResultsLinkToMatchingItem(t *testing.T) {
@@ -86,24 +187,7 @@ func TestSearchResultsLinkToMatchingItem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	searchQuery := url.Values{}
-	searchQuery.Set("q", "needle")
-	searchPath := "/search?" + searchQuery.Encode()
-
-	deadline := time.Now().Add(5 * time.Second)
-	var searchResponse *httptest.ResponseRecorder
-	for {
-		request := httptest.NewRequest(http.MethodGet, "http://example.test"+searchPath, nil)
-		searchResponse = httptest.NewRecorder()
-		handler.ServeHTTP(searchResponse, request)
-		if searchResponse.Code != http.StatusServiceUnavailable {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("search index did not finish building")
-		}
-		time.Sleep(time.Millisecond)
-	}
+	searchResponse := waitForSearchResponse(t, handler, "needle")
 	if searchResponse.Code != http.StatusOK {
 		t.Fatalf("search status = %d, want %d; body: %s", searchResponse.Code, http.StatusOK, searchResponse.Body.String())
 	}

@@ -17,6 +17,7 @@ type Result struct {
 
 type Index interface {
 	Include(filePath string, entry cuebook.Entry) error
+	Remove(filePath string) error
 	Query(string) ([]Result, error)
 }
 
@@ -63,6 +64,28 @@ func (i *bleveIndex) Include(filePath string, entry cuebook.Entry) error {
 	}
 	i.Entries.Store(key, result)
 	return nil
+}
+
+func (i *bleveIndex) Remove(filePath string) error {
+	var removeErr error
+	i.Entries.Range(func(key, value any) bool {
+		result, ok := value.(Result)
+		if !ok || result.Path != filePath {
+			return true
+		}
+		id, ok := key.(string)
+		if !ok {
+			removeErr = fmt.Errorf("search index entry key has type %T", key)
+			return false
+		}
+		if err := i.Index.Delete(id); err != nil {
+			removeErr = err
+			return false
+		}
+		i.Entries.Delete(id)
+		return true
+	})
+	return removeErr
 }
 
 func (i *bleveIndex) Query(searchQuery string) ([]Result, error) {
