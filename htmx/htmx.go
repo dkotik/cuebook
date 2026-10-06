@@ -21,6 +21,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/search"
@@ -29,7 +30,7 @@ import (
 //go:embed templates/page.html
 var templateFiles embed.FS
 
-//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/delete-confirm.js assets/move-confirm.js assets/favicon.svg
+//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/delete-confirm.js assets/move-confirm.js assets/live-reload.js assets/favicon.svg
 var assetFiles embed.FS
 
 // Committer applies a prepared Cuebook patch to a named source file.
@@ -84,6 +85,8 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 	mux.HandleFunc("GET /edit", app.editForm)
 	mux.HandleFunc("GET /item", app.item)
 	mux.HandleFunc("GET /search", app.search)
+	mux.HandleFunc("GET /search/clear-button", app.searchClearButton)
+	mux.HandleFunc("GET /events", app.liveReloadEvents)
 	mux.HandleFunc("POST /edit", app.edit)
 	mux.HandleFunc("POST /add", app.add)
 	mux.HandleFunc("POST /move", app.move)
@@ -110,7 +113,7 @@ func (a *handler) asset(w http.ResponseWriter, r *http.Request) {
 	switch name {
 	case "app.css", "bulma.css":
 		contentType = "text/css; charset=utf-8"
-	case "theme.js", "file-tree.js", "entry-move.js", "remember-details.js", "delete-confirm.js", "move-confirm.js":
+	case "theme.js", "file-tree.js", "entry-move.js", "remember-details.js", "delete-confirm.js", "move-confirm.js", "live-reload.js":
 		contentType = "text/javascript; charset=utf-8"
 	case "bulma-LICENSE.txt":
 		contentType = "text/plain; charset=utf-8"
@@ -132,6 +135,37 @@ func (a *handler) asset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	_, _ = w.Write(content)
+}
+
+func (a *handler) liveReloadEvents(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "SSE streaming is unavailable.", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+	if _, err := fmt.Fprint(w, ": connected\n\n"); err != nil {
+		return
+	}
+	flusher.Flush()
+
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			if _, err := fmt.Fprint(w, ": keep-alive\n\n"); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
 }
 
 func isHTMX(r *http.Request) bool {

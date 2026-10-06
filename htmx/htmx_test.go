@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"context"
 	"embed"
 	"net/http"
 	"net/http/httptest"
@@ -203,6 +204,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "remember details component", path: "/assets/remember-details.js", contains: []string{`customElements.define("remember-details"`, "localStorage.getItem", "localStorage.setItem", "dataset.storageKey", "aria-expanded", "keydown"}, wantStatus: http.StatusOK},
 		{name: "delete confirmation controller", path: "/assets/delete-confirm.js", contains: []string{`form[action="/delete"]`, `event.preventDefault()`, `event.stopImmediatePropagation()`, "textContent", `aria-hidden`, "requestSubmit", `event.key === "Escape"`}, wantStatus: http.StatusOK},
 		{name: "theme controller", path: "/assets/theme.js", contains: []string{"localStorage.setItem", `querySelectorAll("[data-theme-icon]")`, `? "moon" : "sun"`, `icon.style.display`, `? "inline-block" : "none"`}, wantStatus: http.StatusOK},
+		{name: "live reload component", path: "/assets/live-reload.js", contains: []string{"class LiveReload extends HTMLElement", `new EventSource("/events")`, "window.location.reload()"}, wantStatus: http.StatusOK},
 		{name: "unknown asset", path: "/assets/secret.txt", wantStatus: http.StatusNotFound},
 	}
 	for _, tt := range tests {
@@ -219,6 +221,54 @@ func TestAssetsAreServedLocally(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestPageIncludesLiveReloadComponent(t *testing.T) {
+	handler, err := New(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	for _, want := range []string{
+		`<script src="/assets/live-reload.js" defer></script>`,
+		`<live-reload></live-reload>`,
+	} {
+		if !strings.Contains(response.Body.String(), want) {
+			t.Errorf("page does not contain %q", want)
+		}
+	}
+}
+
+func TestLiveReloadEventStreamStartsAndStopsOnContextCancellation(t *testing.T) {
+	handler, err := New(fstest.MapFS{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/events", nil).WithContext(ctx)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	if got := response.Header().Get("Content-Type"); got != "text/event-stream" {
+		t.Errorf("Content-Type = %q, want text/event-stream", got)
+	}
+	if !response.Flushed {
+		t.Error("SSE connection was not flushed")
+	}
+	if got := response.Body.String(); got != ": connected\n\n" {
+		t.Errorf("initial SSE data = %q, want %q", got, ": connected\n\n")
 	}
 }
 

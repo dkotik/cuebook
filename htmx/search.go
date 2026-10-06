@@ -31,6 +31,20 @@ func (a *handler) commitFile(filePath string, change patch.Patch) error {
 	})
 }
 
+func (a *handler) searchClearButton(w http.ResponseWriter, r *http.Request) {
+	var output strings.Builder
+	if strings.TrimSpace(r.URL.Query().Get("q")) != "" {
+		if err := a.templates.ExecuteTemplate(&output, "search-clear-button", nil); err != nil {
+			http.Error(w, "Unable to render the clear search button.", http.StatusInternalServerError)
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(output.String()))
+}
+
 func (a *handler) search(w http.ResponseWriter, r *http.Request) {
 	if a.searchFS == nil || !a.searchFS.IndexReady() {
 		w.Header().Set("Retry-After", "1")

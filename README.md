@@ -23,9 +23,8 @@ changes in data to other users and, most importantly, programs.
 
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value.
   - [ ] fill out @item.go with an HTMX view that shows one list item fetched by UUID
-- [ ] HTMX interface
+- [x] HTMX interface
   - [ ] divide @detail decorated properties from the rest of the properties in cards. They should show only when card is :target?
-- [ ] Search facility through bleve
 - [x] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] add/delete entry button

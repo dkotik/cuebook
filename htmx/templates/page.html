@@ -16,16 +16,18 @@
   <script src="/assets/remember-details.js" defer></script>
   <script src="/assets/delete-confirm.js" defer></script>
   <script src="/assets/move-confirm.js" defer></script>
+  <script src="/assets/live-reload.js" defer></script>
 </head>
 <body>
   <header class="topbar navbar">
     <a href="/">Cuebook</a>
     <form class="topbar-search field has-addons" action="/search" method="get" hx-get="/search" hx-target="#workspace" hx-swap="innerHTML">
       <div class="control is-expanded">
-        <input class="input" type="search" name="q" placeholder="Search entries" aria-label="Search entries">
+        <input class="input" type="search" name="q" placeholder="Search entries" aria-label="Search entries" hx-get="/search/clear-button" hx-trigger="input changed delay:150ms" hx-target="#search-clear-control" hx-swap="innerHTML">
       </div>
+      <div id="search-clear-control" class="control"></div>
       <div class="control">
-        <button class="button" type="submit">Search</button>
+        <button class="button" type="submit" aria-label="Search">🔍</button>
       </div>
     </form>
     <button id="theme-toggle" class="button is-small is-ghost" type="button" aria-label="Toggle color theme" aria-pressed="true">
@@ -124,6 +126,7 @@
       </footer>
     </div>
   </div>
+  <live-reload></live-reload>
 </body>
 </html>
 {{end}}
@@ -168,6 +171,10 @@
   <p class="muted">No search results.</p>
   {{end}}
 </section>
+{{end}}
+
+{{define "search-clear-button" -}}
+<button class="button has-text-danger" type="reset" aria-label="Clear search" title="Clear search" hx-get="/search/clear-button" hx-vals='{"q":""}' hx-target="#search-clear-control" hx-swap="innerHTML">×</button>
 {{end}}
 
 {{define "workspace" -}}
