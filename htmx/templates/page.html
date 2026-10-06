@@ -192,7 +192,7 @@
     {{if .DocumentError}}
       <p class="notice notification is-danger" role="alert">{{.DocumentError}}</p>
     {{else if .Entries}}
-      <div class="entries-grid">
+      <div class="grid is-col-min-16 is-gap-2 entries-grid">
         {{range .Entries}}{{template "entry-list" .}}{{end}}
       </div>
     {{else}}
@@ -248,7 +248,7 @@
 {{end}}
 
 {{define "entry-list" -}}
-<article class="entry card" id="entry-{{.Index}}" data-entry-index="{{.Index}}" data-file="{{.File}}">
+<article class="entry card cell" id="entry-{{.Index}}" data-entry-index="{{.Index}}" data-file="{{.File}}">
   <header class="card-header">
     {{template "entry-heading" .}}
   </header>

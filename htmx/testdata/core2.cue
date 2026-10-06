@@ -11,14 +11,18 @@
 [...#contact] & [
 
   {
-		Name:  "third and finaleee"
-		Email: "third@some.email"
-	},
-  {
 		Name:  "First11111aa1"
 		Email: "test1@testdomain.com"
 	},
   {
 		Name:  "sdkjfhsdkjfh"
 		Email: "12312312@2324.2343"
+	},
+  {
+		Name:  "third and finaleee"
+		Email: "third@some.email"
+	},
+  {
+		Name:  "Adam Bink"
+		Email: "sdfjkh@sdfsdf.com"
 	}]

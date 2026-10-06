@@ -68,8 +68,11 @@ func TestIndexEntryLinksOpenMatchingItem(t *testing.T) {
 			}
 
 			body := indexResponse.Body.String()
-			if !strings.Contains(body, `<div class="entries-grid">`) {
-				t.Fatalf("entry list is not wrapped in the grid: %s", body)
+			if !strings.Contains(body, `<div class="grid is-col-min-16 is-gap-2 entries-grid">`) {
+				t.Fatalf("entry list is not wrapped in the Bulma grid: %s", body)
+			}
+			if !strings.Contains(body, `<article class="entry card cell"`) {
+				t.Fatalf("entry list item is not a Bulma grid cell: %s", body)
 			}
 			titlePosition := strings.Index(body, "Second entry")
 			if titlePosition < 0 {

@@ -13,14 +13,6 @@
 
 [...#contact] & [
   {
-		Name:  "new entry"
-		Email: "test1@testdomain.com"
-	},
-  {
-		Name:  "First11111aa1"
-		Email: "test1@testdomain.com"
-	},
-  {
 		Name:  "First11111aa1axx"
 		Email: "test1@testdomain.com"
 	},
@@ -29,7 +21,11 @@
 		Email: "234234@31234.com"
 	},
   {
-		Name:  "Adam Bink"
-		Email: "sdfjkh@sdfsdf.com"
-	}
+		Name:  "new entry2"
+		Email: "test1@testdomain.com"
+	},
+  {
+		Name:  "First11111aa1"
+		Email: "test1@testdomain.com"
+	},
 ]
