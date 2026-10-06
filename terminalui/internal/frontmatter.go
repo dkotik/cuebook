@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/list"
@@ -83,7 +84,7 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 							_, _ = b.WriteRune('\n')
 						}
 						_, _ = b.WriteRune('\n') // skip a line after comments
-						p, err := patch.UpdateRange(source, patch.ByteRange{
+						p, err := patch.UpdateRange(source, cuebook.ByteRange{
 							Head: 0,
 							Tail: md.TailBytePosition,
 						}, b.Bytes())

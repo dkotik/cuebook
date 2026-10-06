@@ -13,12 +13,12 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 )
 
-// Document holds a list of structured data entries.
-type Document struct {
+// Book holds a list of structured data entries.
+type Book struct {
 	cue.Value
 }
 
-func New(source []byte) (book Document, err error) {
+func New(source []byte) (book Book, err error) {
 	book.Value = cuecontext.New().CompileBytes(source)
 	if err = book.Err(); err != nil {
 		return book, fmt.Errorf("unable to parse Cue list: %w", err)
@@ -37,7 +37,7 @@ func New(source []byte) (book Document, err error) {
 }
 
 // TODO: deprecate in favor of cuebook.EachValue
-func (d Document) EachValue() iter.Seq[cue.Value] {
+func (d Book) EachValue() iter.Seq[cue.Value] {
 	next, err := d.List()
 	if err != nil {
 		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
@@ -52,7 +52,7 @@ func (d Document) EachValue() iter.Seq[cue.Value] {
 	}
 }
 
-func (d Document) EachEntry() iter.Seq2[Entry, error] {
+func (d Book) EachEntry() iter.Seq2[Entry, error] {
 	next, err := d.List()
 	if err != nil {
 		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
@@ -71,12 +71,12 @@ func (d Document) EachEntry() iter.Seq2[Entry, error] {
 	}
 }
 
-func (d Document) GetValue(atIndex int) (cue.Value, error) {
+func (d Book) GetValue(atIndex int) (cue.Value, error) {
 	value := d.LookupPath(cue.MakePath(cue.Index(atIndex)))
 	return value, value.Err()
 }
 
-func (d Document) GetField(atIndex, fieldIndex int) (f Field, err error) {
+func (d Book) GetField(atIndex, fieldIndex int) (f Field, err error) {
 	value, err := d.GetValue(atIndex)
 	if err != nil {
 		return
@@ -88,7 +88,7 @@ func (d Document) GetField(atIndex, fieldIndex int) (f Field, err error) {
 	return entry.GetField(fieldIndex)
 }
 
-func (d Document) Len() (int, error) {
+func (d Book) Len() (int, error) {
 	length, err := d.Value.Len().Int64()
 	if err != nil {
 		panic(fmt.Errorf("unable to get the length of the Cue list: %w", err))
@@ -96,7 +96,7 @@ func (d Document) Len() (int, error) {
 	return int(length), nil
 }
 
-func (d Document) LogValue() slog.Value {
+func (d Book) LogValue() slog.Value {
 	length, _ := d.Len()
 	return slog.GroupValue(
 		// slog.String("title", d.Metadata().Title()),

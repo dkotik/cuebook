@@ -1,15 +1,22 @@
 package patch
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/dkotik/cuebook"
+)
 
 type Error uint8
 
 const (
 	ErrUnknown Error = iota
 	ErrSourceIsNotList
-	ErrByteRangeNotFound
+	_
 	ErrByteRangesOverlap
 )
+
+// ErrByteRangeNotFound aliases the root package's byte-range lookup error.
+var ErrByteRangeNotFound = cuebook.ErrByteRangeNotFound
 
 func (e Error) Error() string {
 	switch e {

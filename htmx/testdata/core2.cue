@@ -11,7 +11,7 @@
 [...#contact] & [
 
   {
-		Name:  "third and final"
+		Name:  "third and finaleee"
 		Email: "third@some.email"
 	},
   {

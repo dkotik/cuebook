@@ -21,6 +21,8 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
+- [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value.
+  - [ ] fill out @item.go with an HTMX view that shows one list item fetched by UUID
 - [ ] HTMX interface
   - [ ] divide @detail decorated properties from the rest of the properties in cards. They should show only when card is :target?
 - [ ] Search facility through bleve

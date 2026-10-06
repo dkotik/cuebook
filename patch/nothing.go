@@ -5,10 +5,10 @@ import (
 )
 
 type nothingPatch struct {
-	A, B ByteAnchor
+	A, B cuebook.ByteAnchor
 }
 
-func (p nothingPatch) Difference() ByteAnchor {
+func (p nothingPatch) Difference() cuebook.ByteAnchor {
 	return p.B
 }
 

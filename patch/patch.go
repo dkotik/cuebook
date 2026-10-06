@@ -27,12 +27,12 @@ import (
 
 type Patch interface {
 	ApplyToCueSource(original []byte) (updated []byte, err error)
-	Difference() ByteAnchor
+	Difference() cuebook.ByteAnchor
 	Invert() Patch
 }
 
 type Result struct {
-	Document   cuebook.Document
+	Document   cuebook.Book
 	Source     []byte
 	LastChange Patch
 	Hash       uint64
@@ -60,11 +60,11 @@ func (r Result) BottomChangeIndex(since Result) (i int) {
 		if !ok {
 			return index
 		}
-		current, err := NewByteRange(entry.Value)
+		current, err := cuebook.NewByteRange(entry.Value)
 		if err != nil {
 			continue
 		}
-		older, err := NewByteRange(olderValue)
+		older, err := cuebook.NewByteRange(olderValue)
 		if err != nil {
 			continue
 		}

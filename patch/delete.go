@@ -6,14 +6,15 @@ import (
 	"unicode"
 
 	"cuelang.org/go/cue"
+	"github.com/dkotik/cuebook"
 )
 
 type deletePatch struct {
-	Preceeding ByteAnchor
-	Target     ByteAnchor
+	Preceeding cuebook.ByteAnchor
+	Target     cuebook.ByteAnchor
 }
 
-func (p deletePatch) Difference() (d ByteAnchor) {
+func (p deletePatch) Difference() (d cuebook.ByteAnchor) {
 	return d
 }
 
@@ -33,7 +34,7 @@ func (p deletePatch) Invert() Patch {
 }
 
 func DeleteFromStructList(source []byte, value cue.Value) (Patch, error) {
-	r, err := NewByteRange(value)
+	r, err := cuebook.NewByteRange(value)
 	if err != nil {
 		return nil, err
 	}

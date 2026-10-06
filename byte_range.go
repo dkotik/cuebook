@@ -1,11 +1,15 @@
-package patch
+package cuebook
 
 import (
 	"bytes"
+	"errors"
 	"log/slog"
 
 	"cuelang.org/go/cue"
 )
+
+// ErrByteRangeNotFound is returned when a byte range cannot be located.
+var ErrByteRangeNotFound = errors.New("byte range not found")
 
 type ByteRange struct {
 	Head int

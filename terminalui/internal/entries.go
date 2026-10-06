@@ -28,7 +28,7 @@ type EntryList struct {
 	tea.Model
 
 	book     patch.Result
-	selected int // *patch.ByteAnchor
+	selected int // *cuebook.ByteAnchor
 }
 
 func (l EntryList) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -70,7 +70,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		// 		i := 0
 		// 		for entry := range msg.Document.EachValue() {
 		// 			i++
-		// 			r, err := patch.NewByteRange(entry)
+		// 			r, err := cuebook.NewByteRange(entry)
 		// 			if err == nil && r == target {
 		// 				l.selected = i
 		// 				break
@@ -85,7 +85,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		// 		i := 0
 		// 		for entry := range msg.Document.EachValue() {
 		// 			i++
-		// 			r, err := patch.NewByteRange(entry)
+		// 			r, err := cuebook.NewByteRange(entry)
 		// 			if err == nil && r == target {
 		// 				l.selected = i
 		// 				break
@@ -231,7 +231,7 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 				return err
 			}
 			if lastChange != nil {
-				at, err := patch.NewByteRange(entry.Value)
+				at, err := cuebook.NewByteRange(entry.Value)
 				if err != nil {
 					return err
 				}

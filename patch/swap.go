@@ -5,17 +5,18 @@ import (
 	"io"
 
 	"cuelang.org/go/cue"
+	"github.com/dkotik/cuebook"
 )
 
 type swapPatch struct {
-	Earlier                ByteAnchor
-	Later                  ByteAnchor
+	Earlier                cuebook.ByteAnchor
+	Later                  cuebook.ByteAnchor
 	EarlierIsTarget        bool
 	EarlierDuplicatesInGap int
 	LaterDuplicatesInGap   int
 }
 
-func (p swapPatch) Difference() ByteAnchor {
+func (p swapPatch) Difference() cuebook.ByteAnchor {
 	if p.EarlierIsTarget {
 		return p.Earlier
 	}
@@ -53,11 +54,11 @@ func (p swapPatch) Invert() Patch {
 }
 
 func SwapEntries(source []byte, a, b cue.Value) (Patch, error) {
-	aRange, err := NewByteRange(a)
+	aRange, err := cuebook.NewByteRange(a)
 	if err != nil {
 		return nil, err
 	}
-	bRange, err := NewByteRange(b)
+	bRange, err := cuebook.NewByteRange(b)
 	if err != nil {
 		return nil, err
 	}

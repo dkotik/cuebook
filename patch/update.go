@@ -16,11 +16,11 @@ import (
 )
 
 type replacePatch struct {
-	Target      ByteAnchor
-	Replacement ByteAnchor
+	Target      cuebook.ByteAnchor
+	Replacement cuebook.ByteAnchor
 }
 
-func (p replacePatch) Difference() ByteAnchor {
+func (p replacePatch) Difference() cuebook.ByteAnchor {
 	return p.Replacement
 }
 
@@ -43,10 +43,10 @@ func (p replacePatch) Invert() Patch {
 	}
 }
 
-func UpdateRange(source []byte, r ByteRange, replacement []byte) (Patch, error) {
+func UpdateRange(source []byte, r cuebook.ByteRange, replacement []byte) (Patch, error) {
 	return replacePatch{
 		Target: r.Anchor(source),
-		Replacement: ByteAnchor{
+		Replacement: cuebook.ByteAnchor{
 			Content:              replacement,
 			PreceedingDuplicates: bytes.Count(source[:r.Head], replacement),
 		},
@@ -54,13 +54,13 @@ func UpdateRange(source []byte, r ByteRange, replacement []byte) (Patch, error) 
 }
 
 func ReplaceStructListEntry(source []byte, value cue.Value, b []byte) (Patch, error) {
-	r, err := NewByteRange(value)
+	r, err := cuebook.NewByteRange(value)
 	if err != nil {
 		return nil, err
 	}
 	return replacePatch{
 		Target: r.Anchor(source),
-		Replacement: ByteAnchor{
+		Replacement: cuebook.ByteAnchor{
 			Content:              b,
 			PreceedingDuplicates: bytes.Count(source[:r.Head], b),
 		},

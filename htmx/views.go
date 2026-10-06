@@ -21,7 +21,7 @@ type entryFieldDefinition struct {
 	Optional bool
 }
 
-func makeAddFieldViews(document cuebook.Document) []addFieldView {
+func makeAddFieldViews(document cuebook.Book) []addFieldView {
 	var result []addFieldView
 	for _, definition := range entryFieldDefinitions(document) {
 		field := definition.Field
@@ -63,7 +63,7 @@ func splitAddFieldViews(fields []addFieldView) (required, optional []addFieldVie
 	return required, optional
 }
 
-func entryFieldDefinitions(document cuebook.Document) []entryFieldDefinition {
+func entryFieldDefinitions(document cuebook.Book) []entryFieldDefinition {
 	var result []entryFieldDefinition
 	for selector, value := range cuebook.EachFieldDefinition(document.Value) {
 		result = append(result, entryFieldDefinition{

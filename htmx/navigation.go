@@ -90,7 +90,7 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 	return data, http.StatusOK
 }
 
-func makeEntryViews(document cuebook.Document, fileName string, readOnly bool) ([]entryView, error) {
+func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]entryView, error) {
 	var result []entryView
 	index := 0
 	for entry, err := range document.EachEntry() {
@@ -143,20 +143,20 @@ func (a *handler) fileNames() ([]string, error) {
 	return names, nil
 }
 
-func (a *handler) readDocument(name string, knownFiles []string) ([]byte, cuebook.Document, int, string) {
+func (a *handler) readDocument(name string, knownFiles []string) ([]byte, cuebook.Book, int, string) {
 	if !validFileName(name) || !containsFile(knownFiles, name) {
-		return nil, cuebook.Document{}, http.StatusNotFound, "CUE file not found."
+		return nil, cuebook.Book{}, http.StatusNotFound, "CUE file not found."
 	}
 	raw, err := fs.ReadFile(a.source, name)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, cuebook.Document{}, http.StatusNotFound, "CUE file not found."
+			return nil, cuebook.Book{}, http.StatusNotFound, "CUE file not found."
 		}
-		return nil, cuebook.Document{}, http.StatusInternalServerError, "Unable to read this CUE file."
+		return nil, cuebook.Book{}, http.StatusInternalServerError, "Unable to read this CUE file."
 	}
 	document, err := cuebook.New(raw)
 	if err != nil {
-		return raw, cuebook.Document{}, http.StatusUnprocessableEntity, "Unable to parse or validate this CUE document: " + err.Error()
+		return raw, cuebook.Book{}, http.StatusUnprocessableEntity, "Unable to parse or validate this CUE document: " + err.Error()
 	}
 	return raw, document, http.StatusOK, ""
 }
@@ -247,7 +247,7 @@ func sortFileTree(nodes []fileTreeNode) {
 	}
 }
 
-func (a *handler) pageForDocument(fileName string, fileNames []string, raw []byte, document cuebook.Document, notice string) (pageData, int) {
+func (a *handler) pageForDocument(fileName string, fileNames []string, raw []byte, document cuebook.Book, notice string) (pageData, int) {
 	data := a.basePage(fileNames, fileName, notice)
 	data.Selected = fileName
 	setFileFrontmatter(&data, fileName, raw)

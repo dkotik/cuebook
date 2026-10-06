@@ -93,7 +93,7 @@ func (a *handler) move(w http.ResponseWriter, r *http.Request) {
 	a.finishEdit(w, r, fileName)
 }
 
-func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Document, from int, fileNames []string) {
+func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Book, from int, fileNames []string) {
 	if sourceName == destinationName {
 		a.finishEdit(w, r, sourceName)
 		return
@@ -234,9 +234,9 @@ func (p swapSequencePatch) ApplyToCueSource(source []byte) ([]byte, error) {
 	return source, nil
 }
 
-func (p swapSequencePatch) Difference() patch.ByteAnchor {
+func (p swapSequencePatch) Difference() cuebook.ByteAnchor {
 	if len(p.steps) == 0 {
-		return patch.ByteAnchor{}
+		return cuebook.ByteAnchor{}
 	}
 	return p.steps[len(p.steps)-1].Difference()
 }

@@ -38,7 +38,7 @@ type (
 
 	swapEntriesPatch struct {
 		patch.Patch
-		// Target patch.ByteAnchor
+		// Target cuebook.ByteAnchor
 	}
 
 	swapFieldsPatch struct {
@@ -236,7 +236,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 						if err != nil {
 							return err
 						}
-						at, err := patch.NewByteRange(entry.Value)
+						at, err := cuebook.NewByteRange(entry.Value)
 						if err != nil {
 							return err
 						}

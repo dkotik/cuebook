@@ -8,14 +8,15 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/format"
+	"github.com/dkotik/cuebook"
 )
 
 type insertAfter struct {
-	Preceeding ByteAnchor
-	Target     ByteAnchor
+	Preceeding cuebook.ByteAnchor
+	Target     cuebook.ByteAnchor
 }
 
-func (p insertAfter) Difference() ByteAnchor {
+func (p insertAfter) Difference() cuebook.ByteAnchor {
 	return p.Target
 }
 
@@ -58,11 +59,11 @@ func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 		content = append([]byte(",\n  "), content...)
 	}
 	return insertAfter{
-		Preceeding: ByteRange{
+		Preceeding: cuebook.ByteRange{
 			Head: max(0, listEnd-1000),
 			Tail: listEnd,
 		}.Anchor(source),
-		Target: ByteAnchor{
+		Target: cuebook.ByteAnchor{
 			Content:              content,
 			PreceedingDuplicates: bytes.Count(source[:listEnd], content),
 		},
