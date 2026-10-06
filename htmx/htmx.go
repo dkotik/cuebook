@@ -21,8 +21,10 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"sync/atomic"
 
 	"github.com/dkotik/cuebook/patch"
+	"github.com/dkotik/cuebook/search"
 )
 
 //go:embed templates/page.html
@@ -38,9 +40,12 @@ type Committer interface {
 }
 
 type handler struct {
-	source    fs.FS
-	committer Committer
-	templates *template.Template
+	source           fs.FS
+	committer        Committer
+	templates        *template.Template
+	searchIndex      search.Index
+	searchIndexReady atomic.Bool
+	searchIndexErr   error // Published by setting searchIndexReady after indexing completes.
 }
 
 // New returns a read-only HTTP handler for CUE files in source.
@@ -68,19 +73,22 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 	}
 
 	app := &handler{
-		source:    source,
-		committer: committer,
-		templates: templates,
+		source:      source,
+		committer:   committer,
+		templates:   templates,
+		searchIndex: search.NewBleveIndex(),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", app.list)
 	mux.HandleFunc("GET /edit", app.editForm)
 	mux.HandleFunc("GET /item", app.item)
+	mux.HandleFunc("GET /search", app.search)
 	mux.HandleFunc("POST /edit", app.edit)
 	mux.HandleFunc("POST /add", app.add)
 	mux.HandleFunc("POST /move", app.move)
 	mux.HandleFunc("POST /delete", app.archive)
 	mux.HandleFunc("GET /assets/{name}", app.asset)
+	go app.buildSearchIndex()
 	return securityHeaders(mux), nil
 }
 

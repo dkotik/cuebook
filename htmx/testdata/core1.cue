@@ -29,7 +29,7 @@
 		Email: "234234@31234.com"
 	},
   {
-		Name:  "sdjfl ksjdflk"
+		Name:  "Adam Bink"
 		Email: "sdfjkh@sdfsdf.com"
 	}
 ]

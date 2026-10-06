@@ -34,6 +34,15 @@
   <div class="layout">
     <nav class="file-nav menu" aria-label="CUE files">
       <h1 class="menu-label">Files</h1>
+      <form class="field has-addons" action="/search" method="get" hx-get="/search" hx-target="#search-results" hx-swap="innerHTML">
+        <div class="control is-expanded">
+          <input class="input" type="search" name="q" placeholder="Search entries" aria-label="Search entries">
+        </div>
+        <div class="control">
+          <button class="button" type="submit">Search</button>
+        </div>
+      </form>
+      <div id="search-results" aria-live="polite"></div>
       {{if .Files}}
       <ul class="file-tree">
         {{range .Files}}{{template "file-tree-node" .}}{{end}}
@@ -141,6 +150,26 @@
     {{end}}
   </file-tree-node>
 </li>
+{{end}}
+
+{{define "search-results" -}}
+<section class="search-results" aria-label="Search results">
+  <h2 class="menu-label">Results for “{{.Query}}”</h2>
+  {{if .Results}}
+  <ul class="menu-list">
+    {{range .Results}}
+    <li>
+      <a href="{{.URL}}" hx-get="{{.URL}}" hx-target="#workspace" hx-swap="innerHTML" hx-push-url="true">
+        <strong>{{.Title}}</strong>
+        <small class="muted">{{.Path}}</small>
+      </a>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="muted">No search results.</p>
+  {{end}}
+</section>
 {{end}}
 
 {{define "workspace" -}}
