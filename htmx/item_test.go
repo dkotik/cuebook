@@ -12,6 +12,56 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
+func TestListAndItemUseSeparateEntryTemplates(t *testing.T) {
+	t.Parallel()
+
+	const filePath = "people.cue"
+	source := []byte(`[{Name: "Target entry"}]`)
+	book, err := cuebook.New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var entryRange cuebook.ByteRange
+	for entry, err := range book.EachEntry() {
+		if err != nil {
+			t.Fatal(err)
+		}
+		entryRange, err = cuebook.NewByteRange(entry.Value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		break
+	}
+
+	handler, err := NewWithCommitter(fstest.MapFS{
+		filePath: &fstest.MapFile{Data: source},
+	}, &recordingCommitter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	listQuery := url.Values{"file": {filePath}}
+	listRequest := httptest.NewRequest(http.MethodGet, "http://example.test/?"+listQuery.Encode(), nil)
+	listResponse := httptest.NewRecorder()
+	handler.ServeHTTP(listResponse, listRequest)
+	if listResponse.Code != http.StatusOK {
+		t.Fatalf("list status = %d, want %d; body: %s", listResponse.Code, http.StatusOK, listResponse.Body.String())
+	}
+	if strings.Contains(listResponse.Body.String(), `action="/delete"`) {
+		t.Errorf("list view unexpectedly includes the archive form: %s", listResponse.Body.String())
+	}
+
+	itemRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+itemURL(filePath, entryRange), nil)
+	itemResponse := httptest.NewRecorder()
+	handler.ServeHTTP(itemResponse, itemRequest)
+	if itemResponse.Code != http.StatusOK {
+		t.Fatalf("item status = %d, want %d; body: %s", itemResponse.Code, http.StatusOK, itemResponse.Body.String())
+	}
+	if !strings.Contains(itemResponse.Body.String(), `action="/delete"`) {
+		t.Errorf("item view does not include the archive form: %s", itemResponse.Body.String())
+	}
+}
+
 func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 	source := []byte(`[
 	{Name: "First entry", Email: "first@example.test"},

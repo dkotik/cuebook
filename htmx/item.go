@@ -85,7 +85,7 @@ func (a *handler) item(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var output strings.Builder
-	if err := a.templates.ExecuteTemplate(&output, "entry", *selected); err != nil {
+	if err := a.templates.ExecuteTemplate(&output, "entry-item", *selected); err != nil {
 		http.Error(w, "Unable to render the item.", http.StatusInternalServerError)
 		return
 	}

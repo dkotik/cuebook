@@ -51,8 +51,11 @@ func TestDeleteArchivesEntries(t *testing.T) {
 			pageRequest := httptest.NewRequest(http.MethodGet, "http://example.test/?file=source.cue", nil)
 			pageResponse := httptest.NewRecorder()
 			handler.ServeHTTP(pageResponse, pageRequest)
-			if pageResponse.Code != http.StatusOK || !strings.Contains(pageResponse.Body.String(), `action="/delete"`) {
-				t.Fatalf("writable entry page does not show the archive button: status %d, body: %s", pageResponse.Code, pageResponse.Body.String())
+			if pageResponse.Code != http.StatusOK {
+				t.Fatalf("writable entry page status = %d, want %d; body: %s", pageResponse.Code, http.StatusOK, pageResponse.Body.String())
+			}
+			if strings.Contains(pageResponse.Body.String(), `action="/delete"`) {
+				t.Fatalf("list view unexpectedly shows an archive button: %s", pageResponse.Body.String())
 			}
 			for _, want := range []string{
 				`id="delete-confirmation"`,
