@@ -66,10 +66,10 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 	if a.committer == nil {
 		return editResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
 	}
-	if len(request.Values) == 0 {
+	if request.Value == nil {
 		return editResponseFrom(a.editFailure(ctx, request.File, "The edit request is invalid.", http.StatusBadRequest))
 	}
-	value := request.Values[0]
+	value := *request.Value
 
 	fileName := request.File
 	fileNames, err := a.fileNames()

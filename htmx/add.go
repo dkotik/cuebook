@@ -31,7 +31,12 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 		return addResponseFrom(a.editFailure(ctx, fileName, message, status))
 	}
 	page, _ := a.pageForDocument(fileName, fileNames, raw, document, "")
-	fieldNames, values := request.Fields, request.Values
+	fieldNames := make([]string, len(request.Entries))
+	values := make([]string, len(request.Entries))
+	for index, entry := range request.Entries {
+		fieldNames[index] = entry.Field
+		values[index] = entry.Value
+	}
 
 	definitions := entryFieldDefinitions(document)
 	if len(definitions) == 0 {

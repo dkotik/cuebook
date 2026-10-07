@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -54,10 +55,10 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 	for _, want := range []string{
 		`action="/add"`,
 		`hx-post="/add"`,
-		`name="field" value="Name"`,
-		`name="field" value="Email"`,
-		`name="field" value="Notes"`,
-		`name="field" value="Password"`,
+		`name="entry.0.field" value="Name"`,
+		`name="entry.1.field" value="Email"`,
+		`name="entry.2.field" value="Notes"`,
+		`name="entry.3.field" value="Password"`,
 		"(optional)",
 		`<remember-details data-storage-key="add-entry-optional">`,
 		"<summary>Optional fields</summary>",
@@ -82,12 +83,12 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 	}
 	componentEnd := componentStart + closingOffset
 	optionalMarkup := body[componentStart:componentEnd]
-	for _, want := range []string{`name="field" value="Notes"`, `name="field" value="Password"`} {
+	for _, want := range []string{`name="entry.2.field" value="Notes"`, `name="entry.3.field" value="Password"`} {
 		if !strings.Contains(optionalMarkup, want) {
 			t.Errorf("persistent optional fields do not contain %q: %s", want, optionalMarkup)
 		}
 	}
-	for _, notWant := range []string{`name="field" value="Name"`, `name="field" value="Email"`} {
+	for _, notWant := range []string{`name="entry.0.field" value="Name"`, `name="entry.1.field" value="Email"`} {
 		if strings.Contains(optionalMarkup, notWant) {
 			t.Errorf("required field %q is inside the optional fields component: %s", notWant, optionalMarkup)
 		}
@@ -125,11 +126,11 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 	}
 	form := body[start:end]
 	for _, want := range []string{
-		`name="field" value="Name"`,
-		`name="value" value="" required`,
-		`name="field" value="Count"`,
-		`type="number" name="value" value="0" step="any" required`,
-		`name="field" value="Enabled"`,
+		`name="entry.0.field" value="Name"`,
+		`name="entry.0.value" value="" required`,
+		`name="entry.1.field" value="Count"`,
+		`type="number" name="entry.1.value" value="0" step="any" required`,
+		`name="entry.2.field" value="Enabled"`,
 		`<option value="false" selected>false</option>`,
 		`<option value="true">true</option>`,
 	} {
@@ -143,11 +144,9 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 		}
 	}
 
-	failure := submitAdd(t, handler, true, url.Values{
-		"file":  {"defaults.cue"},
-		"field": {"Name", "Count", "Enabled"},
-		"value": {"Retained name", "7", "true"},
-	})
+	failure := submitAdd(t, handler, true, addEntryValues("defaults.cue", [][2]string{
+		{"Name", "Retained name"}, {"Count", "7"}, {"Enabled", "true"},
+	}))
 	if failure.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("failure status = %d, want %d; body: %s", failure.Code, http.StatusUnprocessableEntity, failure.Body.String())
 	}
@@ -163,7 +162,7 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 	failureForm := failureBody[formStart : formStart+formEnd+len(`</form>`)]
 	for _, want := range []string{
 		`value="Retained name"`,
-		`type="number" name="value" value="7" step="any" required`,
+		`type="number" name="entry.1.value" value="7" step="any" required`,
 		`<option value="true" selected>true</option>`,
 	} {
 		if !strings.Contains(failureForm, want) {
@@ -567,9 +566,10 @@ func submitAddWithOrigin(t *testing.T, handler http.Handler, htmx bool, values u
 
 func addEntryValues(fileName string, fields [][2]string) url.Values {
 	values := url.Values{"file": {fileName}}
-	for _, field := range fields {
-		values.Add("field", field[0])
-		values.Add("value", field[1])
+	for index, field := range fields {
+		prefix := "entry." + strconv.Itoa(index) + "."
+		values.Set(prefix+"field", field[0])
+		values.Set(prefix+"value", field[1])
 	}
 	return values
 }

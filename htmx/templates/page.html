@@ -27,7 +27,7 @@
       </div>
       <div id="search-clear-control" class="control"></div>
       <div class="control">
-        <button class="button" type="submit" aria-label="Search">🔍999</button>
+        <button class="button" type="submit" aria-label="Search">🔍</button>
       </div>
     </form>
     <button id="theme-toggle" class="button is-small is-ghost" type="button" aria-label="Toggle color theme" aria-pressed="true">
@@ -229,21 +229,21 @@
   <label>
     <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
     {{if .Secret}}
-      <input class="input" type="password" name="value" value="" autocomplete="new-password" {{if not .Optional}}required{{end}}>
+      <input class="input" type="password" name="entry.{{.Index}}.value" value="" autocomplete="new-password" {{if not .Optional}}required{{end}}>
     {{else if .Boolean}}
-      <div class="select"><select name="value" {{if not .Optional}}required{{end}}>
+      <div class="select"><select name="entry.{{.Index}}.value" {{if not .Optional}}required{{end}}>
         <option value="false"{{if eq .Value "false"}} selected{{end}}>false</option>
         <option value="true"{{if eq .Value "true"}} selected{{end}}>true</option>
       </select></div>
     {{else if .Numeric}}
-      <input class="input" type="number" name="value" value="{{.Value}}" step="any" {{if not .Optional}}required{{end}}>
+      <input class="input" type="number" name="entry.{{.Index}}.value" value="{{.Value}}" step="any" {{if not .Optional}}required{{end}}>
     {{else if .MultiLine}}
-      <textarea class="textarea" name="value" rows="3" {{if not .Optional}}required{{end}}>{{.Value}}</textarea>
+      <textarea class="textarea" name="entry.{{.Index}}.value" rows="3" {{if not .Optional}}required{{end}}>{{.Value}}</textarea>
     {{else}}
-      <input class="input" type="text" name="value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
+      <input class="input" type="text" name="entry.{{.Index}}.value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
     {{end}}
   </label>
-  <input type="hidden" name="field" value="{{.Name}}">
+  <input type="hidden" name="entry.{{.Index}}.field" value="{{.Name}}">
 </div>
 {{end}}
 

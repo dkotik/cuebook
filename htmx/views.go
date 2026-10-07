@@ -7,6 +7,7 @@ import (
 )
 
 type addFieldView struct {
+	Index     int
 	Name      string
 	Value     string
 	MultiLine bool
@@ -23,11 +24,12 @@ type entryFieldDefinition struct {
 
 func makeAddFieldViews(document cuebook.Book) []addFieldView {
 	var result []addFieldView
-	for _, definition := range entryFieldDefinitions(document) {
+	for index, definition := range entryFieldDefinitions(document) {
 		field := definition.Field
 		_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
 		kind := field.Value.IncompleteKind()
 		view := addFieldView{
+			Index:     index,
 			Name:      field.Name,
 			MultiLine: metadata.IsMultiLine(field.Value),
 			Secret:    secret,

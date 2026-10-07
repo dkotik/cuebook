@@ -203,7 +203,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	editPageHandler, err := config.Adaptor.AdaptFunc(app.edit,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
 		htadaptor.WithTemplate(templates.Lookup("page")),
-		htadaptor.WithUnsafeDecoder(formDecoder{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit route: %w", err)
@@ -211,7 +210,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	editWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.edit,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
-		htadaptor.WithUnsafeDecoder(formDecoder{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit HTMX route: %w", err)
@@ -221,7 +219,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	addPageHandler, err := config.Adaptor.AdaptFunc(app.add,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
 		htadaptor.WithTemplate(templates.Lookup("page")),
-		htadaptor.WithUnsafeDecoder(formDecoder{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add route: %w", err)
@@ -229,7 +226,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	addWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.add,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
-		htadaptor.WithUnsafeDecoder(formDecoder{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add HTMX route: %w", err)
@@ -239,7 +235,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	movePageHandler, err := config.Adaptor.AdaptFunc(app.move,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
 		htadaptor.WithTemplate(templates.Lookup("page")),
-		htadaptor.WithUnsafeDecoder(formDecoder{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt move route: %w", err)
@@ -247,7 +242,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	moveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.move,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
-		htadaptor.WithUnsafeDecoder(formDecoder{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt move HTMX route: %w", err)
@@ -257,7 +251,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	archivePageHandler, err := config.Adaptor.AdaptFunc(app.archive,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
 		htadaptor.WithTemplate(templates.Lookup("page")),
-		htadaptor.WithUnsafeDecoder(formDecoder{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt delete route: %w", err)
@@ -265,7 +258,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	archiveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.archive,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
-		htadaptor.WithUnsafeDecoder(formDecoder{}),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt delete HTMX route: %w", err)
