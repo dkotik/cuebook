@@ -26,7 +26,9 @@ type editFormRequest struct {
 	Mode  string `schema:"mode"`
 }
 
-func (*editFormRequest) Validate(context.Context) error { return nil }
+func (*editFormRequest) Validate(context.Context) error {
+	return nil
+}
 
 type editFormResponse struct {
 	fieldView
