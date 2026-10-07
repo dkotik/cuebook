@@ -39,10 +39,6 @@ type searchClearRequest struct {
 
 func (*searchClearRequest) Validate(context.Context) error { return nil }
 
-type liveReloadRequest struct{}
-
-func (*liveReloadRequest) Validate(context.Context) error { return nil }
-
 type editRequest struct {
 	File   string   `schema:"file"`
 	Entry  string   `schema:"entry"`
@@ -75,9 +71,3 @@ type archiveRequest struct {
 }
 
 func (*archiveRequest) Validate(context.Context) error { return nil }
-
-type assetRequest struct {
-	Name string `schema:"name"`
-}
-
-func (*assetRequest) Validate(context.Context) error { return nil }

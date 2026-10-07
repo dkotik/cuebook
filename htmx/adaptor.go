@@ -8,25 +8,24 @@ import (
 )
 
 func routeAdaptorOptions(errorEncoder htadaptor.Encoder, routeOptions ...htadaptor.Option) []htadaptor.Option {
-	options := []htadaptor.Option{
-		htadaptor.WithErrorHandler(htadaptor.ErrorHandlerFunc(func(w http.ResponseWriter, r *http.Request, err error) {
-			var responseFailure *responseFailure
-			if errors.As(err, &responseFailure) {
-				if encodeErr := errorEncoder.Encode(w, r, responseFailure.statusCode, responseFailure.value); encodeErr != nil {
-					http.Error(w, "Unable to encode the response.", http.StatusInternalServerError)
-				}
-				return
-			}
+	errorHandler := htadaptor.ErrorHandlerFunc(func(w http.ResponseWriter, r *http.Request, err error) {
+		var responseFailure *responseFailure
+		if errors.As(err, &responseFailure) {
+			writeResponseFailure(w, r, responseFailure, errorEncoder)
+			return
+		}
 
-			status := htadaptor.GetHyperTextStatusCode(err)
-			var decodingError *htadaptor.DecodingError
-			message := err.Error()
-			if errors.As(err, &decodingError) {
-				status = http.StatusBadRequest
-				message = "The request is invalid."
-			}
-			http.Error(w, message, status)
-		})),
+		status := htadaptor.GetHyperTextStatusCode(err)
+		var decodingError *htadaptor.DecodingError
+		message := err.Error()
+		if errors.As(err, &decodingError) {
+			status = http.StatusBadRequest
+			message = "The request is invalid."
+		}
+		http.Error(w, message, status)
+	})
+	options := []htadaptor.Option{
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithMiddleware(requestMetadata),
 		htadaptor.WithReadLimit(maxRequestBodySize),
 	}

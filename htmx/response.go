@@ -3,10 +3,10 @@ package htmx
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"net/http"
-	"strings"
 	"time"
+
+	"github.com/dkotik/htadaptor"
 )
 
 type listResponse struct {
@@ -39,10 +39,6 @@ type searchClearButtonResponse struct {
 	statusCode int
 }
 
-type liveReloadResponse struct {
-	statusCode int
-}
-
 type editResponse struct {
 	pageData
 	statusCode  int
@@ -65,13 +61,6 @@ type archiveResponse struct {
 	pageData
 	statusCode  int
 	redirectURL string
-}
-
-type assetResponse struct {
-	statusCode  int
-	contentType string
-	body        []byte
-	message     string
 }
 
 type responseFailure struct {
@@ -119,111 +108,59 @@ func archiveResponseFrom(data pageData, status int, redirectURL string) (archive
 	return responseResult(response, response.statusCode)
 }
 
-func adaptorResponseEncoder(templates *template.Template) responseEncoder {
-	return responseEncoder{templates: templates}
-}
-
-type responseEncoder struct {
-	templates *template.Template
-}
-
-func (e responseEncoder) Encode(w http.ResponseWriter, r *http.Request, defaultStatus int, value any) error {
-	switch response := value.(type) {
-	case listResponse:
-		return e.encodePage(w, r, response.pageData, response.statusCode, "Unable to render the page.", "")
+func writeResponseFailure(w http.ResponseWriter, r *http.Request, failure *responseFailure, encoder htadaptor.Encoder) {
+	switch response := failure.value.(type) {
 	case itemResponse:
 		if response.message != "" {
-			return writeText(w, statusOrDefault(response.statusCode, defaultStatus), response.message)
+			_ = writeText(w, failure.statusCode, response.message)
+			return
 		}
-		return e.encodeTemplate(w, "entry-item", response, statusOrDefault(response.statusCode, defaultStatus), true, "Unable to render the item.")
 	case editFormResponse:
 		if response.message != "" {
-			return writeText(w, statusOrDefault(response.statusCode, defaultStatus), response.message)
+			_ = writeText(w, failure.statusCode, response.message)
+			return
 		}
-		return e.encodeTemplate(w, response.templateName, response, statusOrDefault(response.statusCode, defaultStatus), true, "Unable to render the field.")
 	case searchResponse:
+		if response.retryAfter != "" {
+			w.Header().Set("Retry-After", response.retryAfter)
+		}
 		if response.message != "" {
-			if response.retryAfter != "" {
-				w.Header().Set("Retry-After", response.retryAfter)
-			}
-			return writeText(w, statusOrDefault(response.statusCode, defaultStatus), response.message)
+			_ = writeText(w, failure.statusCode, response.message)
+			return
 		}
-		return e.encodeTemplate(w, "search-results", response, statusOrDefault(response.statusCode, defaultStatus), true, "Unable to render search results.")
-	case searchClearButtonResponse:
-		if !response.Visible {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Header().Set("Cache-Control", "no-store")
-			w.WriteHeader(statusOrDefault(response.statusCode, defaultStatus))
-			return nil
-		}
-		return e.encodeTemplate(w, "search-clear-button", response, statusOrDefault(response.statusCode, defaultStatus), false, "Unable to render the clear search button.")
-	case liveReloadResponse:
-		return writeEventStream(w, r, statusOrDefault(response.statusCode, defaultStatus))
 	case editResponse:
-		return e.encodePage(w, r, response.pageData, response.statusCode, "Unable to render the page.", response.redirectURL)
+		if response.redirectURL != "" {
+			http.Redirect(w, r, response.redirectURL, failure.statusCode)
+			return
+		}
 	case addResponse:
-		return e.encodePage(w, r, response.pageData, response.statusCode, "Unable to render the page.", response.redirectURL)
+		if response.redirectURL != "" {
+			http.Redirect(w, r, response.redirectURL, failure.statusCode)
+			return
+		}
 	case moveResponse:
-		return e.encodePage(w, r, response.pageData, response.statusCode, "Unable to render the page.", response.redirectURL)
+		if response.redirectURL != "" {
+			http.Redirect(w, r, response.redirectURL, failure.statusCode)
+			return
+		}
 	case archiveResponse:
-		return e.encodePage(w, r, response.pageData, response.statusCode, "Unable to render the page.", response.redirectURL)
-	case assetResponse:
-		if response.message != "" {
-			return writeText(w, statusOrDefault(response.statusCode, defaultStatus), response.message)
+		if response.redirectURL != "" {
+			http.Redirect(w, r, response.redirectURL, failure.statusCode)
+			return
 		}
-		status := statusOrDefault(response.statusCode, defaultStatus)
-		w.Header().Set("Content-Type", response.contentType)
-		if status == http.StatusOK {
-			w.Header().Set("Cache-Control", "public, max-age=3600")
-		}
-		w.WriteHeader(status)
-		_, err := w.Write(response.body)
-		return err
-	default:
-		return fmt.Errorf("unexpected response type %T", value)
 	}
-}
-
-func (e responseEncoder) encodePage(w http.ResponseWriter, r *http.Request, data pageData, status int, errorMessage, redirectURL string) error {
-	if redirectURL != "" {
-		http.Redirect(w, r, redirectURL, statusOrDefault(status, http.StatusSeeOther))
-		return nil
+	if err := encoder.Encode(w, r, failure.statusCode, failure.value); err != nil {
+		http.Error(w, "Unable to encode the response.", http.StatusInternalServerError)
 	}
-	data = pageValues(data)
-	templateName := "page"
-	varyHTMX := false
-	if isHTMX(r) {
-		templateName = "workspace"
-		varyHTMX = true
-	}
-	return e.encodeTemplate(w, templateName, data, statusOrDefault(status, http.StatusOK), varyHTMX, errorMessage)
-}
-
-func (e responseEncoder) encodeTemplate(w http.ResponseWriter, name string, data any, status int, varyHTMX bool, errorMessage string) error {
-	var output strings.Builder
-	if err := e.templates.ExecuteTemplate(&output, name, data); err != nil {
-		return writeText(w, http.StatusInternalServerError, errorMessage)
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	if varyHTMX {
-		w.Header().Set("Vary", "HX-Request")
-	}
-	w.WriteHeader(status)
-	_, err := w.Write([]byte(output.String()))
-	return err
-}
-
-func statusOrDefault(status, defaultStatus int) int {
-	if status != 0 {
-		return status
-	}
-	return defaultStatus
 }
 
 func writeText(w http.ResponseWriter, status int, message string) error {
 	http.Error(w, message, status)
 	return nil
+}
+
+func serveLiveReloadEvents(w http.ResponseWriter, r *http.Request) {
+	_ = writeEventStream(w, r, http.StatusOK)
 }
 
 func writeEventStream(w http.ResponseWriter, r *http.Request, status int) error {

@@ -1,13 +1,10 @@
 package htmx
 
-import (
-	"context"
-	"net/http"
-)
+import "net/http"
 
-func (a *handler) asset(_ context.Context, request *assetRequest) (assetResponse, error) {
+func serveAsset(w http.ResponseWriter, r *http.Request) {
 	var contentType string
-	switch request.Name {
+	switch name := r.PathValue("name"); name {
 	case "app.css", "bulma.css":
 		contentType = "text/css; charset=utf-8"
 	case "theme.js", "file-tree.js", "entry-move.js", "remember-details.js", "delete-confirm.js", "move-confirm.js", "live-reload.js":
@@ -19,15 +16,16 @@ func (a *handler) asset(_ context.Context, request *assetRequest) (assetResponse
 	case "favicon.svg":
 		contentType = "image/svg+xml"
 	default:
-		return assetResponse{statusCode: http.StatusNotFound, message: "404 page not found"}, nil
+		http.NotFound(w, r)
+		return
 	}
-	content, err := assetFiles.ReadFile("assets/" + request.Name)
-	if err != nil {
-		return assetResponse{statusCode: http.StatusInternalServerError, message: "asset unavailable"}, nil
-	}
-	return assetResponse{statusCode: http.StatusOK, contentType: contentType, body: content}, nil
-}
 
-func (*handler) liveReloadEvents(_ context.Context, _ *liveReloadRequest) (liveReloadResponse, error) {
-	return liveReloadResponse{statusCode: http.StatusOK}, nil
+	content, err := assetFiles.ReadFile("assets/" + r.PathValue("name"))
+	if err != nil {
+		http.Error(w, "asset unavailable", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	_, _ = w.Write(content)
 }
