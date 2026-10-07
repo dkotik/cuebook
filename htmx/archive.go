@@ -10,6 +10,19 @@ import (
 
 const archiveDirectory = ".archive/"
 
+type archiveRequest struct {
+	File  string `schema:"file"`
+	Entry string `schema:"entry"`
+}
+
+func (*archiveRequest) Validate(context.Context) error { return nil }
+
+type archiveResponse struct {
+	pageData
+	statusCode  int
+	redirectURL string
+}
+
 func (a *handler) archive(ctx context.Context, request *archiveRequest) (archiveResponse, error) {
 	if !isSameOriginContext(ctx) {
 		return archiveResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")

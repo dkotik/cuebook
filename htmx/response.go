@@ -10,60 +10,6 @@ import (
 	"github.com/dkotik/htadaptor"
 )
 
-type listResponse struct {
-	pageData
-	statusCode int
-}
-
-type itemResponse struct {
-	entryView
-	statusCode int
-	message    string
-}
-
-type editFormResponse struct {
-	fieldView
-	templateName string
-	statusCode   int
-	message      string
-}
-
-type searchResponse struct {
-	searchResultsView
-	statusCode int
-	message    string
-	retryAfter string
-}
-
-type searchClearButtonResponse struct {
-	Visible    bool
-	statusCode int
-}
-
-type editResponse struct {
-	pageData
-	statusCode  int
-	redirectURL string
-}
-
-type addResponse struct {
-	pageData
-	statusCode  int
-	redirectURL string
-}
-
-type moveResponse struct {
-	pageData
-	statusCode  int
-	redirectURL string
-}
-
-type archiveResponse struct {
-	pageData
-	statusCode  int
-	redirectURL string
-}
-
 type responseFailure struct {
 	statusCode int
 	value      any

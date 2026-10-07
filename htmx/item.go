@@ -47,6 +47,21 @@ func itemFailure(status int, message string) (itemResponse, error) {
 	return responseResult(response, status)
 }
 
+type itemRouteRequest struct {
+	Path string `schema:"path"`
+	File string `schema:"file"`
+	Head string `schema:"head"`
+	Tail string `schema:"tail"`
+}
+
+func (*itemRouteRequest) Validate(context.Context) error { return nil }
+
+type itemResponse struct {
+	entryView
+	statusCode int
+	message    string
+}
+
 func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse, error) {
 	filePath := input.Path
 	if filePath == "" {

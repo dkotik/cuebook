@@ -12,6 +12,21 @@ import (
 	"github.com/dkotik/cuebook/patch"
 )
 
+type moveRequest struct {
+	File        string `schema:"file"`
+	From        string `schema:"from"`
+	To          string `schema:"to"`
+	Destination string `schema:"destination"`
+}
+
+func (*moveRequest) Validate(context.Context) error { return nil }
+
+type moveResponse struct {
+	pageData
+	statusCode  int
+	redirectURL string
+}
+
 func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse, error) {
 	if !isSameOriginContext(ctx) {
 		return moveResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")

@@ -13,6 +13,24 @@ import (
 	"github.com/dkotik/cuebook/patch"
 )
 
+type addFieldRequest struct {
+	Field string `schema:"field"`
+	Value string `schema:"value"`
+}
+
+type addRequest struct {
+	File    string            `schema:"file"`
+	Entries []addFieldRequest `schema:"entry"`
+}
+
+func (*addRequest) Validate(context.Context) error { return nil }
+
+type addResponse struct {
+	pageData
+	statusCode  int
+	redirectURL string
+}
+
 func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, error) {
 	if !isSameOriginContext(ctx) {
 		return addResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")

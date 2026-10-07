@@ -19,6 +19,22 @@ func editFormFailure(status int, message string) (editFormResponse, error) {
 	return responseResult(response, status)
 }
 
+type editFormRequest struct {
+	File  string `schema:"file"`
+	Entry string `schema:"entry"`
+	Field string `schema:"field"`
+	Mode  string `schema:"mode"`
+}
+
+func (*editFormRequest) Validate(context.Context) error { return nil }
+
+type editFormResponse struct {
+	fieldView
+	templateName string
+	statusCode   int
+	message      string
+}
+
 func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFormResponse, error) {
 	if a.committer == nil {
 		return editFormFailure(http.StatusForbidden, "This source is read-only.")
@@ -57,6 +73,21 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 	}
 	response := editFormResponse{fieldView: view, templateName: templateName, statusCode: http.StatusOK}
 	return responseResult(response, response.statusCode)
+}
+
+type editRequest struct {
+	File  string  `schema:"file"`
+	Entry string  `schema:"entry"`
+	Field string  `schema:"field"`
+	Value *string `schema:"value"`
+}
+
+func (*editRequest) Validate(context.Context) error { return nil }
+
+type editResponse struct {
+	pageData
+	statusCode  int
+	redirectURL string
 }
 
 func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {

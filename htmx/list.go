@@ -44,6 +44,17 @@ type entryView struct {
 	Details   []fieldView
 }
 
+type listRequest struct {
+	File string `schema:"file"`
+}
+
+func (*listRequest) Validate(context.Context) error { return nil }
+
+type listResponse struct {
+	pageData
+	statusCode int
+}
+
 func (a *handler) list(_ context.Context, request *listRequest) (listResponse, error) {
 	data, status := a.loadPage(request.File, "")
 	response := listResponse{pageData: pageValues(data), statusCode: status}
