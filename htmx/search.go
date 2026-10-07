@@ -39,27 +39,24 @@ type searchClearRequest struct {
 func (*searchClearRequest) Validate(context.Context) error { return nil }
 
 type searchClearButtonResponse struct {
-	Visible    bool
-	statusCode int
+	Visible bool
 }
 
 func (a *handler) searchClearButton(_ context.Context, request *searchClearRequest) (searchClearButtonResponse, error) {
 	return searchClearButtonResponse{
-		Visible:    strings.TrimSpace(request.Query) != "",
-		statusCode: http.StatusOK,
+		Visible: strings.TrimSpace(request.Query) != "",
 	}, nil
 }
 
 type searchResponse struct {
 	searchResultsView
-	statusCode int
 	message    string
 	retryAfter string
 }
 
 func searchFailure(status int, message, retryAfter string) (searchResponse, error) {
-	response := searchResponse{statusCode: status, message: message, retryAfter: retryAfter}
-	return responseResult(response, status)
+	response := searchResponse{message: message, retryAfter: retryAfter}
+	return responseResult(response, responseErrorForStatus(status))
 }
 
 type searchRequest struct {
@@ -102,6 +99,6 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 		})
 	}
 
-	response := searchResponse{searchResultsView: view, statusCode: http.StatusOK}
-	return responseResult(response, response.statusCode)
+	response := searchResponse{searchResultsView: view}
+	return response, nil
 }

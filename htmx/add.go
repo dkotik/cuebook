@@ -27,7 +27,6 @@ func (*addRequest) Validate(context.Context) error { return nil }
 
 type addResponse struct {
 	pageData
-	statusCode  int
 	redirectURL string
 }
 

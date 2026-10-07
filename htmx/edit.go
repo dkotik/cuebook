@@ -15,8 +15,8 @@ import (
 )
 
 func editFormFailure(status int, message string) (editFormResponse, error) {
-	response := editFormResponse{statusCode: status, message: message}
-	return responseResult(response, status)
+	response := editFormResponse{message: message}
+	return responseResult(response, responseErrorForStatus(status))
 }
 
 type editFormRequest struct {
@@ -31,7 +31,6 @@ func (*editFormRequest) Validate(context.Context) error { return nil }
 type editFormResponse struct {
 	fieldView
 	templateName string
-	statusCode   int
 	message      string
 }
 
@@ -71,8 +70,8 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 	if request.Mode == "view" {
 		templateName = "field"
 	}
-	response := editFormResponse{fieldView: view, templateName: templateName, statusCode: http.StatusOK}
-	return responseResult(response, response.statusCode)
+	response := editFormResponse{fieldView: view, templateName: templateName}
+	return response, nil
 }
 
 type editRequest struct {
@@ -86,7 +85,6 @@ func (*editRequest) Validate(context.Context) error { return nil }
 
 type editResponse struct {
 	pageData
-	statusCode  int
 	redirectURL string
 }
 

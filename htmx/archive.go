@@ -19,7 +19,6 @@ func (*archiveRequest) Validate(context.Context) error { return nil }
 
 type archiveResponse struct {
 	pageData
-	statusCode  int
 	redirectURL string
 }
 

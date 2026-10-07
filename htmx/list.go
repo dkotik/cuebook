@@ -52,13 +52,12 @@ func (*listRequest) Validate(context.Context) error { return nil }
 
 type listResponse struct {
 	pageData
-	statusCode int
 }
 
 func (a *handler) list(_ context.Context, request *listRequest) (listResponse, error) {
 	data, status := a.loadPage(request.File, "")
-	response := listResponse{pageData: pageValues(data), statusCode: status}
-	return responseResult(response, status)
+	response := listResponse{pageData: pageValues(data)}
+	return responseResult(response, responseErrorForStatus(status))
 }
 
 func (a *handler) loadPage(fileName, notice string) (pageData, int) {

@@ -16,6 +16,7 @@ import (
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/search"
+	"github.com/dkotik/htadaptor"
 )
 
 func TestSearchFormIsInHeaderAndTargetsMainContent(t *testing.T) {
@@ -139,14 +140,8 @@ func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-			} else {
-				failure, ok := err.(*responseFailure)
-				if !ok || failure.statusCode != test.wantStatus {
-					t.Fatalf("response error = %v, want status %d", err, test.wantStatus)
-				}
-			}
-			if response.statusCode != test.wantStatus {
-				t.Fatalf("status = %d, want %d; message: %s", response.statusCode, test.wantStatus, response.message)
+			} else if status := htadaptor.GetHyperTextStatusCode(err); status != test.wantStatus {
+				t.Fatalf("error status = %d, want %d; error: %v", status, test.wantStatus, err)
 			}
 			if !strings.Contains(response.message, test.wantBody) {
 				t.Errorf("message does not contain %q: %s", test.wantBody, response.message)

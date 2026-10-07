@@ -23,7 +23,6 @@ func (*moveRequest) Validate(context.Context) error { return nil }
 
 type moveResponse struct {
 	pageData
-	statusCode  int
 	redirectURL string
 }
 

@@ -11,23 +11,40 @@ import (
 )
 
 type responseFailure struct {
-	statusCode int
-	value      any
+	cause error
+	value any
 }
 
 func (e *responseFailure) Error() string {
 	return "domain response requires a non-success HTTP status"
 }
 
-func (e *responseFailure) HyperTextStatusCode() int {
-	return e.statusCode
+func (e *responseFailure) Unwrap() error {
+	return e.cause
 }
 
-func responseResult[T any](value T, status int) (T, error) {
+type responseStatusError int
+
+func (e responseStatusError) Error() string {
+	return fmt.Sprintf("HTTP status %d", int(e))
+}
+
+func (e responseStatusError) HyperTextStatusCode() int {
+	return int(e)
+}
+
+func responseErrorForStatus(status int) error {
 	if status == 0 || status == http.StatusOK {
+		return nil
+	}
+	return responseStatusError(status)
+}
+
+func responseResult[T any](value T, cause error) (T, error) {
+	if cause == nil {
 		return value, nil
 	}
-	return value, &responseFailure{statusCode: status, value: value}
+	return value, &responseFailure{cause: cause, value: value}
 }
 
 func pageValues(data pageData) pageData {
@@ -36,23 +53,23 @@ func pageValues(data pageData) pageData {
 }
 
 func editResponseFrom(data pageData, status int, redirectURL string) (editResponse, error) {
-	response := editResponse{pageData: pageValues(data), statusCode: status, redirectURL: redirectURL}
-	return responseResult(response, response.statusCode)
+	response := editResponse{pageData: pageValues(data), redirectURL: redirectURL}
+	return responseResult(response, responseErrorForStatus(status))
 }
 
 func addResponseFrom(data pageData, status int, redirectURL string) (addResponse, error) {
-	response := addResponse{pageData: pageValues(data), statusCode: status, redirectURL: redirectURL}
-	return responseResult(response, response.statusCode)
+	response := addResponse{pageData: pageValues(data), redirectURL: redirectURL}
+	return responseResult(response, responseErrorForStatus(status))
 }
 
 func moveResponseFrom(data pageData, status int, redirectURL string) (moveResponse, error) {
-	response := moveResponse{pageData: pageValues(data), statusCode: status, redirectURL: redirectURL}
-	return responseResult(response, response.statusCode)
+	response := moveResponse{pageData: pageValues(data), redirectURL: redirectURL}
+	return responseResult(response, responseErrorForStatus(status))
 }
 
 func archiveResponseFrom(data pageData, status int, redirectURL string) (archiveResponse, error) {
-	response := archiveResponse{pageData: pageValues(data), statusCode: status, redirectURL: redirectURL}
-	return responseResult(response, response.statusCode)
+	response := archiveResponse{pageData: pageValues(data), redirectURL: redirectURL}
+	return responseResult(response, responseErrorForStatus(status))
 }
 
 func responseErrorHandler(encoder htadaptor.Encoder) htadaptor.ErrorHandlerFunc {
@@ -75,15 +92,16 @@ func responseErrorHandler(encoder htadaptor.Encoder) htadaptor.ErrorHandlerFunc 
 }
 
 func writeResponseFailure(w http.ResponseWriter, r *http.Request, failure *responseFailure, encoder htadaptor.Encoder) {
+	status := htadaptor.GetHyperTextStatusCode(failure)
 	switch response := failure.value.(type) {
 	case itemResponse:
 		if response.message != "" {
-			_ = writeText(w, failure.statusCode, response.message)
+			_ = writeText(w, status, response.message)
 			return
 		}
 	case editFormResponse:
 		if response.message != "" {
-			_ = writeText(w, failure.statusCode, response.message)
+			_ = writeText(w, status, response.message)
 			return
 		}
 	case searchResponse:
@@ -91,31 +109,31 @@ func writeResponseFailure(w http.ResponseWriter, r *http.Request, failure *respo
 			w.Header().Set("Retry-After", response.retryAfter)
 		}
 		if response.message != "" {
-			_ = writeText(w, failure.statusCode, response.message)
+			_ = writeText(w, status, response.message)
 			return
 		}
 	case editResponse:
 		if response.redirectURL != "" {
-			http.Redirect(w, r, response.redirectURL, failure.statusCode)
+			http.Redirect(w, r, response.redirectURL, status)
 			return
 		}
 	case addResponse:
 		if response.redirectURL != "" {
-			http.Redirect(w, r, response.redirectURL, failure.statusCode)
+			http.Redirect(w, r, response.redirectURL, status)
 			return
 		}
 	case moveResponse:
 		if response.redirectURL != "" {
-			http.Redirect(w, r, response.redirectURL, failure.statusCode)
+			http.Redirect(w, r, response.redirectURL, status)
 			return
 		}
 	case archiveResponse:
 		if response.redirectURL != "" {
-			http.Redirect(w, r, response.redirectURL, failure.statusCode)
+			http.Redirect(w, r, response.redirectURL, status)
 			return
 		}
 	}
-	if err := encoder.Encode(w, r, failure.statusCode, failure.value); err != nil {
+	if err := encoder.Encode(w, r, status, failure.value); err != nil {
 		http.Error(w, "Unable to encode the response.", http.StatusInternalServerError)
 	}
 }

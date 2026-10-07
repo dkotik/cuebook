@@ -43,8 +43,8 @@ func itemRequestFromQuery(query url.Values) (ItemRequest, error) {
 }
 
 func itemFailure(status int, message string) (itemResponse, error) {
-	response := itemResponse{statusCode: status, message: message}
-	return responseResult(response, status)
+	response := itemResponse{message: message}
+	return responseResult(response, responseErrorForStatus(status))
 }
 
 type itemRouteRequest struct {
@@ -58,8 +58,7 @@ func (*itemRouteRequest) Validate(context.Context) error { return nil }
 
 type itemResponse struct {
 	entryView
-	statusCode int
-	message    string
+	message string
 }
 
 func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse, error) {
@@ -104,6 +103,6 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 		return itemFailure(http.StatusNotFound, "404 page not found")
 	}
 
-	response := itemResponse{entryView: *selected, statusCode: http.StatusOK}
-	return responseResult(response, response.statusCode)
+	response := itemResponse{entryView: *selected}
+	return response, nil
 }
