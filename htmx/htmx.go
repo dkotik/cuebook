@@ -97,105 +97,82 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	register := func(method, route string, endpoint http.Handler) {
 		mux.Handle(method+" "+routeWithPrefix(config.ServeMuxPrefix, route), endpoint)
 	}
-	listHandler, err := adaptHTMXRoute(config.Adaptor, app.list,
-		htadaptor.NewTemplateEncoder(templates.Lookup("page")),
-		htadaptor.NewTemplateEncoder(templates.Lookup("workspace")),
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("page")),
-			htadaptor.WithQueryValues("file"),
-		},
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("workspace")),
-			htadaptor.WithQueryValues("file"),
-		},
+	listPageHandler, err := config.Adaptor.AdaptFunc(app.list,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
+		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithQueryValues("file"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt list route: %w", err)
 	}
-	register("GET", "{$}", listHandler)
+	listWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.list,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
+		htadaptor.WithTemplate(templates.Lookup("workspace")),
+		htadaptor.WithQueryValues("file"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt list HTMX route: %w", err)
+	}
+	register("GET", "{$}", NewHTMXSwitch(listPageHandler, listWorkspaceHandler))
 
-	editFormHandler, err := adaptHTMXRoute(config.Adaptor, app.editForm,
-		htadaptor.NewTemplateEncoder(templates.Lookup("field-form")),
-		htadaptor.NewTemplateEncoder(templates.Lookup("field-form")),
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("field-form")),
-			htadaptor.WithQueryValues("file", "entry", "field", "mode"),
-		},
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("field-form")),
-			htadaptor.WithQueryValues("file", "entry", "field", "mode"),
-		},
+	editFormHandler, err := config.Adaptor.AdaptFunc(app.editForm,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("field-form")))),
+		htadaptor.WithTemplate(templates.Lookup("field-form")),
+		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit form route: %w", err)
 	}
-	editFieldHandler, err := adaptHTMXRoute(config.Adaptor, app.editForm,
-		htadaptor.NewTemplateEncoder(templates.Lookup("field")),
-		htadaptor.NewTemplateEncoder(templates.Lookup("field")),
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("field")),
-			htadaptor.WithQueryValues("file", "entry", "field", "mode"),
-		},
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("field")),
-			htadaptor.WithQueryValues("file", "entry", "field", "mode"),
-		},
+	editFieldHandler, err := config.Adaptor.AdaptFunc(app.editForm,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("field")))),
+		htadaptor.WithTemplate(templates.Lookup("field")),
+		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit field route: %w", err)
 	}
-	register("GET", "edit", selectEditTemplateHandler(editFormHandler, editFieldHandler))
+	register("GET", "edit", selectEditTemplateHandler(
+		NewHTMXSwitch(editFormHandler, editFormHandler),
+		NewHTMXSwitch(editFieldHandler, editFieldHandler),
+	))
 
-	itemHandler, err := adaptHTMXRoute(config.Adaptor, app.item,
-		htadaptor.NewTemplateEncoder(templates.Lookup("page")),
-		htadaptor.NewTemplateEncoder(templates.Lookup("entry-item")),
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("page")),
-			htadaptor.WithQueryValues("path", "file", "head", "tail"),
-		},
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("entry-item")),
-			htadaptor.WithQueryValues("path", "file", "head", "tail"),
-		},
+	itemPageHandler, err := config.Adaptor.AdaptFunc(app.item,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
+		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithQueryValues("path", "file", "head", "tail"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt item route: %w", err)
 	}
-	register("GET", "item", itemHandler)
+	itemFragmentHandler, err := config.Adaptor.AdaptFunc(app.item,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("entry-item")))),
+		htadaptor.WithTemplate(templates.Lookup("entry-item")),
+		htadaptor.WithQueryValues("path", "file", "head", "tail"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt item HTMX route: %w", err)
+	}
+	register("GET", "item", NewHTMXSwitch(itemPageHandler, itemFragmentHandler))
 
-	searchHandler, err := adaptHTMXRoute(config.Adaptor, app.search,
-		htadaptor.NewTemplateEncoder(templates.Lookup("search-results")),
-		htadaptor.NewTemplateEncoder(templates.Lookup("search-results")),
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("search-results")),
-			htadaptor.WithQueryValues("q", "query"),
-		},
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("search-results")),
-			htadaptor.WithQueryValues("q", "query"),
-		},
+	searchHandler, err := config.Adaptor.AdaptFunc(app.search,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("search-results")))),
+		htadaptor.WithTemplate(templates.Lookup("search-results")),
+		htadaptor.WithQueryValues("q", "query"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt search route: %w", err)
 	}
-	register("GET", "search", searchHandler)
+	register("GET", "search", NewHTMXSwitch(searchHandler, searchHandler))
 
-	clearButtonHandler, err := adaptHTMXRoute(config.Adaptor, app.searchClearButton,
-		htadaptor.NewTemplateEncoder(templates.Lookup("search-clear-button")),
-		htadaptor.NewTemplateEncoder(templates.Lookup("search-clear-button")),
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("search-clear-button")),
-			htadaptor.WithQueryValues("q"),
-		},
-		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("search-clear-button")),
-			htadaptor.WithQueryValues("q"),
-		},
+	clearButtonHandler, err := config.Adaptor.AdaptFunc(app.searchClearButton,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("search-clear-button")))),
+		htadaptor.WithTemplate(templates.Lookup("search-clear-button")),
+		htadaptor.WithQueryValues("q"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt search clear button route: %w", err)
 	}
-	register("GET", "search/clear-button", clearButtonHandler)
+	register("GET", "search/clear-button", NewHTMXSwitch(clearButtonHandler, clearButtonHandler))
 
 	eventsHandler := http.HandlerFunc(serveLiveReloadEvents)
 	register("GET", "events", NewHTMXSwitch(eventsHandler, eventsHandler))
@@ -267,20 +244,6 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	register("GET", "assets/{name}", http.HandlerFunc(serveAsset))
 
 	return mux, nil
-}
-
-func adaptHTMXRoute[T any, V htadaptor.Validatable[T], O any](adaptor *htadaptor.Adaptor, call func(context.Context, V) (O, error), normalErrorEncoder, htmxErrorEncoder htadaptor.Encoder, normalOptions, htmxOptions []htadaptor.Option) (http.Handler, error) {
-	normalOptions = append([]htadaptor.Option{htadaptor.WithErrorHandler(responseErrorHandler(normalErrorEncoder))}, normalOptions...)
-	normal, err := adaptor.AdaptFunc(call, normalOptions...)
-	if err != nil {
-		return nil, err
-	}
-	htmxOptions = append([]htadaptor.Option{htadaptor.WithErrorHandler(responseErrorHandler(htmxErrorEncoder))}, htmxOptions...)
-	htmx, err := adaptor.AdaptFunc(call, htmxOptions...)
-	if err != nil {
-		return nil, err
-	}
-	return NewHTMXSwitch(normal, htmx), nil
 }
 
 func selectEditTemplateHandler(form, view http.Handler) http.Handler {

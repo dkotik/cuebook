@@ -17,7 +17,7 @@
 		Email: "test1@testdomain.com"
 	},
   {
-		Name:  "23424n" @cuebook(title)
+		Name:  "23424n33"
 		Email: "234234@31234a.com"
 	},
   {
