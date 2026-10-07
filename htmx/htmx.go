@@ -147,10 +147,10 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	register("GET", "edit", selectEditTemplateHandler(editFormHandler, editFieldHandler))
 
 	itemHandler, err := adaptHTMXRoute(config.Adaptor, app.item,
-		htadaptor.NewTemplateEncoder(templates.Lookup("entry-item")),
+		htadaptor.NewTemplateEncoder(templates.Lookup("page")),
 		htadaptor.NewTemplateEncoder(templates.Lookup("entry-item")),
 		[]htadaptor.Option{
-			htadaptor.WithTemplate(templates.Lookup("entry-item")),
+			htadaptor.WithTemplate(templates.Lookup("page")),
 			htadaptor.WithQueryValues("path", "file", "head", "tail"),
 		},
 		[]htadaptor.Option{

@@ -57,8 +57,12 @@ func TestListAndItemUseSeparateEntryTemplates(t *testing.T) {
 	if itemResponse.Code != http.StatusOK {
 		t.Fatalf("item status = %d, want %d; body: %s", itemResponse.Code, http.StatusOK, itemResponse.Body.String())
 	}
-	if !strings.Contains(itemResponse.Body.String(), `action="/delete"`) {
-		t.Errorf("item view does not include the archive form: %s", itemResponse.Body.String())
+	itemBody := itemResponse.Body.String()
+	if !strings.Contains(itemBody, "<!doctype html>") {
+		t.Errorf("normal item view should render the full page: %s", itemBody)
+	}
+	if !strings.Contains(itemBody, `action="/delete"`) {
+		t.Errorf("item view does not include the archive form: %s", itemBody)
 	}
 }
 
@@ -161,6 +165,7 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 			}
 
 			request := httptest.NewRequest(http.MethodGet, "http://example.test/item?"+query.Encode(), nil)
+			request.Header.Set("HX-Request", "true")
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, request)
 			if response.Code != test.wantStatus {

@@ -57,6 +57,7 @@ type itemRouteRequest struct {
 func (*itemRouteRequest) Validate(context.Context) error { return nil }
 
 type itemResponse struct {
+	pageData
 	entryView
 	message string
 }
@@ -77,7 +78,7 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 	if err != nil {
 		return itemFailure(http.StatusInternalServerError, "Unable to list CUE files.")
 	}
-	_, document, status, message := a.readDocument(filePath, fileNames)
+	raw, document, status, message := a.readDocument(filePath, fileNames)
 	if status != http.StatusOK {
 		return itemFailure(status, message)
 	}
@@ -103,6 +104,11 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 		return itemFailure(http.StatusNotFound, "404 page not found")
 	}
 
-	response := itemResponse{entryView: *selected}
+	page := a.basePage(fileNames, filePath, "")
+	page.Selected = filePath
+	setFileFrontmatter(&page, filePath, raw)
+	page.SelectedEntry = selected
+
+	response := itemResponse{pageData: pageValues(page), entryView: *selected}
 	return response, nil
 }

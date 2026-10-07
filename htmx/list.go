@@ -24,6 +24,7 @@ type pageData struct {
 	FileTitle         string
 	FileDescription   string
 	Entries           []entryView
+	SelectedEntry     *entryView
 	AddFields         []addFieldView
 	RequiredAddFields []addFieldView
 	OptionalAddFields []addFieldView

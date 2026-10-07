@@ -21,7 +21,7 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] get rid of formDecoder in requests.go, and that entire file: “Remove formDecoder from the htmx package. It is not needed at all; all that work is handled by htadaptor.”
+- [ ] add Markdown transformer to collapsing file description past first thematic break
 - [x] live reload should wait for the server to come back online every 2000ms, then immediately call window.reload
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value.
   - [ ] fill out @item.go with an HTMX view that shows one list item fetched by UUID

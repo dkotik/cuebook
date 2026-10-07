@@ -191,6 +191,8 @@
     {{if .ReadOnly}}<p class="muted">Read-only source</p>{{end}}
     {{if .DocumentError}}
       <p class="notice notification is-danger" role="alert">{{.DocumentError}}</p>
+    {{else if .SelectedEntry}}
+      {{template "entry-item" .SelectedEntry}}
     {{else if .Entries}}
       <div class="grid is-col-min-16 is-gap-2 entries-grid">
         {{range .Entries}}{{template "entry-list" .}}{{end}}
@@ -198,7 +200,7 @@
     {{else}}
       <p class="muted">This document has no entries.</p>
     {{end}}
-    {{if .AddFields}}
+    {{if and (not .SelectedEntry) .AddFields}}
     <section class="add-entry box" aria-labelledby="add-entry-heading">
       <h2 id="add-entry-heading">Add entry</h2>
       <form action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="outerHTML">
