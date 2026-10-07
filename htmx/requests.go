@@ -1,6 +1,10 @@
 package htmx
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"net/http"
+)
 
 type listRequest struct {
 	File string `schema:"file"`
@@ -71,3 +75,40 @@ type archiveRequest struct {
 }
 
 func (*archiveRequest) Validate(context.Context) error { return nil }
+
+const maxFormBodySize = 1 << 20
+
+type formDecoder struct{}
+
+func (formDecoder) Decode(target any, request *http.Request) error {
+	if request.Body != nil {
+		request.Body = http.MaxBytesReader(nil, request.Body, maxFormBodySize)
+	}
+	if err := request.ParseForm(); err != nil {
+		return err
+	}
+
+	values := request.PostForm
+	switch request := target.(type) {
+	case *editRequest:
+		request.File = values.Get("file")
+		request.Entry = values.Get("entry")
+		request.Field = values.Get("field")
+		request.Values = append([]string(nil), values["value"]...)
+	case *addRequest:
+		request.File = values.Get("file")
+		request.Fields = append([]string(nil), values["field"]...)
+		request.Values = append([]string(nil), values["value"]...)
+	case *moveRequest:
+		request.File = values.Get("file")
+		request.From = values.Get("from")
+		request.To = values.Get("to")
+		request.Destination = values.Get("destination")
+	case *archiveRequest:
+		request.File = values.Get("file")
+		request.Entry = values.Get("entry")
+	default:
+		return fmt.Errorf("unsupported form request %T", target)
+	}
+	return nil
+}

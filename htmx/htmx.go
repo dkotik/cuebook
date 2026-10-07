@@ -103,12 +103,10 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("page")),
 			htadaptor.WithQueryValues("file"),
-			htadaptor.WithMiddleware(templateResponseHeaders(false)),
 		},
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("workspace")),
 			htadaptor.WithQueryValues("file"),
-			htadaptor.WithMiddleware(templateResponseHeaders(true)),
 		},
 	)
 	if err != nil {
@@ -122,12 +120,10 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("field-form")),
 			htadaptor.WithQueryValues("file", "entry", "field", "mode"),
-			htadaptor.WithMiddleware(templateResponseHeaders(false)),
 		},
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("field-form")),
 			htadaptor.WithQueryValues("file", "entry", "field", "mode"),
-			htadaptor.WithMiddleware(templateResponseHeaders(true)),
 		},
 	)
 	if err != nil {
@@ -139,12 +135,10 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("field")),
 			htadaptor.WithQueryValues("file", "entry", "field", "mode"),
-			htadaptor.WithMiddleware(templateResponseHeaders(false)),
 		},
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("field")),
 			htadaptor.WithQueryValues("file", "entry", "field", "mode"),
-			htadaptor.WithMiddleware(templateResponseHeaders(true)),
 		},
 	)
 	if err != nil {
@@ -158,12 +152,10 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("entry-item")),
 			htadaptor.WithQueryValues("path", "file", "head", "tail"),
-			htadaptor.WithMiddleware(templateResponseHeaders(false)),
 		},
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("entry-item")),
 			htadaptor.WithQueryValues("path", "file", "head", "tail"),
-			htadaptor.WithMiddleware(templateResponseHeaders(true)),
 		},
 	)
 	if err != nil {
@@ -177,12 +169,10 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("search-results")),
 			htadaptor.WithQueryValues("q", "query"),
-			htadaptor.WithMiddleware(templateResponseHeaders(false)),
 		},
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("search-results")),
 			htadaptor.WithQueryValues("q", "query"),
-			htadaptor.WithMiddleware(templateResponseHeaders(true)),
 		},
 	)
 	if err != nil {
@@ -196,12 +186,10 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("search-clear-button")),
 			htadaptor.WithQueryValues("q"),
-			htadaptor.WithMiddleware(templateResponseHeaders(false)),
 		},
 		[]htadaptor.Option{
 			htadaptor.WithTemplate(templates.Lookup("search-clear-button")),
 			htadaptor.WithQueryValues("q"),
-			htadaptor.WithMiddleware(templateResponseHeaders(true)),
 		},
 	)
 	if err != nil {
@@ -212,69 +200,77 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	eventsHandler := http.HandlerFunc(serveLiveReloadEvents)
 	register("GET", "events", NewHTMXSwitch(eventsHandler, eventsHandler))
 
-	editPageHandler, err := config.Adaptor.AdaptFunc(app.edit, formRouteAdaptorOptions(htadaptor.NewTemplateEncoder(templates.Lookup("page")),
+	editPageHandler, err := config.Adaptor.AdaptFunc(app.edit,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
 		htadaptor.WithTemplate(templates.Lookup("page")),
-		htadaptor.WithMiddleware(templateResponseHeaders(false)),
-	)...)
+		htadaptor.WithUnsafeDecoder(formDecoder{}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit route: %w", err)
 	}
-	editWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.edit, formRouteAdaptorOptions(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")),
+	editWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.edit,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
-		htadaptor.WithMiddleware(templateResponseHeaders(true)),
-	)...)
+		htadaptor.WithUnsafeDecoder(formDecoder{}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit HTMX route: %w", err)
 	}
-	register("POST", "edit", htadaptor.NewHTMXSwitch(editPageHandler, editWorkspaceHandler))
+	register("POST", "edit", NewHTMXSwitch(editPageHandler, editWorkspaceHandler))
 
-	addPageHandler, err := config.Adaptor.AdaptFunc(app.add, formRouteAdaptorOptions(htadaptor.NewTemplateEncoder(templates.Lookup("page")),
+	addPageHandler, err := config.Adaptor.AdaptFunc(app.add,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
 		htadaptor.WithTemplate(templates.Lookup("page")),
-		htadaptor.WithMiddleware(templateResponseHeaders(false)),
-	)...)
+		htadaptor.WithUnsafeDecoder(formDecoder{}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add route: %w", err)
 	}
-	addWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.add, formRouteAdaptorOptions(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")),
+	addWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.add,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
-		htadaptor.WithMiddleware(templateResponseHeaders(true)),
-	)...)
+		htadaptor.WithUnsafeDecoder(formDecoder{}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add HTMX route: %w", err)
 	}
-	register("POST", "add", htadaptor.NewHTMXSwitch(addPageHandler, addWorkspaceHandler))
+	register("POST", "add", NewHTMXSwitch(addPageHandler, addWorkspaceHandler))
 
-	movePageHandler, err := config.Adaptor.AdaptFunc(app.move, formRouteAdaptorOptions(htadaptor.NewTemplateEncoder(templates.Lookup("page")),
+	movePageHandler, err := config.Adaptor.AdaptFunc(app.move,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
 		htadaptor.WithTemplate(templates.Lookup("page")),
-		htadaptor.WithMiddleware(templateResponseHeaders(false)),
-	)...)
+		htadaptor.WithUnsafeDecoder(formDecoder{}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt move route: %w", err)
 	}
-	moveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.move, formRouteAdaptorOptions(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")),
+	moveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.move,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
-		htadaptor.WithMiddleware(templateResponseHeaders(true)),
-	)...)
+		htadaptor.WithUnsafeDecoder(formDecoder{}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt move HTMX route: %w", err)
 	}
-	register("POST", "move", htadaptor.NewHTMXSwitch(movePageHandler, moveWorkspaceHandler))
+	register("POST", "move", NewHTMXSwitch(movePageHandler, moveWorkspaceHandler))
 
-	archivePageHandler, err := config.Adaptor.AdaptFunc(app.archive, formRouteAdaptorOptions(htadaptor.NewTemplateEncoder(templates.Lookup("page")),
+	archivePageHandler, err := config.Adaptor.AdaptFunc(app.archive,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
 		htadaptor.WithTemplate(templates.Lookup("page")),
-		htadaptor.WithMiddleware(templateResponseHeaders(false)),
-	)...)
+		htadaptor.WithUnsafeDecoder(formDecoder{}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt delete route: %w", err)
 	}
-	archiveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.archive, formRouteAdaptorOptions(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")),
+	archiveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.archive,
+		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("workspace")))),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
-		htadaptor.WithMiddleware(templateResponseHeaders(true)),
-	)...)
+		htadaptor.WithUnsafeDecoder(formDecoder{}),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt delete HTMX route: %w", err)
 	}
-	register("POST", "delete", htadaptor.NewHTMXSwitch(archivePageHandler, archiveWorkspaceHandler))
+	register("POST", "delete", NewHTMXSwitch(archivePageHandler, archiveWorkspaceHandler))
 
 	register("GET", "assets/{name}", http.HandlerFunc(serveAsset))
 
@@ -282,11 +278,13 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 }
 
 func adaptHTMXRoute[T any, V htadaptor.Validatable[T], O any](adaptor *htadaptor.Adaptor, call func(context.Context, V) (O, error), normalErrorEncoder, htmxErrorEncoder htadaptor.Encoder, normalOptions, htmxOptions []htadaptor.Option) (http.Handler, error) {
-	normal, err := adaptor.AdaptFunc(call, routeAdaptorOptions(normalErrorEncoder, normalOptions...)...)
+	normalOptions = append([]htadaptor.Option{htadaptor.WithErrorHandler(responseErrorHandler(normalErrorEncoder))}, normalOptions...)
+	normal, err := adaptor.AdaptFunc(call, normalOptions...)
 	if err != nil {
 		return nil, err
 	}
-	htmx, err := adaptor.AdaptFunc(call, routeAdaptorOptions(htmxErrorEncoder, htmxOptions...)...)
+	htmxOptions = append([]htadaptor.Option{htadaptor.WithErrorHandler(responseErrorHandler(htmxErrorEncoder))}, htmxOptions...)
+	htmx, err := adaptor.AdaptFunc(call, htmxOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -324,6 +322,13 @@ func NewHTMXSwitch(normal, htmx http.Handler) http.Handler {
 }
 
 func (s htmxSwitch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Vary", "HX-Request")
+
+	ctx := context.WithValue(r.Context(), htmxContextFlag, isHTMX(r))
+	ctx = context.WithValue(ctx, sameOriginContextFlag, sameOrigin(r))
+	r = r.WithContext(ctx)
+
 	if r.Header.Get("HX-Request") != "" {
 		s.HTMX.ServeHTTP(w, r)
 		return

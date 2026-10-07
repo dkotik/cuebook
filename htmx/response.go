@@ -2,6 +2,7 @@ package htmx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -108,6 +109,25 @@ func archiveResponseFrom(data pageData, status int, redirectURL string) (archive
 	return responseResult(response, response.statusCode)
 }
 
+func responseErrorHandler(encoder htadaptor.Encoder) htadaptor.ErrorHandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request, err error) {
+		var failure *responseFailure
+		if errors.As(err, &failure) {
+			writeResponseFailure(w, r, failure, encoder)
+			return
+		}
+
+		status := htadaptor.GetHyperTextStatusCode(err)
+		var decodingError *htadaptor.DecodingError
+		message := err.Error()
+		if errors.As(err, &decodingError) {
+			status = http.StatusBadRequest
+			message = "The request is invalid."
+		}
+		http.Error(w, message, status)
+	}
+}
+
 func writeResponseFailure(w http.ResponseWriter, r *http.Request, failure *responseFailure, encoder htadaptor.Encoder) {
 	switch response := failure.value.(type) {
 	case itemResponse:
@@ -200,14 +220,6 @@ const (
 	htmxContextFlag contextFlag = iota + 1
 	sameOriginContextFlag
 )
-
-func requestMetadata(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithValue(r.Context(), htmxContextFlag, isHTMX(r))
-		ctx = context.WithValue(ctx, sameOriginContextFlag, sameOrigin(r))
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
 
 func isHTMXContext(ctx context.Context) bool {
 	isHTMX, _ := ctx.Value(htmxContextFlag).(bool)
