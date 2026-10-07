@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,69 +10,53 @@ import (
 
 const archiveDirectory = ".archive/"
 
-func (a *handler) archive(w http.ResponseWriter, r *http.Request) {
-	if !sameOrigin(r) {
-		a.renderPage(w, r, pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
-		return
+func (a *handler) archive(ctx context.Context, request *archiveRequest) (archiveResponse, error) {
+	if !isSameOriginContext(ctx) {
+		return archiveResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")
 	}
 	if a.committer == nil {
-		a.editFailure(w, r, "", "This source is read-only.", http.StatusForbidden)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
 	}
 
 	creator, ok := a.committer.(FileCreator)
 	if !ok {
-		a.editFailure(w, r, "", "This source cannot create archive files.", http.StatusNotImplemented)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, "", "This source cannot create archive files.", http.StatusNotImplemented))
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-	if err := r.ParseForm(); err != nil {
-		a.editFailure(w, r, "", "The delete request is invalid.", http.StatusBadRequest)
-		return
-	}
-
-	fileName := r.PostForm.Get("file")
+	fileName := request.File
 	if strings.HasPrefix(fileName, archiveDirectory) {
-		a.editFailure(w, r, fileName, "Entries in the archive cannot be deleted.", http.StatusForbidden)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, fileName, "Entries in the archive cannot be deleted.", http.StatusForbidden))
 	}
 
 	fileNames, err := a.fileNames()
 	if err != nil {
-		a.editFailure(w, r, "", "Unable to list CUE files.", http.StatusInternalServerError)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, "", "Unable to list CUE files.", http.StatusInternalServerError))
 	}
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	if status != http.StatusOK {
-		a.editFailure(w, r, fileName, message, status)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, fileName, message, status))
 	}
 
-	from, err := strconv.Atoi(r.PostForm.Get("entry"))
+	from, err := strconv.Atoi(request.Entry)
 	length, lengthErr := document.Len()
 	if err != nil || lengthErr != nil || from < 0 || from >= length {
-		a.editFailure(w, r, fileName, "The entry position is invalid.", http.StatusBadRequest)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, fileName, "The entry position is invalid.", http.StatusBadRequest))
 	}
 
 	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
 	if err := a.applyFileChange(archiveName, func() error {
 		return creator.CreateFileIfNotExists(archiveName, []byte("[]\n"))
 	}); err != nil {
-		a.editFailure(w, r, fileName, "Unable to create the archive file.", http.StatusInternalServerError)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, fileName, "Unable to create the archive file.", http.StatusInternalServerError))
 	}
 
 	fileNames, err = a.fileNames()
 	if err != nil {
-		a.editFailure(w, r, fileName, "Unable to list CUE files.", http.StatusInternalServerError)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, fileName, "Unable to list CUE files.", http.StatusInternalServerError))
 	}
 	if !containsFile(fileNames, archiveName) {
-		a.editFailure(w, r, fileName, "The archive file is not available in this source.", http.StatusInternalServerError)
-		return
+		return archiveResponseFrom(a.editFailure(ctx, fileName, "The archive file is not available in this source.", http.StatusInternalServerError))
 	}
 
-	a.transferEntry(w, r, fileName, archiveName, raw, document, from, fileNames)
+	return archiveResponseFrom(a.transferEntry(ctx, fileName, archiveName, raw, document, from, fileNames))
 }

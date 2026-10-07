@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"context"
 	"html"
 	"io/fs"
 	"net/http"
@@ -130,13 +131,25 @@ func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
 				app.searchFS = completedSearchFS{FS: fstest.MapFS{}}
 			}
 			request := httptest.NewRequest(http.MethodGet, "http://example.test"+test.path, nil)
-			response := httptest.NewRecorder()
-			app.search(response, request)
-			if response.Code != test.wantStatus {
-				t.Fatalf("status = %d, want %d; body: %s", response.Code, test.wantStatus, response.Body.String())
+			response, err := app.search(context.Background(), &searchRequest{
+				Query: request.URL.Query().Get("q"),
+				Alt:   request.URL.Query().Get("query"),
+			})
+			if test.wantStatus == http.StatusOK {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				failure, ok := err.(*responseFailure)
+				if !ok || failure.statusCode != test.wantStatus {
+					t.Fatalf("response error = %v, want status %d", err, test.wantStatus)
+				}
 			}
-			if !strings.Contains(response.Body.String(), test.wantBody) {
-				t.Errorf("body does not contain %q: %s", test.wantBody, response.Body.String())
+			if response.statusCode != test.wantStatus {
+				t.Fatalf("status = %d, want %d; message: %s", response.statusCode, test.wantStatus, response.message)
+			}
+			if !strings.Contains(response.message, test.wantBody) {
+				t.Errorf("message does not contain %q: %s", test.wantBody, response.message)
 			}
 		})
 	}

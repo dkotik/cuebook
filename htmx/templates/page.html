@@ -174,7 +174,7 @@
 {{end}}
 
 {{define "search-clear-button" -}}
-<button class="button has-text-danger" type="reset" aria-label="Clear search" title="Clear search" hx-get="{{route "/search/clear-button"}}" hx-vals='{"q":""}' hx-target="#search-clear-control" hx-swap="innerHTML">×</button>
+{{if .Visible}}<button class="button has-text-danger" type="reset" aria-label="Clear search" title="Clear search" hx-get="{{route "/search/clear-button"}}" hx-vals='{"q":""}' hx-target="#search-clear-control" hx-swap="innerHTML">×</button>{{end}}
 {{end}}
 
 {{define "workspace" -}}

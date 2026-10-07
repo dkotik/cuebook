@@ -14,6 +14,7 @@ writes through the patch workflow.
 package htmx
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
@@ -21,10 +22,10 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/search"
+	"github.com/dkotik/htadaptor"
 )
 
 //go:embed templates/page.html
@@ -93,89 +94,152 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		routePrefix: config.ServeMuxPrefix,
 	}
 	mux := config.ServeMux
-	usingCustomMux := mux != nil
-	register := func(method, route string, endpoint http.HandlerFunc) {
-		var handler http.Handler = endpoint
-		mux.Handle(method+" "+routeWithPrefix(config.ServeMuxPrefix, route), handler)
+	register := func(method, route string, endpoint http.Handler) {
+		mux.Handle(method+" "+routeWithPrefix(config.ServeMuxPrefix, route), endpoint)
 	}
-	register("GET", "{$}", app.list)
-	register("GET", "edit", app.editForm)
-	register("GET", "item", app.item)
-	register("GET", "search", app.search)
-	register("GET", "search/clear-button", app.searchClearButton)
-	register("GET", "events", app.liveReloadEvents)
-	register("POST", "edit", app.edit)
-	register("POST", "add", app.add)
-	register("POST", "move", app.move)
-	register("POST", "delete", app.archive)
-	register("GET", "assets/{name}", app.asset)
-	if usingCustomMux {
-		return mux, nil
+	responseEncoder := adaptorResponseEncoder(templates)
+
+	listHandler, err := config.Adaptor.AdaptFunc(app.list, routeAdaptorOptions(responseEncoder,
+		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithQueryValues("file"),
+		htadaptor.WithMiddleware(templateResponseHeaders(false)),
+	)...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt list route: %w", err)
 	}
+	listFragmentHandler, err := config.Adaptor.AdaptFunc(app.list, routeAdaptorOptions(responseEncoder,
+		htadaptor.WithTemplate(templates.Lookup("workspace")),
+		htadaptor.WithQueryValues("file"),
+		htadaptor.WithMiddleware(templateResponseHeaders(true)),
+	)...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt list fragment route: %w", err)
+	}
+	register("GET", "{$}", selectHTMXHandler(listHandler, listFragmentHandler))
+
+	editFormHandler, err := config.Adaptor.AdaptFunc(app.editForm, routeAdaptorOptions(responseEncoder,
+		htadaptor.WithTemplate(templates.Lookup("field-form")),
+		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
+		htadaptor.WithMiddleware(templateResponseHeaders(true)),
+	)...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt edit form route: %w", err)
+	}
+	editFieldHandler, err := config.Adaptor.AdaptFunc(app.editForm, routeAdaptorOptions(responseEncoder,
+		htadaptor.WithTemplate(templates.Lookup("field")),
+		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
+		htadaptor.WithMiddleware(templateResponseHeaders(true)),
+	)...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt edit field route: %w", err)
+	}
+	register("GET", "edit", selectEditTemplateHandler(editFormHandler, editFieldHandler))
+
+	itemHandler, err := config.Adaptor.AdaptFunc(app.item, routeAdaptorOptions(responseEncoder,
+		htadaptor.WithTemplate(templates.Lookup("entry-item")),
+		htadaptor.WithQueryValues("path", "file", "head", "tail"),
+		htadaptor.WithMiddleware(templateResponseHeaders(true)),
+	)...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt item route: %w", err)
+	}
+	register("GET", "item", itemHandler)
+
+	searchHandler, err := config.Adaptor.AdaptFunc(app.search, routeAdaptorOptions(responseEncoder,
+		htadaptor.WithTemplate(templates.Lookup("search-results")),
+		htadaptor.WithQueryValues("q", "query"),
+		htadaptor.WithMiddleware(templateResponseHeaders(true)),
+	)...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt search route: %w", err)
+	}
+	register("GET", "search", searchHandler)
+
+	clearButtonHandler, err := config.Adaptor.AdaptFunc(app.searchClearButton, routeAdaptorOptions(responseEncoder,
+		htadaptor.WithTemplate(templates.Lookup("search-clear-button")),
+		htadaptor.WithQueryValues("q"),
+		htadaptor.WithMiddleware(templateResponseHeaders(false)),
+	)...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt search clear button route: %w", err)
+	}
+	register("GET", "search/clear-button", clearButtonHandler)
+
+	eventsHandler, err := config.Adaptor.AdaptFunc(app.liveReloadEvents, routeAdaptorOptions(responseEncoder, htadaptor.WithEncoder(responseEncoder))...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt live reload route: %w", err)
+	}
+	register("GET", "events", eventsHandler)
+
+	editHandler, err := adaptPageMutation(config.Adaptor, app.edit, responseEncoder, templates)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt edit route: %w", err)
+	}
+	register("POST", "edit", editHandler)
+	addHandler, err := adaptPageMutation(config.Adaptor, app.add, responseEncoder, templates)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt add route: %w", err)
+	}
+	register("POST", "add", addHandler)
+	moveHandler, err := adaptPageMutation(config.Adaptor, app.move, responseEncoder, templates)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt move route: %w", err)
+	}
+	register("POST", "move", moveHandler)
+	archiveHandler, err := adaptPageMutation(config.Adaptor, app.archive, responseEncoder, templates)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt delete route: %w", err)
+	}
+	register("POST", "delete", archiveHandler)
+
+	assetHandler, err := config.Adaptor.AdaptFunc(app.asset, routeAdaptorOptions(responseEncoder,
+		htadaptor.WithEncoder(responseEncoder),
+		htadaptor.WithPathValues("name"),
+	)...)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt asset route: %w", err)
+	}
+	register("GET", "assets/{name}", assetHandler)
+
 	return mux, nil
 }
 
-func (a *handler) asset(w http.ResponseWriter, r *http.Request) {
-	var (
-		contentType string
-		name        = r.PathValue("name")
-	)
-	switch name {
-	case "app.css", "bulma.css":
-		contentType = "text/css; charset=utf-8"
-	case "theme.js", "file-tree.js", "entry-move.js", "remember-details.js", "delete-confirm.js", "move-confirm.js", "live-reload.js":
-		contentType = "text/javascript; charset=utf-8"
-	case "bulma-LICENSE.txt":
-		contentType = "text/plain; charset=utf-8"
-	case "htmx-2.0.4.min.js":
-		contentType = "text/javascript; charset=utf-8"
-	case "favicon.svg":
-		contentType = "image/svg+xml"
-	case "htmx-LICENSE.txt":
-		contentType = "text/plain; charset=utf-8"
-	default:
-		http.NotFound(w, r)
-		return
-	}
-	content, err := assetFiles.ReadFile("assets/" + name)
+func adaptPageMutation[T any, V htadaptor.Validatable[T], O any](adaptor *htadaptor.Adaptor, call func(context.Context, V) (O, error), errorEncoder htadaptor.Encoder, templates *template.Template) (http.Handler, error) {
+	pageHandler, err := adaptor.AdaptFunc(call, formRouteAdaptorOptions(errorEncoder,
+		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithMiddleware(templateResponseHeaders(false)),
+	)...)
 	if err != nil {
-		http.Error(w, "asset unavailable", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
-	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Cache-Control", "public, max-age=3600")
-	_, _ = w.Write(content)
+	workspaceHandler, err := adaptor.AdaptFunc(call, formRouteAdaptorOptions(errorEncoder,
+		htadaptor.WithTemplate(templates.Lookup("workspace")),
+		htadaptor.WithMiddleware(templateResponseHeaders(true)),
+	)...)
+	if err != nil {
+		return nil, err
+	}
+	return selectHTMXHandler(pageHandler, workspaceHandler), nil
 }
 
-func (a *handler) liveReloadEvents(w http.ResponseWriter, r *http.Request) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "SSE streaming is unavailable.", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("X-Accel-Buffering", "no")
-	w.WriteHeader(http.StatusOK)
-	if _, err := fmt.Fprint(w, ": connected\n\n"); err != nil {
-		return
-	}
-	flusher.Flush()
-
-	ticker := time.NewTicker(15 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-r.Context().Done():
+func selectHTMXHandler(page, workspace http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isHTMX(r) {
+			workspace.ServeHTTP(w, r)
 			return
-		case <-ticker.C:
-			if _, err := fmt.Fprint(w, ": keep-alive\n\n"); err != nil {
-				return
-			}
-			flusher.Flush()
 		}
-	}
+		page.ServeHTTP(w, r)
+	})
+}
+
+func selectEditTemplateHandler(form, view http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("mode") == "view" {
+			view.ServeHTTP(w, r)
+			return
+		}
+		form.ServeHTTP(w, r)
+	})
 }
 
 func (a *handler) route(target string) string {
@@ -184,22 +248,4 @@ func (a *handler) route(target string) string {
 
 func isHTMX(r *http.Request) bool {
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get("HX-Request")), "true")
-}
-
-func (a *handler) renderPage(w http.ResponseWriter, r *http.Request, data pageData, status int) {
-	data.RequiredAddFields, data.OptionalAddFields = splitAddFieldViews(data.AddFields)
-	var output strings.Builder
-	name := "page"
-	if isHTMX(r) {
-		name = "workspace"
-		w.Header().Add("Vary", "HX-Request")
-	}
-	if err := a.templates.ExecuteTemplate(&output, name, data); err != nil {
-		http.Error(w, "Unable to render the page.", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	_, _ = w.Write([]byte(output.String()))
 }

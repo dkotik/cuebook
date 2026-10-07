@@ -21,6 +21,8 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
+- [ ] live reload should wait for the server to come back online every 2000ms, then immediately call window.reload
+- [ ] groom htadaptor into place in htmx package; the slop machine put in too much extra work.
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value.
   - [ ] fill out @item.go with an HTMX view that shows one list item fetched by UUID
 - [x] HTMX interface
@@ -46,6 +48,7 @@ changes in data to other users and, most importantly, programs.
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute
 - [ ] turn replace patch into insert patch, if the original entry disappeared, but not without letting the user choose
 - [ ] rewrite documentation
+- [ ] remove security headers from htmx package. The slop machine keeps putting it back in.
 
 ## Entry Latching
 

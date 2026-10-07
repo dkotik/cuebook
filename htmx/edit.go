@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -13,139 +14,105 @@ import (
 	"github.com/dkotik/cuebook/patch"
 )
 
-func (a *handler) editForm(w http.ResponseWriter, r *http.Request) {
+func editFormFailure(status int, message string) (editFormResponse, error) {
+	response := editFormResponse{statusCode: status, message: message}
+	return responseResult(response, status)
+}
+
+func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFormResponse, error) {
 	if a.committer == nil {
-		http.Error(w, "This source is read-only.", http.StatusForbidden)
-		return
+		return editFormFailure(http.StatusForbidden, "This source is read-only.")
 	}
 
-	fileName := r.URL.Query().Get("file")
 	fileNames, err := a.fileNames()
 	if err != nil {
-		http.Error(w, "Unable to list CUE files.", http.StatusInternalServerError)
-		return
+		return editFormFailure(http.StatusInternalServerError, "Unable to list CUE files.")
 	}
-	_, document, status, message := a.readDocument(fileName, fileNames)
+	_, document, status, message := a.readDocument(request.File, fileNames)
 	if status != http.StatusOK {
-		http.Error(w, message, status)
-		return
+		return editFormFailure(status, message)
 	}
 
-	entryIndex, err := strconv.Atoi(r.URL.Query().Get("entry"))
+	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil || entryIndex < 0 {
-		http.Error(w, "The entry index is invalid.", http.StatusBadRequest)
-		return
+		return editFormFailure(http.StatusBadRequest, "The entry index is invalid.")
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		http.Error(w, "Entry not found.", http.StatusNotFound)
-		return
+		return editFormFailure(http.StatusNotFound, "Entry not found.")
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
-		http.Error(w, "Unable to read this entry.", http.StatusUnprocessableEntity)
-		return
+		return editFormFailure(http.StatusUnprocessableEntity, "Unable to read this entry.")
 	}
-	fieldName := r.URL.Query().Get("field")
-	field, ok := entry.GetFieldByName(fieldName)
-	if !ok || fieldName == "" {
-		http.Error(w, "Field not found.", http.StatusNotFound)
-		return
+	field, ok := entry.GetFieldByName(request.Field)
+	if !ok || request.Field == "" {
+		return editFormFailure(http.StatusNotFound, "Field not found.")
 	}
 
-	view := makeFieldView(field, fileName, entryIndex, false)
+	view := makeFieldView(field, request.File, entryIndex, false)
 	templateName := "field-form"
-	if r.URL.Query().Get("mode") == "view" {
+	if request.Mode == "view" {
 		templateName = "field"
 	}
-	a.renderFieldTemplate(w, r, templateName, view)
+	response := editFormResponse{fieldView: view, templateName: templateName, statusCode: http.StatusOK}
+	return responseResult(response, response.statusCode)
 }
 
-func (a *handler) renderFieldTemplate(w http.ResponseWriter, r *http.Request, name string, view fieldView) {
-	var output strings.Builder
-	if err := a.templates.ExecuteTemplate(&output, name, view); err != nil {
-		http.Error(w, "Unable to render the field.", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Add("Vary", "HX-Request")
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(output.String()))
-}
-
-func (a *handler) edit(w http.ResponseWriter, r *http.Request) {
-	if !sameOrigin(r) {
-		a.renderPage(w, r, pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
-		return
+func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {
+	if !isSameOriginContext(ctx) {
+		return editResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")
 	}
 	if a.committer == nil {
-		a.editFailure(w, r, "", "This source is read-only.", http.StatusForbidden)
-		return
+		return editResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-	if err := r.ParseForm(); err != nil {
-		a.editFailure(w, r, "", "The edit request is invalid.", http.StatusBadRequest)
-		return
+	if len(request.Values) == 0 {
+		return editResponseFrom(a.editFailure(ctx, request.File, "The edit request is invalid.", http.StatusBadRequest))
 	}
+	value := request.Values[0]
 
-	fileName := r.PostForm.Get("file")
+	fileName := request.File
 	fileNames, err := a.fileNames()
 	if err != nil {
-		a.editFailure(w, r, "", "Unable to list CUE files.", http.StatusInternalServerError)
-		return
+		return editResponseFrom(a.editFailure(ctx, "", "Unable to list CUE files.", http.StatusInternalServerError))
 	}
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	if status != http.StatusOK {
-		a.editFailure(w, r, fileName, message, status)
-		return
+		return editResponseFrom(a.editFailure(ctx, fileName, message, status))
 	}
 	page, _ := a.pageForDocument(fileName, fileNames, raw, document, "")
 
-	entryIndex, err := strconv.Atoi(r.PostForm.Get("entry"))
+	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil || entryIndex < 0 {
-		a.renderPage(w, r, withNotice(page, "The entry index is invalid."), http.StatusBadRequest)
-		return
+		return editResponseFrom(withNotice(page, "The entry index is invalid."), http.StatusBadRequest, "")
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		a.renderPage(w, r, withNotice(page, "Entry not found."), http.StatusNotFound)
-		return
+		return editResponseFrom(withNotice(page, "Entry not found."), http.StatusNotFound, "")
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
-		a.renderPage(w, r, withNotice(page, "Unable to read this entry."), http.StatusUnprocessableEntity)
-		return
+		return editResponseFrom(withNotice(page, "Unable to read this entry."), http.StatusUnprocessableEntity, "")
 	}
-	fieldName := r.PostForm.Get("field")
+	fieldName := request.Field
 	field, ok := entry.GetFieldByName(fieldName)
 	if !ok || fieldName == "" {
-		a.renderPage(w, r, withNotice(page, "Field not found."), http.StatusNotFound)
-		return
+		return editResponseFrom(withNotice(page, "Field not found."), http.StatusNotFound, "")
 	}
-	if !r.PostForm.Has("value") {
-		a.renderPage(w, r, withNotice(page, "The field value is missing."), http.StatusBadRequest)
-		return
-	}
-	value := r.PostForm.Get("value")
 	if isSecretField(field.Value) && value == "" && field.String() != "" {
-		a.finishEdit(w, r, fileName)
-		return
+		return editResponseFrom(a.finishEdit(ctx, fileName))
 	}
 
 	change, err := patch.UpdateFieldValue(raw, entryValue, field.Value, value)
 	if err != nil {
-		a.renderEditInputFailure(w, r, page, entryIndex, fieldName, value, "The field value could not be formatted.", http.StatusUnprocessableEntity)
-		return
+		return editResponseFrom(a.renderEditInputFailure(ctx, page, entryIndex, fieldName, value, "The field value could not be formatted.", http.StatusUnprocessableEntity))
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		a.renderEditInputFailure(w, r, page, entryIndex, fieldName, value, "The entry changed before the edit could be applied. Reload and try again.", http.StatusConflict)
-		return
+		return editResponseFrom(a.renderEditInputFailure(ctx, page, entryIndex, fieldName, value, "The entry changed before the edit could be applied. Reload and try again.", http.StatusConflict))
 	}
 	if _, err = cuebook.New(candidate); err != nil {
-		a.renderEditInputFailure(w, r, page, entryIndex, fieldName, value, "The submitted value does not satisfy the CUE constraints: "+err.Error(), http.StatusUnprocessableEntity)
-		return
+		return editResponseFrom(a.renderEditInputFailure(ctx, page, entryIndex, fieldName, value, "The submitted value does not satisfy the CUE constraints: "+err.Error(), http.StatusUnprocessableEntity))
 	}
 	if err = a.commitFile(fileName, change); err != nil {
 		status = http.StatusInternalServerError
@@ -154,13 +121,12 @@ func (a *handler) edit(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusConflict
 			notice = "The entry changed before the edit could be applied. Reload and try again."
 		}
-		a.editFailure(w, r, fileName, notice, status)
-		return
+		return editResponseFrom(a.editFailure(ctx, fileName, notice, status))
 	}
-	a.finishEdit(w, r, fileName)
+	return editResponseFrom(a.finishEdit(ctx, fileName))
 }
 
-func (a *handler) renderEditInputFailure(w http.ResponseWriter, r *http.Request, page pageData, entryIndex int, fieldName, value, notice string, status int) {
+func (a *handler) renderEditInputFailure(_ context.Context, page pageData, entryIndex int, fieldName, value, notice string, status int) (pageData, int, string) {
 	for i := range page.Entries {
 		entry := &page.Entries[i]
 		if entry.Index != entryIndex {
@@ -170,7 +136,7 @@ func (a *handler) renderEditInputFailure(w http.ResponseWriter, r *http.Request,
 			break
 		}
 	}
-	a.renderPage(w, r, withNotice(page, notice), status)
+	return withNotice(page, notice), status, ""
 }
 
 func markEditingField(fields []fieldView, fieldName, value string) bool {
@@ -185,27 +151,25 @@ func markEditingField(fields []fieldView, fieldName, value string) bool {
 	return false
 }
 
-func (a *handler) finishEdit(w http.ResponseWriter, r *http.Request, fileName string) {
-	a.renderEditedFile(w, r, fileName)
+func (a *handler) finishEdit(ctx context.Context, fileName string) (pageData, int, string) {
+	return a.renderEditedFile(ctx, fileName)
 }
 
-func (a *handler) renderEditedFile(w http.ResponseWriter, r *http.Request, fileName string) {
-	if !isHTMX(r) {
-		http.Redirect(w, r, a.route(fileURL(fileName)), http.StatusSeeOther)
-		return
+func (a *handler) renderEditedFile(ctx context.Context, fileName string) (pageData, int, string) {
+	if !isHTMXContext(ctx) {
+		return pageData{}, http.StatusSeeOther, a.route(fileURL(fileName))
 	}
 	data, status := a.loadPage(fileName, "")
 	if status != http.StatusOK {
 		data.Error = "The edit was saved, but the updated document could not be displayed."
 		status = http.StatusInternalServerError
 	}
-
-	a.renderPage(w, r, data, status)
+	return data, status, ""
 }
 
-func (a *handler) editFailure(w http.ResponseWriter, r *http.Request, fileName, notice string, status int) {
+func (a *handler) editFailure(_ context.Context, fileName, notice string, status int) (pageData, int, string) {
 	data, _ := a.loadPage(fileName, notice)
-	a.renderPage(w, r, data, status)
+	return data, status, ""
 }
 
 func sameOrigin(r *http.Request) bool {

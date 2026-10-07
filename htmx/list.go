@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -43,10 +44,10 @@ type entryView struct {
 	Details   []fieldView
 }
 
-func (a *handler) list(w http.ResponseWriter, r *http.Request) {
-	fileName := r.URL.Query().Get("file")
-	data, status := a.loadPage(fileName, "")
-	a.renderPage(w, r, data, status)
+func (a *handler) list(_ context.Context, request *listRequest) (listResponse, error) {
+	data, status := a.loadPage(request.File, "")
+	response := listResponse{pageData: pageValues(data), statusCode: status}
+	return responseResult(response, status)
 }
 
 func (a *handler) loadPage(fileName, notice string) (pageData, int) {

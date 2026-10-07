@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -11,59 +12,44 @@ import (
 	"github.com/dkotik/cuebook/patch"
 )
 
-func (a *handler) move(w http.ResponseWriter, r *http.Request) {
-	if !sameOrigin(r) {
-		a.renderPage(w, r, pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
-		return
+func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse, error) {
+	if !isSameOriginContext(ctx) {
+		return moveResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")
 	}
 	if a.committer == nil {
-		a.editFailure(w, r, "", "This source is read-only.", http.StatusForbidden)
-		return
+		return moveResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-	if err := r.ParseForm(); err != nil {
-		a.editFailure(w, r, "", "The move request is invalid.", http.StatusBadRequest)
-		return
-	}
-
-	fileName := r.PostForm.Get("file")
+	fileName := request.File
 	fileNames, err := a.fileNames()
 	if err != nil {
-		a.editFailure(w, r, "", "Unable to list CUE files.", http.StatusInternalServerError)
-		return
+		return moveResponseFrom(a.editFailure(ctx, "", "Unable to list CUE files.", http.StatusInternalServerError))
 	}
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	if status != http.StatusOK {
-		a.editFailure(w, r, fileName, message, status)
-		return
+		return moveResponseFrom(a.editFailure(ctx, fileName, message, status))
 	}
 
-	from, err := strconv.Atoi(r.PostForm.Get("from"))
+	from, err := strconv.Atoi(request.From)
 	length, _ := document.Len()
 	if err != nil || from < 0 || from >= length {
-		a.editFailure(w, r, fileName, "The entry position is invalid.", http.StatusBadRequest)
-		return
+		return moveResponseFrom(a.editFailure(ctx, fileName, "The entry position is invalid.", http.StatusBadRequest))
 	}
-	if destination := r.PostForm.Get("destination"); destination != "" {
-		a.transferEntry(w, r, fileName, destination, raw, document, from, fileNames)
-		return
+	if request.Destination != "" {
+		return moveResponseFrom(a.transferEntry(ctx, fileName, request.Destination, raw, document, from, fileNames))
 	}
 
-	to, err := strconv.Atoi(r.PostForm.Get("to"))
+	to, err := strconv.Atoi(request.To)
 	if err != nil || to < 0 || to >= length {
-		a.editFailure(w, r, fileName, "The entry position is invalid.", http.StatusBadRequest)
-		return
+		return moveResponseFrom(a.editFailure(ctx, fileName, "The entry position is invalid.", http.StatusBadRequest))
 	}
 	if from == to {
-		a.finishEdit(w, r, fileName)
-		return
+		return moveResponseFrom(a.finishEdit(ctx, fileName))
 	}
 
 	change, err := entryMovePatch(raw, from, to)
 	if err != nil {
-		a.editFailure(w, r, fileName, "The entries could not be reordered.", http.StatusUnprocessableEntity)
-		return
+		return moveResponseFrom(a.editFailure(ctx, fileName, "The entries could not be reordered.", http.StatusUnprocessableEntity))
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
@@ -73,12 +59,10 @@ func (a *handler) move(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusUnprocessableEntity
 			notice = "The entries could not be reordered."
 		}
-		a.editFailure(w, r, fileName, notice, status)
-		return
+		return moveResponseFrom(a.editFailure(ctx, fileName, notice, status))
 	}
 	if _, err := cuebook.New(candidate); err != nil {
-		a.editFailure(w, r, fileName, "The reordered document does not satisfy the CUE constraints.", http.StatusUnprocessableEntity)
-		return
+		return moveResponseFrom(a.editFailure(ctx, fileName, "The reordered document does not satisfy the CUE constraints.", http.StatusUnprocessableEntity))
 	}
 	if err := a.commitFile(fileName, change); err != nil {
 		status := http.StatusInternalServerError
@@ -87,62 +71,51 @@ func (a *handler) move(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusConflict
 			notice = "The document changed before the entries could be reordered. Reload and try again."
 		}
-		a.editFailure(w, r, fileName, notice, status)
-		return
+		return moveResponseFrom(a.editFailure(ctx, fileName, notice, status))
 	}
-	a.finishEdit(w, r, fileName)
+	return moveResponseFrom(a.finishEdit(ctx, fileName))
 }
 
-func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Book, from int, fileNames []string) {
+func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Book, from int, fileNames []string) (pageData, int, string) {
 	if sourceName == destinationName {
-		a.finishEdit(w, r, sourceName)
-		return
+		return a.finishEdit(ctx, sourceName)
 	}
 
 	destinationRaw, _, status, message := a.readDocument(destinationName, fileNames)
 	if status != http.StatusOK {
-		a.editFailure(w, r, destinationName, message, status)
-		return
+		return a.editFailure(ctx, destinationName, message, status)
 	}
 	sourceEntryValue, err := sourceDocument.GetValue(from)
 	if err != nil {
-		a.editFailure(w, r, sourceName, "The source entry could not be found.", http.StatusNotFound)
-		return
+		return a.editFailure(ctx, sourceName, "The source entry could not be found.", http.StatusNotFound)
 	}
 	destinationEntryValue, _, err := entryValueWithoutConstraints(sourceEntryValue)
 	if err != nil {
-		a.editFailure(w, r, sourceName, "The source entry could not be converted for transfer.", http.StatusUnprocessableEntity)
-		return
+		return a.editFailure(ctx, sourceName, "The source entry could not be converted for transfer.", http.StatusUnprocessableEntity)
 	}
 
 	appendChange, err := patch.AppendToStructList(destinationRaw, destinationEntryValue)
 	if err != nil {
-		a.editFailure(w, r, destinationName, "The entry could not be added to the destination file.", http.StatusUnprocessableEntity)
-		return
+		return a.editFailure(ctx, destinationName, "The entry could not be added to the destination file.", http.StatusUnprocessableEntity)
 	}
 	destinationCandidate, err := appendChange.ApplyToCueSource(destinationRaw)
 	if err != nil {
-		a.editFailure(w, r, destinationName, "The destination file changed before the entry could be added. Reload and try again.", http.StatusConflict)
-		return
+		return a.editFailure(ctx, destinationName, "The destination file changed before the entry could be added. Reload and try again.", http.StatusConflict)
 	}
 	if _, err := cuebook.New(destinationCandidate); err != nil {
-		a.editFailure(w, r, destinationName, "The entry does not satisfy the destination file's CUE constraints.", http.StatusUnprocessableEntity)
-		return
+		return a.editFailure(ctx, destinationName, "The entry does not satisfy the destination file's CUE constraints.", http.StatusUnprocessableEntity)
 	}
 
 	deleteChange, err := patch.DeleteFromStructList(sourceRaw, sourceEntryValue)
 	if err != nil {
-		a.editFailure(w, r, sourceName, "The entry could not be removed from the source file.", http.StatusUnprocessableEntity)
-		return
+		return a.editFailure(ctx, sourceName, "The entry could not be removed from the source file.", http.StatusUnprocessableEntity)
 	}
 	sourceCandidate, err := deleteChange.ApplyToCueSource(sourceRaw)
 	if err != nil {
-		a.editFailure(w, r, sourceName, "The source file changed before the entry could be removed. Reload and try again.", http.StatusConflict)
-		return
+		return a.editFailure(ctx, sourceName, "The source file changed before the entry could be removed. Reload and try again.", http.StatusConflict)
 	}
 	if _, err := cuebook.New(sourceCandidate); err != nil {
-		a.editFailure(w, r, sourceName, "Removing the entry does not satisfy the source file's CUE constraints.", http.StatusUnprocessableEntity)
-		return
+		return a.editFailure(ctx, sourceName, "Removing the entry does not satisfy the source file's CUE constraints.", http.StatusUnprocessableEntity)
 	}
 
 	if err := a.commitFile(destinationName, patch.Validated(appendChange)); err != nil {
@@ -152,14 +125,12 @@ func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceNa
 			status = http.StatusConflict
 			notice = "The destination file changed before the entry could be added. Reload and try again."
 		}
-		a.editFailure(w, r, destinationName, notice, status)
-		return
+		return a.editFailure(ctx, destinationName, notice, status)
 	}
 	if err := a.commitFile(sourceName, patch.Validated(deleteChange)); err != nil {
 		rollbackErr := a.commitFile(destinationName, patch.Validated(appendChange.Invert()))
 		if rollbackErr != nil {
-			a.editFailure(w, r, destinationName, "The entry was added to the destination, but the source could not be updated and the destination change could not be rolled back. It may now exist in both files.", http.StatusInternalServerError)
-			return
+			return a.editFailure(ctx, destinationName, "The entry was added to the destination, but the source could not be updated and the destination change could not be rolled back. It may now exist in both files.", http.StatusInternalServerError)
 		}
 		status := http.StatusInternalServerError
 		notice := "The transfer could not be completed; the destination change was rolled back."
@@ -167,10 +138,9 @@ func (a *handler) transferEntry(w http.ResponseWriter, r *http.Request, sourceNa
 			status = http.StatusConflict
 			notice = "The source file changed before the entry could be removed. The destination change was rolled back; reload and try again."
 		}
-		a.editFailure(w, r, sourceName, notice, status)
-		return
+		return a.editFailure(ctx, sourceName, notice, status)
 	}
-	a.renderEditedFile(w, r, destinationName)
+	return a.renderEditedFile(ctx, destinationName)
 }
 
 func entryValueWithoutConstraints(value cue.Value) (cue.Value, string, error) {

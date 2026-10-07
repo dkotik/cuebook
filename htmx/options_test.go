@@ -6,7 +6,32 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/dkotik/htadaptor"
 )
+
+func TestConfiguredAdaptorMiddlewareAppliesToRoutes(t *testing.T) {
+	adaptor := htadaptor.New(htadaptor.WithMiddleware(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Adaptor-Middleware", "applied")
+			next.ServeHTTP(w, r)
+		})
+	}))
+	handler, err := New(fstest.MapFS{}, WithAdaptor(&adaptor))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	if got := response.Header().Get("X-Adaptor-Middleware"); got != "applied" {
+		t.Errorf("adaptor middleware header = %q, want applied", got)
+	}
+}
 
 func TestServeMuxPrefixAppliesToRoutesAndGeneratedURLs(t *testing.T) {
 	t.Parallel()

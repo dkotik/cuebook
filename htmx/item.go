@@ -1,11 +1,11 @@
 package htmx
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/dkotik/cuebook"
 )
@@ -42,56 +42,53 @@ func itemRequestFromQuery(query url.Values) (ItemRequest, error) {
 	}, nil
 }
 
-func (a *handler) item(w http.ResponseWriter, r *http.Request) {
-	request, err := itemRequestFromQuery(r.URL.Query())
-	if err != nil {
-		http.Error(w, "The item request is invalid.", http.StatusBadRequest)
-		return
+func itemFailure(status int, message string) (itemResponse, error) {
+	response := itemResponse{statusCode: status, message: message}
+	return responseResult(response, status)
+}
+
+func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse, error) {
+	filePath := input.Path
+	if filePath == "" {
+		filePath = input.File
 	}
+	head, headErr := strconv.Atoi(input.Head)
+	tail, tailErr := strconv.Atoi(input.Tail)
+	if headErr != nil || tailErr != nil || head < 0 || tail <= head || filePath == "" {
+		return itemFailure(http.StatusBadRequest, "The item request is invalid.")
+	}
+	requestedRange := cuebook.ByteRange{Head: head, Tail: tail}
 
 	fileNames, err := a.fileNames()
 	if err != nil {
-		http.Error(w, "Unable to list CUE files.", http.StatusInternalServerError)
-		return
+		return itemFailure(http.StatusInternalServerError, "Unable to list CUE files.")
 	}
-	_, document, status, message := a.readDocument(request.Path, fileNames)
+	_, document, status, message := a.readDocument(filePath, fileNames)
 	if status != http.StatusOK {
-		http.Error(w, message, status)
-		return
+		return itemFailure(status, message)
 	}
 
 	var selected *entryView
 	index := 0
 	for entry, err := range document.EachEntry() {
 		if err != nil {
-			http.Error(w, "Unable to display this CUE document.", http.StatusUnprocessableEntity)
-			return
+			return itemFailure(http.StatusUnprocessableEntity, "Unable to display this CUE document.")
 		}
 		entryRange, err := cuebook.NewByteRange(entry.Value)
 		if err != nil {
-			http.Error(w, "Unable to locate this item in the CUE file.", http.StatusUnprocessableEntity)
-			return
+			return itemFailure(http.StatusUnprocessableEntity, "Unable to locate this item in the CUE file.")
 		}
-		if entryRange == request.ByteRange {
-			view := makeEntryView(entry, request.Path, index, entryRange, a.committer == nil)
+		if entryRange == requestedRange {
+			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil)
 			selected = &view
 			break
 		}
 		index++
 	}
 	if selected == nil {
-		http.NotFound(w, r)
-		return
+		return itemFailure(http.StatusNotFound, "404 page not found")
 	}
 
-	var output strings.Builder
-	if err := a.templates.ExecuteTemplate(&output, "entry-item", *selected); err != nil {
-		http.Error(w, "Unable to render the item.", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Add("Vary", "HX-Request")
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(output.String()))
+	response := itemResponse{entryView: *selected, statusCode: http.StatusOK}
+	return responseResult(response, response.statusCode)
 }

@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -31,44 +32,37 @@ func (a *handler) commitFile(filePath string, change patch.Patch) error {
 	})
 }
 
-func (a *handler) searchClearButton(w http.ResponseWriter, r *http.Request) {
-	var output strings.Builder
-	if strings.TrimSpace(r.URL.Query().Get("q")) != "" {
-		if err := a.templates.ExecuteTemplate(&output, "search-clear-button", nil); err != nil {
-			http.Error(w, "Unable to render the clear search button.", http.StatusInternalServerError)
-			return
-		}
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(output.String()))
+func (a *handler) searchClearButton(_ context.Context, request *searchClearRequest) (searchClearButtonResponse, error) {
+	return searchClearButtonResponse{
+		Visible:    strings.TrimSpace(request.Query) != "",
+		statusCode: http.StatusOK,
+	}, nil
 }
 
-func (a *handler) search(w http.ResponseWriter, r *http.Request) {
+func searchFailure(status int, message, retryAfter string) (searchResponse, error) {
+	response := searchResponse{statusCode: status, message: message, retryAfter: retryAfter}
+	return responseResult(response, status)
+}
+
+func (a *handler) search(_ context.Context, request *searchRequest) (searchResponse, error) {
 	if a.searchFS == nil || !a.searchFS.IndexReady() {
-		w.Header().Set("Retry-After", "1")
-		http.Error(w, "The search index is still being built.", http.StatusServiceUnavailable)
-		return
+		return searchFailure(http.StatusServiceUnavailable, "The search index is still being built.", "1")
 	}
 	if a.searchFS.IndexError() != nil {
-		http.Error(w, "Unable to build the search index.", http.StatusInternalServerError)
-		return
+		return searchFailure(http.StatusInternalServerError, "Unable to build the search index.", "")
 	}
 
-	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	query := strings.TrimSpace(request.Query)
 	if query == "" {
-		query = strings.TrimSpace(r.URL.Query().Get("query"))
+		query = strings.TrimSpace(request.Alt)
 	}
 	if query == "" {
-		http.Error(w, "A search query is required.", http.StatusBadRequest)
-		return
+		return searchFailure(http.StatusBadRequest, "A search query is required.", "")
 	}
 
 	results, err := a.searchFS.Query(query)
 	if err != nil {
-		http.Error(w, "The search query is invalid.", http.StatusBadRequest)
-		return
+		return searchFailure(http.StatusBadRequest, "The search query is invalid.", "")
 	}
 	view := searchResultsView{Query: query, Results: make([]searchResultView, 0, len(results))}
 	for _, result := range results {
@@ -83,14 +77,6 @@ func (a *handler) search(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	var output strings.Builder
-	if err := a.templates.ExecuteTemplate(&output, "search-results", view); err != nil {
-		http.Error(w, "Unable to render search results.", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Add("Vary", "HX-Request")
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(output.String()))
+	response := searchResponse{searchResultsView: view, statusCode: http.StatusOK}
+	return responseResult(response, response.statusCode)
 }
