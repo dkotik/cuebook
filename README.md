@@ -21,8 +21,7 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] live reload should wait for the server to come back online every 2000ms, then immediately call window.reload
-- [ ] groom htadaptor into place in htmx package; the slop machine put in too much extra work.
+- [x] live reload should wait for the server to come back online every 2000ms, then immediately call window.reload
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value.
   - [ ] fill out @item.go with an HTMX view that shows one list item fetched by UUID
 - [x] HTMX interface

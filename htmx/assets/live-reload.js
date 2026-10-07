@@ -11,13 +11,30 @@ class LiveReload extends HTMLElement {
       if (this.reloadPending) return;
 
       this.reloadPending = true;
-      window.setTimeout(() => window.location.reload(), 2000);
+      void this.waitForServer();
     }, { once: true });
+  }
+
+  waitForServer() {
+    window.clearTimeout(this.reloadTimeout);
+    this.reloadTimeout = window.setTimeout(async () => {
+      this.reloadTimeout = null;
+      if (!this.isConnected) return;
+
+      try {
+        await fetch("/", { cache: "no-store" });
+        if (this.isConnected) window.location.reload();
+      } catch {
+        if (this.isConnected) this.waitForServer();
+      }
+    }, 2000);
   }
 
   disconnectedCallback() {
     this.eventSource?.close();
     this.eventSource = null;
+    window.clearTimeout(this.reloadTimeout);
+    this.reloadTimeout = null;
   }
 }
 

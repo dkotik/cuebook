@@ -26,6 +26,6 @@ func serveAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Cache-Control", "public, max-age=3600")
+	// w.Header().Set("Cache-Control", "public, max-age=3600")
 	_, _ = w.Write(content)
 }
