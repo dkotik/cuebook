@@ -14,8 +14,9 @@ import (
 )
 
 // NewDirectory returns a writable handler rooted at directory. Only regular
-// .cue files beneath the root are exposed. The root must already exist.
-func NewDirectory(directory string) (http.Handler, error) {
+// .cue files beneath the root are exposed. The root must already exist. opts
+// configure route registration and mounting.
+func NewDirectory(directory string, opts ...Option) (http.Handler, error) {
 	if strings.TrimSpace(directory) == "" {
 		return nil, errors.New("htmx: directory is empty")
 	}
@@ -34,7 +35,7 @@ func NewDirectory(directory string) (http.Handler, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("htmx: %q is not a directory", directory)
 	}
-	return NewWithCommitter(os.DirFS(root), directoryCommitter{root: root})
+	return NewWithCommitter(os.DirFS(root), directoryCommitter{root: root}, opts...)
 }
 
 // FileCreator creates a file only when it does not already exist. It is an

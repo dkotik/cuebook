@@ -2,7 +2,8 @@ class LiveReload extends HTMLElement {
   connectedCallback() {
     if (this.eventSource || this.reloadPending) return;
 
-    const eventSource = new EventSource("/events");
+    const eventsURL = this.dataset.eventsUrl || "/events";
+    const eventSource = new EventSource(eventsURL);
     this.eventSource = eventSource;
     eventSource.addEventListener("error", () => {
       eventSource.close();

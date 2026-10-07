@@ -40,7 +40,7 @@
 
   document.addEventListener("submit", (event) => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || !form.matches('form[action="/delete"], form[hx-post="/delete"]')) {
+    if (!(form instanceof HTMLFormElement) || !form.matches('form[action$="/delete"], form[hx-post$="/delete"]')) {
       return;
     }
     if (form.dataset.confirmed === "true") {

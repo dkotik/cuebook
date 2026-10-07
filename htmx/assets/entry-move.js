@@ -1,4 +1,5 @@
 (() => {
+  const routePrefix = document.body?.dataset.routePrefix || "";
   let draggedCard = null;
   let pending = false;
 
@@ -34,7 +35,7 @@
     document.getElementById("workspace")?.setAttribute("aria-busy", "true");
     clearDropIndicators();
     try {
-      await window.htmx.ajax("POST", "/move", {
+      await window.htmx.ajax("POST", `${routePrefix}/move`, {
         target: "#workspace",
         swap: "outerHTML",
         values,

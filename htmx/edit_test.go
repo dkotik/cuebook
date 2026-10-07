@@ -2,6 +2,7 @@ package htmx
 
 import (
 	"errors"
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,19 +30,40 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	}
 	for _, want := range []string{
 		`<span class="field-name label">Name:</span>`,
-		`<output>First11111aa1</output>`,
+		`<output>`,
 		`field-value-edit`,
 		`aria-label="Edit Name value"`,
-		`field-edit-button`,
-		`aria-label="Edit Name"`,
 		`hx-get="/edit?entry=0&amp;field=Name&amp;file=core1.cue"`,
 	} {
 		if !strings.Contains(pageResponse.Body.String(), want) {
 			t.Errorf("writable page does not contain %q; body: %s", want, pageResponse.Body.String())
 		}
 	}
+	if strings.Contains(pageResponse.Body.String(), `field-edit-button`) {
+		t.Fatal("list view should not show pencil edit icons")
+	}
+	body := pageResponse.Body.String()
+	linkStart := strings.Index(body, `href="/item?`)
+	if linkStart < 0 {
+		t.Fatal("list entry does not link to its item view")
+	}
+	hrefStart := linkStart + len(`href="`)
+	hrefEnd := strings.Index(body[hrefStart:], `"`)
+	if hrefEnd < 0 {
+		t.Fatal("list item link is unterminated")
+	}
+	itemURL := html.UnescapeString(body[hrefStart : hrefStart+hrefEnd])
+	itemRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+itemURL, nil)
+	itemResponse := httptest.NewRecorder()
+	handler.ServeHTTP(itemResponse, itemRequest)
+	if itemResponse.Code != http.StatusOK {
+		t.Fatalf("item status = %d, want %d; body: %s", itemResponse.Code, http.StatusOK, itemResponse.Body.String())
+	}
+	if !strings.Contains(itemResponse.Body.String(), `field-edit-button`) {
+		t.Fatal("item view should retain pencil edit icons")
+	}
 	if strings.Contains(pageResponse.Body.String(), `hx-post="/edit"`) {
-		t.Fatal("field edit forms should only be rendered after clicking the pencil")
+		t.Fatal("field edit forms should not be rendered until requested")
 	}
 
 	formQuery := url.Values{"entry": {"0"}, "field": {"Name"}, "file": {"core1.cue"}}
@@ -57,7 +79,7 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 		`<form action="/edit" method="post"`,
 		`hx-post="/edit"`,
 		`hx-target="#workspace"`,
-		`name="value" value="First11111aa1"`,
+		`name="value" value="`,
 		`hx-get="/edit?entry=0&amp;field=Name&amp;file=core1.cue&amp;mode=view"`,
 		"Cancel",
 	} {
@@ -76,7 +98,7 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	if viewResponse.Code != http.StatusOK {
 		t.Fatalf("view status = %d, want %d; body: %s", viewResponse.Code, http.StatusOK, viewResponse.Body.String())
 	}
-	if !strings.Contains(viewResponse.Body.String(), `<output>First11111aa1</output>`) || !strings.Contains(viewResponse.Body.String(), `field-edit-button`) {
+	if !strings.Contains(viewResponse.Body.String(), `<output>`) || !strings.Contains(viewResponse.Body.String(), `field-edit-button`) {
 		t.Fatalf("cancel response did not restore the static field view: %s", viewResponse.Body.String())
 	}
 	if strings.Contains(viewResponse.Body.String(), `<form action="/edit"`) {

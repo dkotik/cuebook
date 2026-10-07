@@ -93,7 +93,14 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 		if err != nil {
 			return nil, fmt.Errorf("entry %d: unable to locate item in CUE file: %w", index, err)
 		}
-		result = append(result, makeEntryView(entry, fileName, index, entryRange, readOnly))
+		view := makeEntryView(entry, fileName, index, entryRange, readOnly)
+		for fieldIndex := range view.Fields {
+			view.Fields[fieldIndex].ShowEditIcon = false
+		}
+		for fieldIndex := range view.Details {
+			view.Details[fieldIndex].ShowEditIcon = false
+		}
+		result = append(result, view)
 		index++
 	}
 	return result, nil

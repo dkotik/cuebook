@@ -28,16 +28,11 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	from := -1
-	for index, title := range initialTitles {
-		if title == "new entry" {
-			from = index
-			break
-		}
+	if len(initialTitles) < 2 {
+		t.Fatalf("need at least two entries to test moving; titles: %v", initialTitles)
 	}
-	if from <= 0 {
-		t.Fatalf("new entry should have a movable nonzero index; titles: %v", initialTitles)
-	}
+	from := len(initialTitles) - 1
+	movingTitle := initialTitles[from]
 	directory := t.TempDir()
 	filePath := filepath.Join(directory, "contacts.cue")
 	if err := os.WriteFile(filePath, source, 0o600); err != nil {
@@ -67,10 +62,11 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 	if !strings.Contains(response.Body.String(), `<main id="workspace"`) {
 		t.Fatalf("expected an updated HTMX workspace response: %s", response.Body.String())
 	}
-	newEntryPosition := strings.Index(response.Body.String(), `<h2 class="card-header-title">new entry</h2>`)
-	firstEntryPosition := strings.Index(response.Body.String(), `<h2 class="card-header-title">`+initialTitles[0]+`</h2>`)
-	if newEntryPosition < 0 || firstEntryPosition < newEntryPosition {
-		t.Fatalf("response did not reflect the new entry order: %s", response.Body.String())
+	responseBody := response.Body.String()
+	movingEntryPosition := strings.Index(responseBody, `>`+movingTitle+`</a></h2>`)
+	firstEntryPosition := strings.Index(responseBody, `>`+initialTitles[0]+`</a></h2>`)
+	if movingEntryPosition < 0 || firstEntryPosition < movingEntryPosition {
+		t.Fatalf("response did not reflect the moved entry order: %s", responseBody)
 	}
 
 	updated, err := os.ReadFile(filePath)
@@ -81,7 +77,7 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantTitles := append([]string{"new entry"}, initialTitles[:from]...)
+	wantTitles := append([]string{movingTitle}, initialTitles[:from]...)
 	wantTitles = append(wantTitles, initialTitles[from+1:]...)
 	if len(titles) != len(wantTitles) {
 		t.Fatalf("entry count = %d, want %d: %v", len(titles), len(wantTitles), titles)

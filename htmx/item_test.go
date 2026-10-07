@@ -178,8 +178,8 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 					t.Errorf("body unexpectedly contains %q: %s", unwanted, body)
 				}
 			}
-			if test.wantStatus == http.StatusOK && strings.Count(body, `<article class="entry card"`) != 1 {
-				t.Errorf("rendered entry count = %d, want 1: %s", strings.Count(body, `<article class="entry card"`), body)
+			if test.wantStatus == http.StatusOK && strings.Count(body, `<article class="card"`) != 1 {
+				t.Errorf("rendered entry count = %d, want 1: %s", strings.Count(body, `<article class="card"`), body)
 			}
 		})
 	}

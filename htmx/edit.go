@@ -191,7 +191,7 @@ func (a *handler) finishEdit(w http.ResponseWriter, r *http.Request, fileName st
 
 func (a *handler) renderEditedFile(w http.ResponseWriter, r *http.Request, fileName string) {
 	if !isHTMX(r) {
-		http.Redirect(w, r, fileURL(fileName), http.StatusSeeOther)
+		http.Redirect(w, r, a.route(fileURL(fileName)), http.StatusSeeOther)
 		return
 	}
 	data, status := a.loadPage(fileName, "")
@@ -237,16 +237,17 @@ func withNotice(data pageData, notice string) pageData {
 }
 
 type fieldView struct {
-	File      string
-	Index     int
-	Name      string
-	Value     string
-	EditURL   string
-	ViewURL   string
-	MultiLine bool
-	Secret    bool
-	ReadOnly  bool
-	Editing   bool
+	File         string
+	Index        int
+	Name         string
+	Value        string
+	EditURL      string
+	ViewURL      string
+	MultiLine    bool
+	Secret       bool
+	ReadOnly     bool
+	Editing      bool
+	ShowEditIcon bool
 }
 
 func fieldEditURL(fileName string, entryIndex int, fieldName string, view bool) string {
@@ -263,14 +264,15 @@ func fieldEditURL(fileName string, entryIndex int, fieldName string, view bool) 
 func makeFieldView(field cuebook.Field, fileName string, index int, readOnly bool) fieldView {
 	_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
 	return fieldView{
-		File:      fileName,
-		Index:     index,
-		Name:      field.Name,
-		Value:     field.String(),
-		EditURL:   fieldEditURL(fileName, index, field.Name, false),
-		ViewURL:   fieldEditURL(fileName, index, field.Name, true),
-		MultiLine: metadata.IsMultiLine(field.Value),
-		Secret:    secret,
-		ReadOnly:  readOnly,
+		File:         fileName,
+		Index:        index,
+		Name:         field.Name,
+		Value:        field.String(),
+		EditURL:      fieldEditURL(fileName, index, field.Name, false),
+		ViewURL:      fieldEditURL(fileName, index, field.Name, true),
+		MultiLine:    metadata.IsMultiLine(field.Value),
+		Secret:       secret,
+		ReadOnly:     readOnly,
+		ShowEditIcon: true,
 	}
 }

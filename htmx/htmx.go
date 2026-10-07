@@ -40,32 +40,43 @@ type Committer interface {
 }
 
 type handler struct {
-	source    fs.FS
-	committer Committer
-	templates *template.Template
-	searchFS  search.SearchFS
+	source      fs.FS
+	committer   Committer
+	templates   *template.Template
+	searchFS    search.SearchFS
+	routePrefix string
 }
 
-// New returns a read-only HTTP handler for CUE files in source.
-func New(source fs.FS) (http.Handler, error) {
-	return newHandler(source, nil)
+// New returns a read-only HTTP handler for CUE files in source. The filesystem
+// is required; opts customize route registration and mounting.
+func New(source fs.FS, opts ...Option) (http.Handler, error) {
+	return newHandler(source, nil, opts...)
 }
 
 // NewWithCommitter returns an HTTP handler that can save edits using committer.
 // The source and committer must refer to the same logical files. To enable
-// archiving entries, committer must also implement FileCreator.
-func NewWithCommitter(source fs.FS, committer Committer) (http.Handler, error) {
+// archiving entries, committer must also implement FileCreator. opts configure
+// route registration and mounting.
+func NewWithCommitter(source fs.FS, committer Committer, opts ...Option) (http.Handler, error) {
 	if committer == nil {
 		return nil, errors.New("htmx: committer is nil")
 	}
-	return newHandler(source, committer)
+	return newHandler(source, committer, opts...)
 }
 
-func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
+func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler, error) {
 	if source == nil {
 		return nil, errors.New("htmx: source filesystem is nil")
 	}
-	templates, err := template.ParseFS(templateFiles, "templates/page.html")
+	config, err := resolveOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	templates, err := template.New("page.html").Funcs(template.FuncMap{
+		"route": func(target string) string {
+			return routeWithPrefix(config.ServeMuxPrefix, target)
+		},
+	}).ParseFS(templateFiles, "templates/page.html")
 	if err != nil {
 		return nil, fmt.Errorf("htmx: parse page templates: %w", err)
 	}
@@ -75,34 +86,33 @@ func newHandler(source fs.FS, committer Committer) (http.Handler, error) {
 		return nil, fmt.Errorf("htmx: wrap source filesystem for search: %w", err)
 	}
 	app := &handler{
-		source:    searchableSource,
-		committer: committer,
-		templates: templates,
-		searchFS:  searchableSource,
+		source:      searchableSource,
+		committer:   committer,
+		templates:   templates,
+		searchFS:    searchableSource,
+		routePrefix: config.ServeMuxPrefix,
 	}
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", app.list)
-	mux.HandleFunc("GET /edit", app.editForm)
-	mux.HandleFunc("GET /item", app.item)
-	mux.HandleFunc("GET /search", app.search)
-	mux.HandleFunc("GET /search/clear-button", app.searchClearButton)
-	mux.HandleFunc("GET /events", app.liveReloadEvents)
-	mux.HandleFunc("POST /edit", app.edit)
-	mux.HandleFunc("POST /add", app.add)
-	mux.HandleFunc("POST /move", app.move)
-	mux.HandleFunc("POST /delete", app.archive)
-	mux.HandleFunc("GET /assets/{name}", app.asset)
-	return securityHeaders(mux), nil
-}
-
-func securityHeaders(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Referrer-Policy", "same-origin")
-		next.ServeHTTP(w, r)
-	})
+	mux := config.ServeMux
+	usingCustomMux := mux != nil
+	register := func(method, route string, endpoint http.HandlerFunc) {
+		var handler http.Handler = endpoint
+		mux.Handle(method+" "+routeWithPrefix(config.ServeMuxPrefix, route), handler)
+	}
+	register("GET", "{$}", app.list)
+	register("GET", "edit", app.editForm)
+	register("GET", "item", app.item)
+	register("GET", "search", app.search)
+	register("GET", "search/clear-button", app.searchClearButton)
+	register("GET", "events", app.liveReloadEvents)
+	register("POST", "edit", app.edit)
+	register("POST", "add", app.add)
+	register("POST", "move", app.move)
+	register("POST", "delete", app.archive)
+	register("GET", "assets/{name}", app.asset)
+	if usingCustomMux {
+		return mux, nil
+	}
+	return mux, nil
 }
 
 func (a *handler) asset(w http.ResponseWriter, r *http.Request) {
@@ -166,6 +176,10 @@ func (a *handler) liveReloadEvents(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 		}
 	}
+}
+
+func (a *handler) route(target string) string {
+	return routeWithPrefix(a.routePrefix, target)
 }
 
 func isHTMX(r *http.Request) bool {
