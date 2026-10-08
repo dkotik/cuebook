@@ -1,16 +1,9 @@
 <section class="search-results" aria-label="Search results">
   <h2 class="menu-label">Results for “{{.Query}}”</h2>
   {{if .Results}}
-  <ul class="menu-list">
-    {{range .Results}}
-    <li>
-      <a href="{{route .URL}}" hx-get="{{route .URL}}" hx-target="#workspace" hx-swap="innerHTML" hx-push-url="true">
-        <strong>{{.Title}}</strong>
-        <small class="muted">{{.Path}}</small>
-      </a>
-    </li>
-    {{end}}
-  </ul>
+  <div class="grid is-col-min-16 is-gap-2 entries-grid">
+    {{range .Results}}{{template "search-result.html" .}}{{end}}
+  </div>
   {{else}}
   <p class="muted">No search results.</p>
   {{end}}

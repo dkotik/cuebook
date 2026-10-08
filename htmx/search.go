@@ -14,9 +14,10 @@ type searchResultsView struct {
 }
 
 type searchResultView struct {
-	Title string
-	Path  string
-	URL   string
+	Title       string
+	Path        string
+	URL         string
+	Description []string
 }
 
 func (a *handler) applyFileChange(filePath string, change func() error) error {
@@ -86,9 +87,10 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 			title = "Untitled entry"
 		}
 		view.Results = append(view.Results, searchResultView{
-			Title: title,
-			Path:  result.Path,
-			URL:   itemURL(result.Path, result.ByteRange),
+			Title:       title,
+			Path:        result.Path,
+			URL:         itemURL(result.Path, result.ByteRange),
+			Description: result.Entry.GetDescription(),
 		})
 	}
 

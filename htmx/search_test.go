@@ -282,10 +282,36 @@ func TestSearchResultsLinkToMatchingItem(t *testing.T) {
 	}
 
 	body := searchResponse.Body.String()
-	for _, want := range []string{"Needle entry", filePath} {
+	for _, want := range []string{"Needle entry", filePath, "needle@example.test"} {
 		if !strings.Contains(body, html.EscapeString(want)) {
 			t.Errorf("search results do not contain %q: %s", want, body)
 		}
+	}
+	for _, want := range []string{
+		`<article class="entry card cell"`,
+		`class="card-content search-result-description"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("search results do not contain %q: %s", want, body)
+		}
+	}
+	cardStart := strings.Index(body, `<article class="entry card cell"`)
+	if cardStart < 0 {
+		t.Fatalf("search result card is missing: %s", body)
+	}
+	headerEnd := strings.Index(body[cardStart:], "</header>")
+	if headerEnd < 0 {
+		t.Fatalf("search result card header is missing: %s", body)
+	}
+	pathContent := strings.TrimLeft(body[cardStart+headerEnd+len("</header>"):], "\t\r\n ")
+	if !strings.HasPrefix(pathContent, `<p class="search-result-path muted">`) {
+		t.Fatalf("source path does not immediately follow the result header: %s", body)
+	}
+	if !strings.Contains(pathContent, html.EscapeString(filePath)) {
+		t.Errorf("source path is missing beneath result header: %s", pathContent)
+	}
+	if got := strings.Count(body, html.EscapeString("Needle entry")); got != 1 {
+		t.Errorf("result title appears %d times, want once", got)
 	}
 	hrefAttributeStart := strings.Index(body, `href="`)
 	if hrefAttributeStart < 0 {
