@@ -3,8 +3,10 @@ package htmx
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"strings"
 
+	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/patch"
 )
 
@@ -14,10 +16,49 @@ type searchResultsView struct {
 }
 
 type searchResultView struct {
+	Index       int
+	File        string
+	ItemURL     string
 	Title       string
+	CanMove     bool
+	EntryCount  int
 	Path        string
-	URL         string
 	Description []string
+}
+
+type searchEntryPosition struct {
+	Index int
+	Count int
+}
+
+func (a *handler) searchEntryPositions(filePath string) (map[cuebook.ByteRange]searchEntryPosition, error) {
+	source, err := fs.ReadFile(a.searchFS, filePath)
+	if err != nil {
+		return nil, err
+	}
+	document, err := cuebook.New(source)
+	if err != nil {
+		return nil, err
+	}
+	count, err := document.Len()
+	if err != nil {
+		return nil, err
+	}
+
+	positions := make(map[cuebook.ByteRange]searchEntryPosition, count)
+	index := 0
+	for entry, err := range document.EachEntry() {
+		if err != nil {
+			return nil, err
+		}
+		byteRange, err := cuebook.NewByteRange(entry.Value)
+		if err != nil {
+			return nil, err
+		}
+		positions[byteRange] = searchEntryPosition{Index: index, Count: count}
+		index++
+	}
+	return positions, nil
 }
 
 func (a *handler) applyFileChange(filePath string, change func() error) error {
@@ -81,17 +122,32 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 		return searchResponse{}, errors.New("The search query is invalid.")
 	}
 	view := searchResultsView{Query: query, Results: make([]searchResultView, 0, len(results))}
+	positionsByFile := make(map[string]map[cuebook.ByteRange]searchEntryPosition)
 	for _, result := range results {
 		title := result.Entry.GetTitle()
 		if title == "" {
 			title = "Untitled entry"
 		}
-		view.Results = append(view.Results, searchResultView{
+		resultView := searchResultView{
+			File:        result.Path,
+			ItemURL:     itemURL(result.Path, result.ByteRange),
 			Title:       title,
 			Path:        result.Path,
-			URL:         itemURL(result.Path, result.ByteRange),
 			Description: result.Entry.GetDescription(),
-		})
+		}
+		if a.committer != nil {
+			positions, exists := positionsByFile[result.Path]
+			if !exists {
+				positions, _ = a.searchEntryPositions(result.Path)
+				positionsByFile[result.Path] = positions
+			}
+			if position, ok := positions[result.ByteRange]; ok {
+				resultView.Index = position.Index
+				resultView.EntryCount = position.Count
+				resultView.CanMove = true
+			}
+		}
+		view.Results = append(view.Results, resultView)
 	}
 
 	response := searchResponse{searchResultsView: view}

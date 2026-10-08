@@ -89,7 +89,7 @@
     }
 
     const targetCard = cardFromEvent(event);
-    if (!targetCard || targetCard === draggedCard) {
+    if (!targetCard || targetCard === draggedCard || targetCard.dataset.file !== draggedCard.dataset.file) {
       clearDropIndicators();
       return;
     }
@@ -137,7 +137,7 @@
     }
 
     const targetCard = cardFromEvent(event);
-    if (!targetCard || targetCard === sourceCard) {
+    if (!targetCard || targetCard === sourceCard || targetCard.dataset.file !== sourceCard.dataset.file) {
       clearDragState();
       return;
     }
@@ -155,8 +155,11 @@
     if (from < to) {
       to -= 1;
     }
-    const cards = document.querySelectorAll("#workspace .entry[data-entry-index]");
-    to = Math.max(0, Math.min(to, cards.length - 1));
+    const sourceEntryCount = Number(sourceCard.dataset.entryCount);
+    const entryCount = Number.isInteger(sourceEntryCount) && sourceEntryCount > 0
+      ? sourceEntryCount
+      : document.querySelectorAll("#workspace .entry[data-entry-index]").length;
+    to = Math.max(0, Math.min(to, entryCount - 1));
     if (from === to) {
       clearDragState();
       return;

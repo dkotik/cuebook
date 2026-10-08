@@ -1,6 +1,6 @@
-<article class="entry card cell">
+<article class="entry card cell"{{if .CanMove}} data-entry-index="{{.Index}}" data-file="{{.File}}" data-entry-count="{{.EntryCount}}"{{end}}>
   <header class="card-header">
-    <h2 class="card-header-title"><a href="{{route .URL}}" hx-get="{{route .URL}}" hx-target="#workspace" hx-swap="innerHTML" hx-push-url="true">{{.Title}}</a></h2>
+    {{template "entry-heading.html" .}}
   </header>
   <p class="search-result-path muted">{{.Path}}</p>
   {{if .Description}}

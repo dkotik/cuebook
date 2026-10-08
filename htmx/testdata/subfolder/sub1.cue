@@ -10,10 +10,6 @@
 
 [...#contact] & [
   {
-		Name:  "Maria"
-		Email: "mr@sfsdf.com"
-	},
-  {
 		Name:  "aFirst11111aaDDD"
 		Email: "test1@testdomain.com"
 	},
@@ -32,5 +28,9 @@
   {
 		Name:  "1 really great21"
 		Email: "1dfjd@kekeke.kekeke"
+	},
+  {
+		Name:  "Maria"
+		Email: "mr@sfsdf.com"
 	}
 ]

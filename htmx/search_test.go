@@ -246,6 +246,63 @@ func issueSearchRequest(t *testing.T, handler http.Handler, query string) *httpt
 	return response
 }
 
+func TestSearchResultsExposeDraggableSourceEntries(t *testing.T) {
+	tests := []struct {
+		name      string
+		writable  bool
+		wantMoves bool
+	}{
+		{name: "writable source", writable: true, wantMoves: true},
+		{name: "read-only source"},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			files := fstest.MapFS{
+				"first.cue":  &fstest.MapFile{Data: []byte(`[{Name: "First untouched", Text: "other"}, {Name: "First needle", Text: "needle"}]`)},
+				"second.cue": &fstest.MapFile{Data: []byte(`[{Name: "Second untouched", Text: "other"}, {Name: "Second needle", Text: "needle"}]`)},
+			}
+
+			var handler http.Handler
+			var err error
+			if test.writable {
+				handler, err = NewWithCommitter(files, mapFileCommitter{files: files})
+			} else {
+				handler, err = New(files)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response := waitForSearchResponse(t, handler, "needle")
+			if response.Code != http.StatusOK {
+				t.Fatalf("search status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+			body := response.Body.String()
+			if got := strings.Count(body, `<article class="entry card cell"`); got != 2 {
+				t.Fatalf("search result cards = %d, want 2: %s", got, body)
+			}
+
+			gotMoves := strings.Contains(body, `data-entry-drag-handle`)
+			if gotMoves != test.wantMoves {
+				t.Fatalf("search result drag handles visible = %t, want %t: %s", gotMoves, test.wantMoves, body)
+			}
+			if test.wantMoves {
+				for _, want := range []string{
+					`data-entry-index="1" data-file="first.cue" data-entry-count="2"`,
+					`data-entry-index="1" data-file="second.cue" data-entry-count="2"`,
+					`draggable="true" data-entry-drag-handle`,
+				} {
+					if !strings.Contains(body, want) {
+						t.Errorf("search results do not contain %q: %s", want, body)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestSearchResultsLinkToMatchingItem(t *testing.T) {
 	t.Parallel()
 
