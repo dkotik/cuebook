@@ -302,8 +302,8 @@
 {{if .Editing}}
   {{template "field-form" .}}
 {{else}}
-<div class="field field-item">
-  <span class="field-name label">{{.Name}}:</span>
+<div class="field field-item"{{if .HideLabel}} title="{{.Name}}"{{end}}>
+  {{if not .HideLabel}}<span class="field-name label">{{.Name}}:</span>{{end}}
   <div class="field-item__value">
     {{if .ReadOnly}}
       <output>{{if .Secret}}••••••••{{else}}{{.Value}}{{end}}</output>

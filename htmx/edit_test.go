@@ -29,7 +29,7 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 		t.Fatalf("page status = %d, want %d; body: %s", pageResponse.Code, http.StatusOK, pageResponse.Body.String())
 	}
 	for _, want := range []string{
-		`<span class="field-name label">Name:</span>`,
+		`<div class="field field-item" title="Name">`,
 		`<output>`,
 		`field-value-edit`,
 		`aria-label="Edit Name value"`,
@@ -41,6 +41,9 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	}
 	if strings.Contains(pageResponse.Body.String(), `field-edit-button`) {
 		t.Fatal("list view should not show pencil edit icons")
+	}
+	if strings.Contains(pageResponse.Body.String(), `<span class="field-name label">Name:</span>`) {
+		t.Fatal("list view should hide field labels")
 	}
 	body := pageResponse.Body.String()
 	linkStart := strings.Index(body, `href="/item?`)
@@ -61,6 +64,9 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	}
 	if !strings.Contains(itemResponse.Body.String(), `field-edit-button`) {
 		t.Fatal("item view should retain pencil edit icons")
+	}
+	if !strings.Contains(itemResponse.Body.String(), `<span class="field-name label">Name:</span>`) {
+		t.Fatal("item view should retain visible field labels")
 	}
 	if strings.Contains(pageResponse.Body.String(), `hx-post="/edit"`) {
 		t.Fatal("field edit forms should not be rendered until requested")

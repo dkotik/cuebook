@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/dkotik/htadaptor"
 )
@@ -121,39 +120,4 @@ func writeResponseFailure(w http.ResponseWriter, r *http.Request, failure *respo
 func writeText(w http.ResponseWriter, status int, message string) error {
 	http.Error(w, message, status)
 	return nil
-}
-
-func serveLiveReloadEvents(w http.ResponseWriter, r *http.Request) {
-	_ = writeEventStream(w, r, http.StatusOK)
-}
-
-func writeEventStream(w http.ResponseWriter, r *http.Request, status int) error {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "SSE streaming is unavailable.", http.StatusInternalServerError)
-		return nil
-	}
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("X-Accel-Buffering", "no")
-	w.WriteHeader(status)
-	if _, err := fmt.Fprint(w, ": connected\n\n"); err != nil {
-		return err
-	}
-	flusher.Flush()
-
-	ticker := time.NewTicker(15 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-r.Context().Done():
-			return nil
-		case <-ticker.C:
-			if _, err := fmt.Fprint(w, ": keep-alive\n\n"); err != nil {
-				return err
-			}
-			flusher.Flush()
-		}
-	}
 }

@@ -21,6 +21,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/search"
@@ -168,8 +169,41 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	}
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "search/clear-button"), NewHTMXSwitch(clearButtonHandler, clearButtonHandler))
 
-	eventsHandler := http.HandlerFunc(serveLiveReloadEvents)
-	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "events"), NewHTMXSwitch(eventsHandler, eventsHandler))
+	mux.Handle(
+		"GET "+routeWithPrefix(config.ServeMuxPrefix, "events"),
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				http.Error(w, "SSE streaming is unavailable.", http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("X-Accel-Buffering", "no")
+			w.WriteHeader(http.StatusOK)
+			if _, err := fmt.Fprint(w, ": connected\n\n"); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			flusher.Flush()
+
+			ticker := time.NewTicker(15 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-r.Context().Done():
+					return
+				case <-ticker.C:
+					if _, err := fmt.Fprint(w, ": keep-alive\n\n"); err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					flusher.Flush()
+				}
+			}
+		}),
+	)
 
 	editPageHandler, err := config.Adaptor.AdaptFunc(app.edit,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),

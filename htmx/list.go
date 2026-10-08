@@ -114,9 +114,11 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 		view := makeEntryView(entry, fileName, index, entryRange, readOnly)
 		for fieldIndex := range view.Fields {
 			view.Fields[fieldIndex].ShowEditIcon = false
+			view.Fields[fieldIndex].HideLabel = true
 		}
 		for fieldIndex := range view.Details {
 			view.Details[fieldIndex].ShowEditIcon = false
+			view.Details[fieldIndex].HideLabel = true
 		}
 		result = append(result, view)
 		index++

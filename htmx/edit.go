@@ -217,6 +217,7 @@ type fieldView struct {
 	ReadOnly     bool
 	Editing      bool
 	ShowEditIcon bool
+	HideLabel    bool
 }
 
 func fieldEditURL(fileName string, entryIndex int, fieldName string, view bool) string {
