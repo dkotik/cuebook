@@ -1,4 +1,4 @@
-<h2 class="card-header-title"><a href="{{route .ItemURL}}" hx-get="{{route .ItemURL}}" hx-target="#workspace" hx-swap="innerHTML" hx-push-url="true">{{.Title}}</a></h2>
+<h2 class="card-header-title"><a href="{{route .EntryURL}}" hx-get="{{route .EntryURL}}" hx-target="#workspace" hx-swap="innerHTML" hx-push-url="true">{{.Title}}</a></h2>
 {{if .CanMove}}
 <button class="card-header-icon entry-drag-handle" type="button" draggable="true" data-entry-drag-handle aria-label="Drag to move {{.Title}}" title="Drag to move {{.Title}}">
   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

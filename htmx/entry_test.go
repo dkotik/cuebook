@@ -12,7 +12,7 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
-func TestListAndItemUseSeparateEntryTemplates(t *testing.T) {
+func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 	t.Parallel()
 
 	const filePath = "people.cue"
@@ -51,22 +51,22 @@ func TestListAndItemUseSeparateEntryTemplates(t *testing.T) {
 		t.Errorf("list view unexpectedly includes the archive form: %s", listResponse.Body.String())
 	}
 
-	itemRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+itemURL(filePath, entryRange), nil)
-	itemResponse := httptest.NewRecorder()
-	handler.ServeHTTP(itemResponse, itemRequest)
-	if itemResponse.Code != http.StatusOK {
-		t.Fatalf("item status = %d, want %d; body: %s", itemResponse.Code, http.StatusOK, itemResponse.Body.String())
+	entryRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+entryURL(filePath, entryRange), nil)
+	entryResponse := httptest.NewRecorder()
+	handler.ServeHTTP(entryResponse, entryRequest)
+	if entryResponse.Code != http.StatusOK {
+		t.Fatalf("entry status = %d, want %d; body: %s", entryResponse.Code, http.StatusOK, entryResponse.Body.String())
 	}
-	itemBody := itemResponse.Body.String()
-	if !strings.Contains(itemBody, "<!doctype html>") {
-		t.Errorf("normal item view should render the full page: %s", itemBody)
+	entryBody := entryResponse.Body.String()
+	if !strings.Contains(entryBody, "<!doctype html>") {
+		t.Errorf("normal entry view should render the full page: %s", entryBody)
 	}
-	if !strings.Contains(itemBody, `action="/delete"`) {
-		t.Errorf("item view does not include the archive form: %s", itemBody)
+	if !strings.Contains(entryBody, `action="/delete"`) {
+		t.Errorf("entry view does not include the archive form: %s", entryBody)
 	}
 }
 
-func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
+func TestEntryHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 	source := []byte(`[
 	{Name: "First entry", Email: "first@example.test"},
 	{Name: "Second entry", Email: "second@example.test", Active: true},
@@ -123,7 +123,7 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 			head:       strconv.Itoa(secondRange.Head),
 			tail:       strconv.Itoa(secondRange.Tail),
 			wantStatus: http.StatusInternalServerError,
-			contains:   []string{"The item request is invalid."},
+			contains:   []string{"The entry request is invalid."},
 		},
 		{
 			name:       "invalid range is rejected",
@@ -131,7 +131,7 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 			head:       "not-an-integer",
 			tail:       strconv.Itoa(secondRange.Tail),
 			wantStatus: http.StatusInternalServerError,
-			contains:   []string{"The item request is invalid."},
+			contains:   []string{"The entry request is invalid."},
 		},
 		{
 			name:       "unmatched range is not found",
@@ -139,7 +139,7 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 			head:       "0",
 			tail:       "1",
 			wantStatus: http.StatusNotFound,
-			contains:   []string{"item not found: path=people.cue byteRange=0-1"},
+			contains:   []string{"entry not found: path=people.cue byteRange=0-1"},
 		},
 		{
 			name:       "unknown file is not found",
@@ -166,7 +166,7 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 				query.Set("tail", test.tail)
 			}
 
-			request := httptest.NewRequest(http.MethodGet, "http://example.test/item?"+query.Encode(), nil)
+			request := httptest.NewRequest(http.MethodGet, "http://example.test/entry?"+query.Encode(), nil)
 			request.Header.Set("HX-Request", "true")
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, request)

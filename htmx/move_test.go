@@ -110,8 +110,8 @@ func TestMoveRejectsReadOnlyAndInvalidIndexes(t *testing.T) {
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("invalid position status = %d, want %d; body: %s", response.Code, http.StatusNotFound, response.Body.String())
 	}
-	if !strings.Contains(response.Body.String(), "item not found: path=core1.cue") {
-		t.Fatalf("invalid position response does not identify the missing item: %s", response.Body.String())
+	if !strings.Contains(response.Body.String(), "entry not found: path=core1.cue") {
+		t.Fatalf("invalid position response does not identify the missing entry: %s", response.Body.String())
 	}
 	response = submitMove(t, writable, "missing.cue", 0, 1, "http://example.test", true)
 	if response.Code != http.StatusNotFound {

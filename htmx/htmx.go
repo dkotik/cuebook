@@ -132,23 +132,23 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		NewHTMXSwitch(editFieldHandler, editFieldHandler),
 	))
 
-	itemPageHandler, err := config.Adaptor.AdaptFunc(app.item,
+	entryPageHandler, err := config.Adaptor.AdaptFunc(app.entry,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page.html")),
 		htadaptor.WithQueryValues("path", "file", "head", "tail"),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("htmx: adapt item route: %w", err)
+		return nil, fmt.Errorf("htmx: adapt entry route: %w", err)
 	}
-	itemFragmentHandler, err := config.Adaptor.AdaptFunc(app.item,
+	entryFragmentHandler, err := config.Adaptor.AdaptFunc(app.entry,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("entry-item.html")),
+		htadaptor.WithTemplate(templates.Lookup("entry.html")),
 		htadaptor.WithQueryValues("path", "file", "head", "tail"),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("htmx: adapt item HTMX route: %w", err)
+		return nil, fmt.Errorf("htmx: adapt entry HTMX route: %w", err)
 	}
-	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "item"), NewHTMXSwitch(itemPageHandler, itemFragmentHandler))
+	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "entry"), NewHTMXSwitch(entryPageHandler, entryFragmentHandler))
 
 	searchHandler, err := config.Adaptor.AdaptFunc(app.search,
 		htadaptor.WithErrorHandler(errorHandler),

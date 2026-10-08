@@ -11,22 +11,22 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
-type ItemRequest struct {
+type EntryRequest struct {
 	cuebook.ByteRange
 	Path string
 }
 
-func itemRequestFromQuery(query url.Values) (ItemRequest, error) {
+func entryRequestFromQuery(query url.Values) (EntryRequest, error) {
 	head, err := strconv.Atoi(query.Get("head"))
 	if err != nil {
-		return ItemRequest{}, fmt.Errorf("invalid item range head: %w", err)
+		return EntryRequest{}, fmt.Errorf("invalid entry range head: %w", err)
 	}
 	tail, err := strconv.Atoi(query.Get("tail"))
 	if err != nil {
-		return ItemRequest{}, fmt.Errorf("invalid item range tail: %w", err)
+		return EntryRequest{}, fmt.Errorf("invalid entry range tail: %w", err)
 	}
 	if head < 0 || tail <= head {
-		return ItemRequest{}, fmt.Errorf("invalid item byte range")
+		return EntryRequest{}, fmt.Errorf("invalid entry byte range")
 	}
 
 	filePath := query.Get("path")
@@ -34,30 +34,30 @@ func itemRequestFromQuery(query url.Values) (ItemRequest, error) {
 		filePath = query.Get("file")
 	}
 	if filePath == "" {
-		return ItemRequest{}, fmt.Errorf("file path is required")
+		return EntryRequest{}, fmt.Errorf("file path is required")
 	}
 
-	return ItemRequest{
+	return EntryRequest{
 		ByteRange: cuebook.ByteRange{Head: head, Tail: tail},
 		Path:      filePath,
 	}, nil
 }
 
-type itemRouteRequest struct {
+type entryRouteRequest struct {
 	Path string `schema:"path"`
 	File string `schema:"file"`
 	Head string `schema:"head"`
 	Tail string `schema:"tail"`
 }
 
-func (*itemRouteRequest) Validate(context.Context) error { return nil }
+func (*entryRouteRequest) Validate(context.Context) error { return nil }
 
-type itemResponse struct {
+type entryResponse struct {
 	pageData
 	entryView
 }
 
-func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse, error) {
+func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryResponse, error) {
 	filePath := input.Path
 	if filePath == "" {
 		filePath = input.File
@@ -65,28 +65,28 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 	head, headErr := strconv.Atoi(input.Head)
 	tail, tailErr := strconv.Atoi(input.Tail)
 	if headErr != nil || tailErr != nil || head < 0 || tail <= head || filePath == "" {
-		return itemResponse{}, errors.New("The item request is invalid.")
+		return entryResponse{}, errors.New("The entry request is invalid.")
 	}
 	requestedRange := cuebook.ByteRange{Head: head, Tail: tail}
 
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return itemResponse{}, errors.New("Unable to list CUE files.")
+		return entryResponse{}, errors.New("Unable to list CUE files.")
 	}
 	raw, document, status, message := a.readDocument(filePath, fileNames)
 	if status != http.StatusOK {
-		return itemResponse{}, documentReadError(filePath, status, message)
+		return entryResponse{}, documentReadError(filePath, status, message)
 	}
 
 	var selected *entryView
 	index := 0
 	for entry, err := range document.EachEntry() {
 		if err != nil {
-			return itemResponse{}, errors.New("Unable to display this CUE document.")
+			return entryResponse{}, errors.New("Unable to display this CUE document.")
 		}
 		entryRange, err := cuebook.NewByteRange(entry.Value)
 		if err != nil {
-			return itemResponse{}, errors.New("Unable to locate this item in the CUE file.")
+			return entryResponse{}, errors.New("Unable to locate this entry in the CUE file.")
 		}
 		if entryRange == requestedRange {
 			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil)
@@ -96,7 +96,7 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 		index++
 	}
 	if selected == nil {
-		return itemResponse{}, &cuebook.ItemNotFoundError{Path: filePath, ByteRange: requestedRange}
+		return entryResponse{}, &cuebook.EntryNotFoundError{Path: filePath, ByteRange: requestedRange}
 	}
 
 	page := a.basePage(fileNames, filePath, "")
@@ -104,5 +104,5 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 	setFileFrontmatter(&page, filePath, raw)
 	page.SelectedEntry = selected
 
-	return itemResponse{pageData: page, entryView: *selected}, nil
+	return entryResponse{pageData: page, entryView: *selected}, nil
 }

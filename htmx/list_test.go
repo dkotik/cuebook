@@ -13,7 +13,7 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
-func TestIndexEntryLinksOpenMatchingItem(t *testing.T) {
+func TestIndexEntryLinksOpenMatchingEntry(t *testing.T) {
 	t.Parallel()
 
 	source := []byte(`[
@@ -72,7 +72,7 @@ func TestIndexEntryLinksOpenMatchingItem(t *testing.T) {
 				t.Fatalf("entry list is not wrapped in the Bulma grid: %s", body)
 			}
 			if !strings.Contains(body, `<article class="entry card cell"`) {
-				t.Fatalf("entry list item is not a Bulma grid cell: %s", body)
+				t.Fatalf("entry card is not a Bulma grid cell: %s", body)
 			}
 			titlePosition := strings.Index(body, "Second entry")
 			if titlePosition < 0 {
@@ -91,40 +91,40 @@ func TestIndexEntryLinksOpenMatchingItem(t *testing.T) {
 			if hrefLength < 0 {
 				t.Fatalf("selected entry link href is unterminated: %s", body[anchorStart:])
 			}
-			itemHref := html.UnescapeString(body[hrefStart : hrefStart+hrefLength])
-			parsedHref, err := url.Parse(itemHref)
+			entryHref := html.UnescapeString(body[hrefStart : hrefStart+hrefLength])
+			parsedHref, err := url.Parse(entryHref)
 			if err != nil {
-				t.Fatalf("parse generated item href %q: %v", itemHref, err)
+				t.Fatalf("parse generated entry href %q: %v", entryHref, err)
 			}
-			if parsedHref.Path != "/item" {
-				t.Errorf("item href path = %q, want /item", parsedHref.Path)
+			if parsedHref.Path != "/entry" {
+				t.Errorf("entry href path = %q, want /entry", parsedHref.Path)
 			}
 			query := parsedHref.Query()
 			if got := query.Get("path"); got != test.filePath {
-				t.Errorf("item href path query = %q, want %q", got, test.filePath)
+				t.Errorf("entry href path query = %q, want %q", got, test.filePath)
 			}
 			if got := query.Get("head"); got != strconv.Itoa(selectedRange.Head) {
-				t.Errorf("item href head query = %q, want %d", got, selectedRange.Head)
+				t.Errorf("entry href head query = %q, want %d", got, selectedRange.Head)
 			}
 			if got := query.Get("tail"); got != strconv.Itoa(selectedRange.Tail) {
-				t.Errorf("item href tail query = %q, want %d", got, selectedRange.Tail)
+				t.Errorf("entry href tail query = %q, want %d", got, selectedRange.Tail)
 			}
 
-			itemRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+itemHref, nil)
-			itemResponse := httptest.NewRecorder()
-			handler.ServeHTTP(itemResponse, itemRequest)
-			if itemResponse.Code != http.StatusOK {
-				t.Fatalf("item status = %d, want %d; body: %s", itemResponse.Code, http.StatusOK, itemResponse.Body.String())
+			entryRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+entryHref, nil)
+			entryResponse := httptest.NewRecorder()
+			handler.ServeHTTP(entryResponse, entryRequest)
+			if entryResponse.Code != http.StatusOK {
+				t.Fatalf("entry status = %d, want %d; body: %s", entryResponse.Code, http.StatusOK, entryResponse.Body.String())
 			}
-			itemBody := itemResponse.Body.String()
+			entryBody := entryResponse.Body.String()
 			for _, want := range []string{"Second entry", "second@example.test"} {
-				if !strings.Contains(itemBody, want) {
-					t.Errorf("item body does not contain %q: %s", want, itemBody)
+				if !strings.Contains(entryBody, want) {
+					t.Errorf("entry body does not contain %q: %s", want, entryBody)
 				}
 			}
 			for _, unwanted := range []string{"First entry", "first@example.test"} {
-				if strings.Contains(itemBody, unwanted) {
-					t.Errorf("item body unexpectedly contains %q: %s", unwanted, itemBody)
+				if strings.Contains(entryBody, unwanted) {
+					t.Errorf("entry body unexpectedly contains %q: %s", unwanted, entryBody)
 				}
 			}
 		})

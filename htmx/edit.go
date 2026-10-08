@@ -48,11 +48,11 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 		return editFormResponse{}, errors.New("The entry index is invalid.")
 	}
 	if entryIndex < 0 {
-		return editFormResponse{}, &cuebook.ItemNotFoundError{Path: request.File}
+		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		return editFormResponse{}, &cuebook.ItemNotFoundError{Path: request.File}
+		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
@@ -60,7 +60,7 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 	}
 	field, ok := entry.GetFieldByName(request.Field)
 	if !ok || request.Field == "" {
-		return editFormResponse{}, &cuebook.ItemNotFoundError{Path: request.File}
+		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
 	}
 
 	view := makeFieldView(field, request.File, entryIndex, false)
@@ -109,11 +109,11 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 		return editResponse{}, errors.New("The entry index is invalid.")
 	}
 	if entryIndex < 0 {
-		return editResponse{}, &cuebook.ItemNotFoundError{Path: fileName}
+		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		return editResponse{}, &cuebook.ItemNotFoundError{Path: fileName}
+		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
@@ -122,7 +122,7 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 	fieldName := request.Field
 	field, ok := entry.GetFieldByName(fieldName)
 	if !ok || fieldName == "" {
-		return editResponse{}, &cuebook.ItemNotFoundError{Path: fileName}
+		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 	if isSecretField(field.Value) && value == "" && field.String() != "" {
 		data, err := a.renderEditedFile(fileName)

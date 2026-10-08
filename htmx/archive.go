@@ -57,7 +57,7 @@ func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveRe
 		return archiveResponse{}, errors.New("Unable to read the entry count.")
 	}
 	if from < 0 || from >= length {
-		return archiveResponse{}, &cuebook.ItemNotFoundError{Path: fileName}
+		return archiveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 
 	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"

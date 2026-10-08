@@ -49,7 +49,7 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 		return moveResponse{}, errors.New("Unable to read the entry count.")
 	}
 	if from < 0 || from >= length {
-		return moveResponse{}, &cuebook.ItemNotFoundError{Path: fileName}
+		return moveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 	if request.Destination != "" {
 		data, err := a.transferEntry(fileName, request.Destination, raw, document, from, fileNames)
@@ -61,7 +61,7 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 		return moveResponse{}, errors.New("The entry position is invalid.")
 	}
 	if to < 0 || to >= length {
-		return moveResponse{}, &cuebook.ItemNotFoundError{Path: fileName}
+		return moveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 	if from == to {
 		data, err := a.renderEditedFile(fileName)
@@ -103,7 +103,7 @@ func (a *handler) transferEntry(sourceName, destinationName string, sourceRaw []
 	}
 	sourceEntryValue, err := sourceDocument.GetValue(from)
 	if err != nil {
-		return pageData{}, &cuebook.ItemNotFoundError{Path: sourceName}
+		return pageData{}, &cuebook.EntryNotFoundError{Path: sourceName}
 	}
 	destinationEntryValue, _, err := entryValueWithoutConstraints(sourceEntryValue)
 	if err != nil {

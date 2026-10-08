@@ -123,7 +123,7 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 			entry:      100,
 			origin:     "http://example.test",
 			wantStatus: http.StatusNotFound,
-			wantNotice: "item not found: path=source.cue",
+			wantNotice: "entry not found: path=source.cue",
 		},
 		{
 			name:       "missing source file",

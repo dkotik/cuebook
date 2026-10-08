@@ -18,7 +18,7 @@ type searchResultsView struct {
 type searchResultView struct {
 	Index       int
 	File        string
-	ItemURL     string
+	EntryURL    string
 	Title       string
 	CanMove     bool
 	EntryCount  int
@@ -130,7 +130,7 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 		}
 		resultView := searchResultView{
 			File:        result.Path,
-			ItemURL:     itemURL(result.Path, result.ByteRange),
+			EntryURL:    entryURL(result.Path, result.ByteRange),
 			Title:       title,
 			Path:        result.Path,
 			Description: result.Entry.GetDescription(),

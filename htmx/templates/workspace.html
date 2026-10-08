@@ -9,7 +9,7 @@
     {{if .DocumentError}}
       <p class="notice notification is-danger" role="alert">{{.DocumentError}}</p>
     {{else if .SelectedEntry}}
-      {{template "entry-item.html" .SelectedEntry}}
+      {{template "entry.html" .SelectedEntry}}
     {{else if .Entries}}
       <div class="grid is-col-min-16 is-gap-2 entries-grid">
         {{range .Entries}}{{template "entry-list.html" .}}{{end}}
@@ -22,12 +22,12 @@
       <h2 id="add-entry-heading">Add entry</h2>
       <form action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="outerHTML">
         <input type="hidden" name="file" value="{{.Selected}}">
-        {{range .RequiredAddFields}}{{template "add-entry-field.html" .}}{{end}}
+        {{range .RequiredAddFields}}{{template "entry-add-field.html" .}}{{end}}
         {{if .OptionalAddFields}}
         <remember-details data-storage-key="add-entry-optional">
           <summary>Optional fields</summary>
           <div id="add-entry-optional-content" data-details-content>
-            {{range .OptionalAddFields}}{{template "add-entry-field.html" .}}{{end}}
+            {{range .OptionalAddFields}}{{template "entry-add-field.html" .}}{{end}}
           </div>
         </remember-details>
         {{end}}

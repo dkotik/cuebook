@@ -67,7 +67,7 @@ func TestServeMuxPrefixAppliesToRoutesAndGeneratedURLs(t *testing.T) {
 			for _, want := range []string{
 				`data-route-prefix="` + test.wantPrefix + `"`,
 				`href="` + test.wantPrefix + `/?file=one.cue"`,
-				`href="` + test.wantPrefix + `/item?`,
+				`href="` + test.wantPrefix + `/entry?`,
 				`src="` + test.wantPrefix + `/assets/live-reload.js"`,
 				`data-events-url="` + test.wantPrefix + `/events"`,
 			} {

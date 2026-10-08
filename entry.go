@@ -11,20 +11,20 @@ import (
 	"github.com/dkotik/cuebook/metadata"
 )
 
-// ItemNotFoundError reports that a requested entry or item does not exist.
-type ItemNotFoundError struct {
+// EntryNotFoundError reports that a requested entry does not exist.
+type EntryNotFoundError struct {
 	Path      string
 	ByteRange ByteRange
 }
 
-func (e *ItemNotFoundError) Error() string {
+func (e *EntryNotFoundError) Error() string {
 	if e.ByteRange == (ByteRange{}) {
-		return fmt.Sprintf("item not found: path=%s", e.Path)
+		return fmt.Sprintf("entry not found: path=%s", e.Path)
 	}
-	return fmt.Sprintf("item not found: path=%s byteRange=%d-%d", e.Path, e.ByteRange.Head, e.ByteRange.Tail)
+	return fmt.Sprintf("entry not found: path=%s byteRange=%d-%d", e.Path, e.ByteRange.Head, e.ByteRange.Tail)
 }
 
-func (e *ItemNotFoundError) HyperTextStatusCode() int {
+func (e *EntryNotFoundError) HyperTextStatusCode() int {
 	return http.StatusNotFound
 }
 
@@ -162,7 +162,7 @@ func EachFieldDefinition(value cue.Value) iter.Seq2[cue.Selector, cue.Value] {
 	return func(yield func(_ cue.Selector, value cue.Value) bool) {
 		path := cue.MakePath(cue.Index(0))
 		if length, _ := value.Len().Uint64(); length == 0 {
-			// insert an empty item, so that field definitions are inheritted
+			// insert an empty entry, so that field definitions are inheritted
 			// from conjuctions; otherwise field query will return cue.BottomKind
 			// without any way of enumerating the fields
 			value = value.FillPath(path, ast.NewStruct())

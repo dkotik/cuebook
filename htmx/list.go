@@ -50,7 +50,7 @@ type pageData struct {
 type entryView struct {
 	Index     int
 	File      string
-	ItemURL   string
+	EntryURL  string
 	Title     string
 	CanMove   bool
 	CanDelete bool
@@ -123,7 +123,7 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 		}
 		entryRange, err := cuebook.NewByteRange(entry.Value)
 		if err != nil {
-			return nil, fmt.Errorf("entry %d: unable to locate item in CUE file: %w", index, err)
+			return nil, fmt.Errorf("entry %d: unable to locate entry in CUE file: %w", index, err)
 		}
 		view := makeEntryView(entry, fileName, index, entryRange, readOnly)
 		for fieldIndex := range view.Fields {
@@ -144,7 +144,7 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 	view := entryView{
 		Index:     index,
 		File:      fileName,
-		ItemURL:   itemURL(fileName, entryRange),
+		EntryURL:  entryURL(fileName, entryRange),
 		Title:     entry.GetTitle(),
 		CanMove:   !readOnly,
 		CanDelete: !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
@@ -213,12 +213,12 @@ func containsFile(names []string, name string) bool {
 	return index < len(names) && names[index] == name
 }
 
-func itemURL(fileName string, entryRange cuebook.ByteRange) string {
+func entryURL(fileName string, entryRange cuebook.ByteRange) string {
 	query := url.Values{}
 	query.Set("path", fileName)
 	query.Set("head", strconv.Itoa(entryRange.Head))
 	query.Set("tail", strconv.Itoa(entryRange.Tail))
-	return "/item?" + query.Encode()
+	return "/entry?" + query.Encode()
 }
 
 const (

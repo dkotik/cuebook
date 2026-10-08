@@ -46,27 +46,27 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 		t.Fatal("list view should hide field labels")
 	}
 	body := pageResponse.Body.String()
-	linkStart := strings.Index(body, `href="/item?`)
+	linkStart := strings.Index(body, `href="/entry?`)
 	if linkStart < 0 {
-		t.Fatal("list entry does not link to its item view")
+		t.Fatal("list entry does not link to its entry view")
 	}
 	hrefStart := linkStart + len(`href="`)
 	hrefEnd := strings.Index(body[hrefStart:], `"`)
 	if hrefEnd < 0 {
-		t.Fatal("list item link is unterminated")
+		t.Fatal("list entry link is unterminated")
 	}
-	itemURL := html.UnescapeString(body[hrefStart : hrefStart+hrefEnd])
-	itemRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+itemURL, nil)
-	itemResponse := httptest.NewRecorder()
-	handler.ServeHTTP(itemResponse, itemRequest)
-	if itemResponse.Code != http.StatusOK {
-		t.Fatalf("item status = %d, want %d; body: %s", itemResponse.Code, http.StatusOK, itemResponse.Body.String())
+	entryURL := html.UnescapeString(body[hrefStart : hrefStart+hrefEnd])
+	entryRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+entryURL, nil)
+	entryResponse := httptest.NewRecorder()
+	handler.ServeHTTP(entryResponse, entryRequest)
+	if entryResponse.Code != http.StatusOK {
+		t.Fatalf("entry status = %d, want %d; body: %s", entryResponse.Code, http.StatusOK, entryResponse.Body.String())
 	}
-	if !strings.Contains(itemResponse.Body.String(), `field-edit-button`) {
-		t.Fatal("item view should retain pencil edit icons")
+	if !strings.Contains(entryResponse.Body.String(), `field-edit-button`) {
+		t.Fatal("entry view should retain pencil edit icons")
 	}
-	if !strings.Contains(itemResponse.Body.String(), `<span class="field-name label">Name:</span>`) {
-		t.Fatal("item view should retain visible field labels")
+	if !strings.Contains(entryResponse.Body.String(), `<span class="field-name label">Name:</span>`) {
+		t.Fatal("entry view should retain visible field labels")
 	}
 	if strings.Contains(pageResponse.Body.String(), `hx-post="/edit"`) {
 		t.Fatal("field edit forms should not be rendered until requested")
@@ -119,8 +119,8 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	if missingFieldResponse.Code != http.StatusNotFound {
 		t.Fatalf("missing field form status = %d, want %d; body: %s", missingFieldResponse.Code, http.StatusNotFound, missingFieldResponse.Body.String())
 	}
-	if !strings.Contains(missingFieldResponse.Body.String(), "item not found: path=core1.cue") {
-		t.Fatalf("missing field form response does not identify the missing item: %s", missingFieldResponse.Body.String())
+	if !strings.Contains(missingFieldResponse.Body.String(), "entry not found: path=core1.cue") {
+		t.Fatalf("missing field form response does not identify the missing entry: %s", missingFieldResponse.Body.String())
 	}
 
 	formQuery.Set("file", "missing.cue")
@@ -275,14 +275,14 @@ func TestEditFailures(t *testing.T) {
 			values:     editValues("core1.cue", "0", "notAField", "value"),
 			origin:     "http://example.test",
 			wantStatus: http.StatusNotFound,
-			wantNotice: "item not found: path=core1.cue",
+			wantNotice: "entry not found: path=core1.cue",
 		},
 		{
 			name:       "out of range entry is not found",
 			values:     editValues("core1.cue", "9", "Name", "value"),
 			origin:     "http://example.test",
 			wantStatus: http.StatusNotFound,
-			wantNotice: "item not found: path=core1.cue",
+			wantNotice: "entry not found: path=core1.cue",
 		},
 		{
 			name:       "path traversal is not found",

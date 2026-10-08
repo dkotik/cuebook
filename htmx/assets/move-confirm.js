@@ -26,7 +26,7 @@
 
   function fileLabel(fileName) {
     const link = [...document.querySelectorAll(".tree-file-link[data-file]")]
-      .find((item) => item.dataset.file === fileName);
+      .find((link) => link.dataset.file === fileName);
     return link?.textContent?.trim() || fileName;
   }
 
