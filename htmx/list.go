@@ -22,21 +22,9 @@ import (
 	"github.com/yuin/goldmark/v2/util"
 )
 
-type FileNotFound struct {
-	Path string
-}
-
-func (e *FileNotFound) Error() string {
-	return fmt.Sprintf("file not found: path=%s", e.Path)
-}
-
-func (e *FileNotFound) HyperTextStatusCode() int {
-	return http.StatusNotFound
-}
-
 func documentReadError(filePath string, status int, message string) error {
 	if status == http.StatusNotFound {
-		return &FileNotFound{Path: filePath}
+		return &cuebook.FileNotFoundError{Path: filePath}
 	}
 	return errors.New(message)
 }

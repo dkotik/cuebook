@@ -4,11 +4,29 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"net/http"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"github.com/dkotik/cuebook/metadata"
 )
+
+// ItemNotFoundError reports that a requested entry or item does not exist.
+type ItemNotFoundError struct {
+	Path      string
+	ByteRange ByteRange
+}
+
+func (e *ItemNotFoundError) Error() string {
+	if e.ByteRange == (ByteRange{}) {
+		return fmt.Sprintf("item not found: path=%s", e.Path)
+	}
+	return fmt.Sprintf("item not found: path=%s byteRange=%d-%d", e.Path, e.ByteRange.Head, e.ByteRange.Tail)
+}
+
+func (e *ItemNotFoundError) HyperTextStatusCode() int {
+	return http.StatusNotFound
+}
 
 type Entry struct {
 	title   string

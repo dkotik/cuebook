@@ -8,10 +8,24 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"net/http"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 )
+
+// FileNotFoundError reports that a requested CUE file does not exist.
+type FileNotFoundError struct {
+	Path string
+}
+
+func (e *FileNotFoundError) Error() string {
+	return fmt.Sprintf("file not found: path=%s", e.Path)
+}
+
+func (e *FileNotFoundError) HyperTextStatusCode() int {
+	return http.StatusNotFound
+}
 
 // Book holds a list of structured data entries.
 type Book struct {

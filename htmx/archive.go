@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dkotik/cuebook"
 )
 
 const archiveDirectory = ".archive/"
@@ -55,7 +57,7 @@ func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveRe
 		return archiveResponse{}, errors.New("Unable to read the entry count.")
 	}
 	if from < 0 || from >= length {
-		return archiveResponse{}, &ItemNotFoundError{Path: fileName}
+		return archiveResponse{}, &cuebook.ItemNotFoundError{Path: fileName}
 	}
 
 	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
@@ -70,7 +72,7 @@ func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveRe
 		return archiveResponse{}, errors.New("Unable to list CUE files.")
 	}
 	if !containsFile(fileNames, archiveName) {
-		return archiveResponse{}, &FileNotFound{Path: archiveName}
+		return archiveResponse{}, &cuebook.FileNotFoundError{Path: archiveName}
 	}
 
 	data, err := a.transferEntry(fileName, archiveName, raw, document, from, fileNames)
