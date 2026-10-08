@@ -27,12 +27,11 @@ func (*addRequest) Validate(context.Context) error { return nil }
 
 type addResponse struct {
 	pageData
-	redirectURL string
 }
 
 func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, error) {
 	if !isSameOriginContext(ctx) {
-		return addResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")
+		return addResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
 	}
 	if a.committer == nil {
 		return addResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
@@ -57,7 +56,7 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 
 	definitions := entryFieldDefinitions(document)
 	if len(definitions) == 0 {
-		return addResponseFrom(withNotice(page, "This document has no entry fields to add."), http.StatusUnprocessableEntity, "")
+		return addResponseFrom(withNotice(page, "This document has no entry fields to add."), http.StatusUnprocessableEntity)
 	}
 	if len(fieldNames) == 0 || len(fieldNames) != len(values) {
 		return addResponseFrom(a.renderAddFormError(page, fieldNames, values, "The add-entry fields are invalid.", http.StatusBadRequest))
@@ -122,13 +121,13 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 		}
 		return addResponseFrom(a.renderAddFormError(page, fieldNames, values, notice, status))
 	}
-	return addResponseFrom(a.finishEdit(ctx, fileName))
+	return addResponseFrom(a.finishEdit(fileName))
 }
 
-func (a *handler) renderAddFormError(page pageData, fieldNames, values []string, message string, status int) (pageData, int, string) {
+func (a *handler) renderAddFormError(page pageData, fieldNames, values []string, message string, status int) (pageData, int) {
 	page.AddFields = retainAddFieldValues(page.AddFields, fieldNames, values)
 	page.AddError = message
-	return page, status, ""
+	return page, status
 }
 
 func retainAddFieldValues(fields []addFieldView, names, values []string) []addFieldView {

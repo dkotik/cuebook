@@ -41,11 +41,10 @@ type Committer interface {
 }
 
 type handler struct {
-	source      fs.FS
-	committer   Committer
-	templates   *template.Template
-	searchFS    search.SearchFS
-	routePrefix string
+	source    fs.FS
+	committer Committer
+	templates *template.Template
+	searchFS  search.SearchFS
 }
 
 // New returns a read-only HTTP handler for CUE files in source. The filesystem
@@ -87,11 +86,10 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		return nil, fmt.Errorf("htmx: wrap source filesystem for search: %w", err)
 	}
 	app := &handler{
-		source:      searchableSource,
-		committer:   committer,
-		templates:   templates,
-		searchFS:    searchableSource,
-		routePrefix: config.ServeMuxPrefix,
+		source:    searchableSource,
+		committer: committer,
+		templates: templates,
+		searchFS:  searchableSource,
 	}
 	mux := config.ServeMux
 	listPageHandler, err := config.Adaptor.AdaptFunc(app.list,
@@ -253,10 +251,6 @@ func selectEditTemplateHandler(form, view http.Handler) http.Handler {
 	})
 }
 
-func (a *handler) route(target string) string {
-	return routeWithPrefix(a.routePrefix, target)
-}
-
 func isHTMX(r *http.Request) bool {
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get("HX-Request")), "true")
 }
@@ -277,8 +271,7 @@ func (s htmxSwitch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Vary", "HX-Request")
 
-	ctx := context.WithValue(r.Context(), htmxContextFlag, isHTMX(r))
-	ctx = context.WithValue(ctx, sameOriginContextFlag, sameOrigin(r))
+	ctx := context.WithValue(r.Context(), sameOriginContextFlag, sameOrigin(r))
 	r = r.WithContext(ctx)
 
 	if r.Header.Get("HX-Request") != "" {

@@ -87,12 +87,11 @@ func (*editRequest) Validate(context.Context) error { return nil }
 
 type editResponse struct {
 	pageData
-	redirectURL string
 }
 
 func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {
 	if !isSameOriginContext(ctx) {
-		return editResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")
+		return editResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
 	}
 	if a.committer == nil {
 		return editResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
@@ -115,23 +114,23 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 
 	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil || entryIndex < 0 {
-		return editResponseFrom(withNotice(page, "The entry index is invalid."), http.StatusBadRequest, "")
+		return editResponseFrom(withNotice(page, "The entry index is invalid."), http.StatusBadRequest)
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		return editResponseFrom(withNotice(page, "Entry not found."), http.StatusNotFound, "")
+		return editResponseFrom(withNotice(page, "Entry not found."), http.StatusNotFound)
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
-		return editResponseFrom(withNotice(page, "Unable to read this entry."), http.StatusUnprocessableEntity, "")
+		return editResponseFrom(withNotice(page, "Unable to read this entry."), http.StatusUnprocessableEntity)
 	}
 	fieldName := request.Field
 	field, ok := entry.GetFieldByName(fieldName)
 	if !ok || fieldName == "" {
-		return editResponseFrom(withNotice(page, "Field not found."), http.StatusNotFound, "")
+		return editResponseFrom(withNotice(page, "Field not found."), http.StatusNotFound)
 	}
 	if isSecretField(field.Value) && value == "" && field.String() != "" {
-		return editResponseFrom(a.finishEdit(ctx, fileName))
+		return editResponseFrom(a.finishEdit(fileName))
 	}
 
 	change, err := patch.UpdateFieldValue(raw, entryValue, field.Value, value)
@@ -154,10 +153,10 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 		}
 		return editResponseFrom(a.editFailure(ctx, fileName, notice, status))
 	}
-	return editResponseFrom(a.finishEdit(ctx, fileName))
+	return editResponseFrom(a.finishEdit(fileName))
 }
 
-func (a *handler) renderEditInputFailure(_ context.Context, page pageData, entryIndex int, fieldName, value, notice string, status int) (pageData, int, string) {
+func (a *handler) renderEditInputFailure(_ context.Context, page pageData, entryIndex int, fieldName, value, notice string, status int) (pageData, int) {
 	for i := range page.Entries {
 		entry := &page.Entries[i]
 		if entry.Index != entryIndex {
@@ -167,7 +166,7 @@ func (a *handler) renderEditInputFailure(_ context.Context, page pageData, entry
 			break
 		}
 	}
-	return withNotice(page, notice), status, ""
+	return withNotice(page, notice), status
 }
 
 func markEditingField(fields []fieldView, fieldName, value string) bool {
@@ -182,25 +181,22 @@ func markEditingField(fields []fieldView, fieldName, value string) bool {
 	return false
 }
 
-func (a *handler) finishEdit(ctx context.Context, fileName string) (pageData, int, string) {
-	return a.renderEditedFile(ctx, fileName)
+func (a *handler) finishEdit(fileName string) (pageData, int) {
+	return a.renderEditedFile(fileName)
 }
 
-func (a *handler) renderEditedFile(ctx context.Context, fileName string) (pageData, int, string) {
-	if !isHTMXContext(ctx) {
-		return pageData{}, http.StatusSeeOther, a.route(fileURL(fileName))
-	}
+func (a *handler) renderEditedFile(fileName string) (pageData, int) {
 	data, status := a.loadPage(fileName, "")
 	if status != http.StatusOK {
 		data.Error = "The edit was saved, but the updated document could not be displayed."
 		status = http.StatusInternalServerError
 	}
-	return data, status, ""
+	return data, status
 }
 
-func (a *handler) editFailure(_ context.Context, fileName, notice string, status int) (pageData, int, string) {
+func (a *handler) editFailure(_ context.Context, fileName, notice string, status int) (pageData, int) {
 	data, _ := a.loadPage(fileName, notice)
-	return data, status, ""
+	return data, status
 }
 
 func sameOrigin(r *http.Request) bool {

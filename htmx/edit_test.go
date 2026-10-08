@@ -148,7 +148,7 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 		wantStatus int
 		fragment   bool
 	}{
-		{name: "browser form redirects after save", wantStatus: http.StatusSeeOther},
+		{name: "browser form receives updated page", wantStatus: http.StatusOK},
 		{name: "htmx form receives updated fragment", htmx: true, wantStatus: http.StatusOK, fragment: true},
 	}
 	for _, tt := range tests {
@@ -179,12 +179,11 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 				if !strings.Contains(response.Body.String(), `<main id="workspace"`) || strings.Contains(response.Body.String(), "<!doctype html>") {
 					t.Fatalf("expected HTMX workspace fragment, got: %s", response.Body.String())
 				}
-				if !strings.Contains(response.Body.String(), "Saved Contact") {
-					t.Errorf("updated value missing from response: %s", response.Body.String())
-				}
+			} else if !strings.Contains(response.Body.String(), "<!doctype html>") {
+				t.Fatalf("expected full page response, got: %s", response.Body.String())
 			}
-			if tt.wantStatus == http.StatusSeeOther && !strings.Contains(response.Header().Get("Location"), "contacts.cue") {
-				t.Errorf("redirect location = %q", response.Header().Get("Location"))
+			if !strings.Contains(response.Body.String(), "Saved Contact") {
+				t.Errorf("updated value missing from response: %s", response.Body.String())
 			}
 
 			updated, err := os.ReadFile(filepath.Join(directory, "contacts.cue"))

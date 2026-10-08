@@ -276,7 +276,7 @@ func TestWritableDirectoryAppendsEntries(t *testing.T) {
 		name string
 		htmx bool
 	}{
-		{name: "browser form redirects after append"},
+		{name: "browser form receives updated page"},
 		{name: "htmx form receives updated fragment", htmx: true},
 	}
 	for _, tt := range tests {
@@ -316,11 +316,11 @@ func TestWritableDirectoryAppendsEntries(t *testing.T) {
 					t.Fatalf("expected updated HTMX workspace, got: %s", response.Body.String())
 				}
 			} else {
-				if response.Code != http.StatusSeeOther {
-					t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusSeeOther, response.Body.String())
+				if response.Code != http.StatusOK {
+					t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 				}
-				if !strings.Contains(response.Header().Get("Location"), "contacts.cue") {
-					t.Errorf("redirect location = %q", response.Header().Get("Location"))
+				if !strings.Contains(response.Body.String(), "<!doctype html>") || !strings.Contains(response.Body.String(), "Added Contact") {
+					t.Fatalf("expected updated full page, got: %s", response.Body.String())
 				}
 			}
 
@@ -375,8 +375,11 @@ func TestWritableDirectoryAppendsToEmptySchemaList(t *testing.T) {
 		{"Name", "First Contact"},
 		{"Email", "first@example.test"},
 	}))
-	if response.Code != http.StatusSeeOther {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusSeeOther, response.Body.String())
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), "<!doctype html>") || !strings.Contains(response.Body.String(), "First Contact") {
+		t.Fatalf("expected updated full page, got: %s", response.Body.String())
 	}
 
 	updated, err := os.ReadFile(filepath.Join(directory, "contacts.cue"))

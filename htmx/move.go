@@ -23,12 +23,11 @@ func (*moveRequest) Validate(context.Context) error { return nil }
 
 type moveResponse struct {
 	pageData
-	redirectURL string
 }
 
 func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse, error) {
 	if !isSameOriginContext(ctx) {
-		return moveResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden, "")
+		return moveResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
 	}
 	if a.committer == nil {
 		return moveResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
@@ -58,7 +57,7 @@ func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse,
 		return moveResponseFrom(a.editFailure(ctx, fileName, "The entry position is invalid.", http.StatusBadRequest))
 	}
 	if from == to {
-		return moveResponseFrom(a.finishEdit(ctx, fileName))
+		return moveResponseFrom(a.finishEdit(fileName))
 	}
 
 	change, err := entryMovePatch(raw, from, to)
@@ -87,12 +86,12 @@ func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse,
 		}
 		return moveResponseFrom(a.editFailure(ctx, fileName, notice, status))
 	}
-	return moveResponseFrom(a.finishEdit(ctx, fileName))
+	return moveResponseFrom(a.finishEdit(fileName))
 }
 
-func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Book, from int, fileNames []string) (pageData, int, string) {
+func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Book, from int, fileNames []string) (pageData, int) {
 	if sourceName == destinationName {
-		return a.finishEdit(ctx, sourceName)
+		return a.finishEdit(sourceName)
 	}
 
 	destinationRaw, _, status, message := a.readDocument(destinationName, fileNames)
@@ -154,7 +153,7 @@ func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName
 		}
 		return a.editFailure(ctx, sourceName, notice, status)
 	}
-	return a.renderEditedFile(ctx, destinationName)
+	return a.renderEditedFile(destinationName)
 }
 
 func entryValueWithoutConstraints(value cue.Value) (cue.Value, string, error) {

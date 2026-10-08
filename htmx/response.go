@@ -52,23 +52,23 @@ func pageValues(data pageData) pageData {
 	return data
 }
 
-func editResponseFrom(data pageData, status int, redirectURL string) (editResponse, error) {
-	response := editResponse{pageData: pageValues(data), redirectURL: redirectURL}
+func editResponseFrom(data pageData, status int) (editResponse, error) {
+	response := editResponse{pageData: pageValues(data)}
 	return responseResult(response, responseErrorForStatus(status))
 }
 
-func addResponseFrom(data pageData, status int, redirectURL string) (addResponse, error) {
-	response := addResponse{pageData: pageValues(data), redirectURL: redirectURL}
+func addResponseFrom(data pageData, status int) (addResponse, error) {
+	response := addResponse{pageData: pageValues(data)}
 	return responseResult(response, responseErrorForStatus(status))
 }
 
-func moveResponseFrom(data pageData, status int, redirectURL string) (moveResponse, error) {
-	response := moveResponse{pageData: pageValues(data), redirectURL: redirectURL}
+func moveResponseFrom(data pageData, status int) (moveResponse, error) {
+	response := moveResponse{pageData: pageValues(data)}
 	return responseResult(response, responseErrorForStatus(status))
 }
 
-func archiveResponseFrom(data pageData, status int, redirectURL string) (archiveResponse, error) {
-	response := archiveResponse{pageData: pageValues(data), redirectURL: redirectURL}
+func archiveResponseFrom(data pageData, status int) (archiveResponse, error) {
+	response := archiveResponse{pageData: pageValues(data)}
 	return responseResult(response, responseErrorForStatus(status))
 }
 
@@ -112,26 +112,7 @@ func writeResponseFailure(w http.ResponseWriter, r *http.Request, failure *respo
 			_ = writeText(w, status, response.message)
 			return
 		}
-	case editResponse:
-		if response.redirectURL != "" {
-			http.Redirect(w, r, response.redirectURL, status)
-			return
-		}
-	case addResponse:
-		if response.redirectURL != "" {
-			http.Redirect(w, r, response.redirectURL, status)
-			return
-		}
-	case moveResponse:
-		if response.redirectURL != "" {
-			http.Redirect(w, r, response.redirectURL, status)
-			return
-		}
-	case archiveResponse:
-		if response.redirectURL != "" {
-			http.Redirect(w, r, response.redirectURL, status)
-			return
-		}
+
 	}
 	if err := encoder.Encode(w, r, status, failure.value); err != nil {
 		http.Error(w, "Unable to encode the response.", http.StatusInternalServerError)
@@ -180,15 +161,7 @@ func writeEventStream(w http.ResponseWriter, r *http.Request, status int) error 
 
 type contextFlag uint8
 
-const (
-	htmxContextFlag contextFlag = iota + 1
-	sameOriginContextFlag
-)
-
-func isHTMXContext(ctx context.Context) bool {
-	isHTMX, _ := ctx.Value(htmxContextFlag).(bool)
-	return isHTMX
-}
+const sameOriginContextFlag contextFlag = 1
 
 func isSameOriginContext(ctx context.Context) bool {
 	sameOrigin, _ := ctx.Value(sameOriginContextFlag).(bool)
