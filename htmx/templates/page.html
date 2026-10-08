@@ -15,21 +15,25 @@
   <script src="{{route "/assets/remember-details.js"}}" defer></script>
   <script src="{{route "/assets/delete-confirm.js"}}" defer></script>
   <script src="{{route "/assets/move-confirm.js"}}" defer></script>
-  <script src="{{route "/assets/search-clear.js"}}" defer></script>
+  <script src="{{route "/assets/search-control.js"}}" defer></script>
   <script src="{{route "/assets/live-reload.js"}}" defer></script>
 </head>
 <body data-route-prefix="{{route ""}}">
   <header class="topbar navbar">
     <a href="{{route "/"}}">Cuebook</a>
-    <form class="topbar-search field has-addons" action="{{route "/search"}}" method="get" hx-get="{{route "/search"}}" hx-target="#workspace" hx-swap="innerHTML">
-      <div class="control is-expanded">
-        <input class="input" type="search" name="q" placeholder="Search entries" aria-label="Search entries" hx-get="{{route "/search/clear-button"}}" hx-trigger="input changed delay:150ms" hx-target="#search-clear-control" hx-swap="innerHTML">
-      </div>
-      <div id="search-clear-control" class="control"></div>
-      <div class="control">
-        <button class="button" type="submit" aria-label="Search">🔍</button>
-      </div>
-    </form>
+    <cuebook-search>
+      <form class="topbar-search field has-addons" action="{{route "/search"}}" method="get" hx-get="{{route "/search"}}" hx-target="#workspace" hx-swap="innerHTML">
+        <div class="control is-expanded">
+          <input class="input" type="search" name="q" placeholder="Search entries" aria-label="Search entries">
+        </div>
+        <div class="control">
+          <button class="button has-text-danger" type="button" data-clear-search hidden aria-label="Clear search" title="Clear search">×</button>
+        </div>
+        <div class="control">
+          <button class="button" type="submit" aria-label="Search">🔍</button>
+        </div>
+      </form>
+    </cuebook-search>
     <button id="theme-toggle" class="button is-small is-ghost" type="button" aria-label="Toggle color theme" aria-pressed="true">
       <svg data-theme-icon="moon" style="display: inline-block" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>

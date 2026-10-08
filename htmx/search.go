@@ -74,22 +74,6 @@ func (a *handler) commitFile(filePath string, change patch.Patch) error {
 	})
 }
 
-type searchClearRequest struct {
-	Query string `schema:"q"`
-}
-
-func (*searchClearRequest) Validate(context.Context) error { return nil }
-
-type searchClearButtonResponse struct {
-	Visible bool
-}
-
-func (a *handler) searchClearButton(_ context.Context, request *searchClearRequest) (searchClearButtonResponse, error) {
-	return searchClearButtonResponse{
-		Visible: strings.TrimSpace(request.Query) != "",
-	}, nil
-}
-
 type searchResponse struct {
 	searchResultsView
 }

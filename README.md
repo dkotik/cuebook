@@ -22,6 +22,7 @@ changes in data to other users and, most importantly, programs.
 ## Development
 
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
+- [ ] add copy-paste support
 - [x] HTMX interface
   - [ ] divide @detail decorated properties from the rest of the properties in cards. They should show only when card is :target?
 - [x] Ctrl+J and Ctrl+K entry reordering of entries
@@ -33,7 +34,6 @@ changes in data to other users and, most importantly, programs.
 - [x] add `@cuebook(details)` attribute support
 - [x] add Markdown metadata loading and editing
 - [x] add editing history tracking
-- [ ] add copy-paste support
 - [x] saving should merge the state on disk with the state in memory
 - [ ] responsive color scheme: lipgloss.HasDarkBackground() at initialization
 - [x] handle change of entry index due to modification of the file by other processes

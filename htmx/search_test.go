@@ -45,60 +45,31 @@ func TestSearchFormIsInHeaderAndTargetsMainContent(t *testing.T) {
 	if navStart >= 0 && navEnd > navStart && formStart > navStart && formStart < navEnd {
 		t.Errorf("search form is still inside the file navigation: %s", body)
 	}
+	componentStart := strings.Index(body, `<cuebook-search>`)
+	componentEnd := strings.Index(body, `</cuebook-search>`)
+	if componentStart < 0 || componentEnd <= componentStart {
+		t.Fatalf("custom search element is missing or unclosed: %s", body)
+	}
+	component := body[componentStart:componentEnd]
 	for _, want := range []string{
-		`hx-target="#workspace"`,
-		`<main id="workspace"`,
-		`hx-get="/search/clear-button"`,
-		`hx-target="#search-clear-control"`,
-		`src="/assets/search-clear.js"`,
-
-		`id="search-clear-control"`,
+		`<form class="topbar-search`,
+		`hx-get="/search"`,
+		`<input class="input" type="search" name="q"`,
+		`data-clear-search hidden`,
 		`aria-label="Search">🔍</button>`,
 	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("page does not contain %q", want)
+		if !strings.Contains(component, want) {
+			t.Errorf("custom search element does not contain %q", want)
 		}
+	}
+	if !strings.Contains(body, `src="/assets/search-control.js"`) {
+		t.Error("custom search element controller is not loaded")
+	}
+	if strings.Contains(component, "/search/clear-button") || strings.Contains(body, `id="search-clear-control"`) {
+		t.Errorf("search clear control still depends on a separate HTMX endpoint: %s", body)
 	}
 	if strings.Contains(body, `id="search-results"`) {
 		t.Errorf("page still has a separate search results target: %s", body)
-	}
-	if strings.Contains(body, `data-clear-search`) {
-		t.Errorf("clear search button is visible before a query is entered: %s", body)
-	}
-}
-
-func TestSearchClearButtonTracksQuery(t *testing.T) {
-	handler, err := New(fstest.MapFS{
-		"people.cue": &fstest.MapFile{Data: []byte(`[{Name: "Ada"}]`)},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tests := []struct {
-		name       string
-		query      string
-		wantButton bool
-	}{
-		{name: "empty query hides clear button"},
-		{name: "whitespace query hides clear button", query: " \t"},
-		{name: "nonempty query shows clear button", query: "Ada", wantButton: true},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			values := url.Values{"q": {test.query}}
-			request := httptest.NewRequest(http.MethodGet, "http://example.test/search/clear-button?"+values.Encode(), nil)
-			response := httptest.NewRecorder()
-			handler.ServeHTTP(response, request)
-			if response.Code != http.StatusOK {
-				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
-			}
-			gotButton := strings.Contains(response.Body.String(), `data-clear-search`)
-			if gotButton != test.wantButton {
-				t.Errorf("clear button visible = %t, want %t; body: %s", gotButton, test.wantButton, response.Body.String())
-			}
-		})
 	}
 }
 
