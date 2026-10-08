@@ -411,6 +411,15 @@ func TestAddEntryFailures(t *testing.T) {
 			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
+			name: "missing file is not found",
+			values: addEntryValues("missing.cue", [][2]string{
+				{"Name", "Contact"}, {"Email", "valid@example.test"},
+			}),
+			origin:     "http://example.test",
+			wantStatus: http.StatusNotFound,
+			wantNotice: "file not found: path=missing.cue",
+		},
+		{
 			name: "unknown field is rejected",
 			values: addEntryValues("core1.cue", [][2]string{
 				{"Name", "Contact"}, {"Email", "valid@example.test"}, {"notAField", "value"},

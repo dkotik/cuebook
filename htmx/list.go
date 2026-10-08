@@ -22,6 +22,25 @@ import (
 	"github.com/yuin/goldmark/v2/util"
 )
 
+type FileNotFound struct {
+	Path string
+}
+
+func (e *FileNotFound) Error() string {
+	return fmt.Sprintf("file not found: path=%s", e.Path)
+}
+
+func (e *FileNotFound) HyperTextStatusCode() int {
+	return http.StatusNotFound
+}
+
+func documentReadError(filePath string, status int, message string) error {
+	if status == http.StatusNotFound {
+		return &FileNotFound{Path: filePath}
+	}
+	return errors.New(message)
+}
+
 type pageData struct {
 	Files             []fileTreeNode
 	ArchiveFiles      []fileTreeNode
@@ -68,7 +87,7 @@ func (a *handler) list(_ context.Context, request *listRequest) (listResponse, e
 		if message == "" {
 			message = data.DocumentError
 		}
-		return listResponse{}, errors.New(message)
+		return listResponse{}, documentReadError(request.File, status, message)
 	}
 	return listResponse{pageData: data}, nil
 }

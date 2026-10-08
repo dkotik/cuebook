@@ -11,6 +11,22 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
+type ItemNotFoundError struct {
+	Path      string
+	ByteRange cuebook.ByteRange
+}
+
+func (e *ItemNotFoundError) Error() string {
+	if e.ByteRange == (cuebook.ByteRange{}) {
+		return fmt.Sprintf("item not found: path=%s", e.Path)
+	}
+	return fmt.Sprintf("item not found: path=%s byteRange=%d-%d", e.Path, e.ByteRange.Head, e.ByteRange.Tail)
+}
+
+func (e *ItemNotFoundError) HyperTextStatusCode() int {
+	return http.StatusNotFound
+}
+
 type ItemRequest struct {
 	cuebook.ByteRange
 	Path string
@@ -75,7 +91,7 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 	}
 	raw, document, status, message := a.readDocument(filePath, fileNames)
 	if status != http.StatusOK {
-		return itemResponse{}, errors.New(message)
+		return itemResponse{}, documentReadError(filePath, status, message)
 	}
 
 	var selected *entryView
@@ -96,7 +112,7 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 		index++
 	}
 	if selected == nil {
-		return itemResponse{}, errors.New("404 page not found")
+		return itemResponse{}, &ItemNotFoundError{Path: filePath, ByteRange: requestedRange}
 	}
 
 	page := a.basePage(fileNames, filePath, "")

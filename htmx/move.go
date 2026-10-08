@@ -37,13 +37,19 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 	}
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	if status != http.StatusOK {
-		return moveResponse{}, errors.New(message)
+		return moveResponse{}, documentReadError(fileName, status, message)
 	}
 
 	from, err := strconv.Atoi(request.From)
-	length, _ := document.Len()
-	if err != nil || from < 0 || from >= length {
+	if err != nil {
 		return moveResponse{}, errors.New("The entry position is invalid.")
+	}
+	length, err := document.Len()
+	if err != nil {
+		return moveResponse{}, errors.New("Unable to read the entry count.")
+	}
+	if from < 0 || from >= length {
+		return moveResponse{}, &ItemNotFoundError{Path: fileName}
 	}
 	if request.Destination != "" {
 		data, err := a.transferEntry(fileName, request.Destination, raw, document, from, fileNames)
@@ -51,8 +57,11 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 	}
 
 	to, err := strconv.Atoi(request.To)
-	if err != nil || to < 0 || to >= length {
+	if err != nil {
 		return moveResponse{}, errors.New("The entry position is invalid.")
+	}
+	if to < 0 || to >= length {
+		return moveResponse{}, &ItemNotFoundError{Path: fileName}
 	}
 	if from == to {
 		data, err := a.renderEditedFile(fileName)
@@ -90,11 +99,11 @@ func (a *handler) transferEntry(sourceName, destinationName string, sourceRaw []
 
 	destinationRaw, _, status, message := a.readDocument(destinationName, fileNames)
 	if status != http.StatusOK {
-		return pageData{}, errors.New(message)
+		return pageData{}, documentReadError(destinationName, status, message)
 	}
 	sourceEntryValue, err := sourceDocument.GetValue(from)
 	if err != nil {
-		return pageData{}, errors.New("The source entry could not be found.")
+		return pageData{}, &ItemNotFoundError{Path: sourceName}
 	}
 	destinationEntryValue, _, err := entryValueWithoutConstraints(sourceEntryValue)
 	if err != nil {

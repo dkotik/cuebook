@@ -21,8 +21,7 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] re-introduce 404 Not Found errors to htmx package
-- [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value.
+- [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
   - [ ] fill out @item.go with an HTMX view that shows one list item fetched by UUID
 - [x] HTMX interface
   - [ ] divide @detail decorated properties from the rest of the properties in cards. They should show only when card is :target?

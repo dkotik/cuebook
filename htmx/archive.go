@@ -43,13 +43,19 @@ func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveRe
 	}
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	if status != http.StatusOK {
-		return archiveResponse{}, errors.New(message)
+		return archiveResponse{}, documentReadError(fileName, status, message)
 	}
 
 	from, err := strconv.Atoi(request.Entry)
-	length, lengthErr := document.Len()
-	if err != nil || lengthErr != nil || from < 0 || from >= length {
+	if err != nil {
 		return archiveResponse{}, errors.New("The entry position is invalid.")
+	}
+	length, lengthErr := document.Len()
+	if lengthErr != nil {
+		return archiveResponse{}, errors.New("Unable to read the entry count.")
+	}
+	if from < 0 || from >= length {
+		return archiveResponse{}, &ItemNotFoundError{Path: fileName}
 	}
 
 	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
@@ -64,7 +70,7 @@ func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveRe
 		return archiveResponse{}, errors.New("Unable to list CUE files.")
 	}
 	if !containsFile(fileNames, archiveName) {
-		return archiveResponse{}, errors.New("The archive file is not available in this source.")
+		return archiveResponse{}, &FileNotFound{Path: archiveName}
 	}
 
 	data, err := a.transferEntry(fileName, archiveName, raw, document, from, fileNames)

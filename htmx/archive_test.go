@@ -122,8 +122,16 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 			file:       "source.cue",
 			entry:      100,
 			origin:     "http://example.test",
-			wantStatus: http.StatusInternalServerError,
-			wantNotice: "The entry position is invalid.",
+			wantStatus: http.StatusNotFound,
+			wantNotice: "item not found: path=source.cue",
+		},
+		{
+			name:       "missing source file",
+			file:       "missing.cue",
+			entry:      0,
+			origin:     "http://example.test",
+			wantStatus: http.StatusNotFound,
+			wantNotice: "file not found: path=missing.cue",
 		},
 		{
 			name:       "entry already in archive",

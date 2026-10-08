@@ -40,16 +40,19 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 	}
 	_, document, status, message := a.readDocument(request.File, fileNames)
 	if status != http.StatusOK {
-		return editFormResponse{}, errors.New(message)
+		return editFormResponse{}, documentReadError(request.File, status, message)
 	}
 
 	entryIndex, err := strconv.Atoi(request.Entry)
-	if err != nil || entryIndex < 0 {
+	if err != nil {
 		return editFormResponse{}, errors.New("The entry index is invalid.")
+	}
+	if entryIndex < 0 {
+		return editFormResponse{}, &ItemNotFoundError{Path: request.File}
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		return editFormResponse{}, errors.New("Entry not found.")
+		return editFormResponse{}, &ItemNotFoundError{Path: request.File}
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
@@ -57,7 +60,7 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 	}
 	field, ok := entry.GetFieldByName(request.Field)
 	if !ok || request.Field == "" {
-		return editFormResponse{}, errors.New("Field not found.")
+		return editFormResponse{}, &ItemNotFoundError{Path: request.File}
 	}
 
 	view := makeFieldView(field, request.File, entryIndex, false)
@@ -98,16 +101,19 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 	}
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	if status != http.StatusOK {
-		return editResponse{}, errors.New(message)
+		return editResponse{}, documentReadError(fileName, status, message)
 	}
 
 	entryIndex, err := strconv.Atoi(request.Entry)
-	if err != nil || entryIndex < 0 {
+	if err != nil {
 		return editResponse{}, errors.New("The entry index is invalid.")
+	}
+	if entryIndex < 0 {
+		return editResponse{}, &ItemNotFoundError{Path: fileName}
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		return editResponse{}, errors.New("Entry not found.")
+		return editResponse{}, &ItemNotFoundError{Path: fileName}
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
@@ -116,7 +122,7 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 	fieldName := request.Field
 	field, ok := entry.GetFieldByName(fieldName)
 	if !ok || fieldName == "" {
-		return editResponse{}, errors.New("Field not found.")
+		return editResponse{}, &ItemNotFoundError{Path: fileName}
 	}
 	if isSecretField(field.Value) && value == "" && field.String() != "" {
 		data, err := a.renderEditedFile(fileName)
@@ -146,6 +152,9 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 
 func (a *handler) renderEditedFile(fileName string) (pageData, error) {
 	data, status := a.loadPage(fileName, "")
+	if status == http.StatusNotFound {
+		return pageData{}, &FileNotFound{Path: fileName}
+	}
 	if status != http.StatusOK {
 		return pageData{}, errors.New("The edit was saved, but the updated document could not be displayed.")
 	}

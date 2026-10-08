@@ -138,14 +138,16 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 			path:       filePath,
 			head:       "0",
 			tail:       "1",
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusNotFound,
+			contains:   []string{"item not found: path=people.cue byteRange=0-1"},
 		},
 		{
 			name:       "unknown file is not found",
 			path:       "missing.cue",
 			head:       strconv.Itoa(secondRange.Head),
 			tail:       strconv.Itoa(secondRange.Tail),
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusNotFound,
+			contains:   []string{"file not found: path=missing.cue"},
 		},
 	}
 

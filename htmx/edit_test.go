@@ -110,6 +110,30 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	if strings.Contains(viewResponse.Body.String(), `<form action="/edit"`) {
 		t.Fatal("cancel response unexpectedly contains an edit form")
 	}
+
+	formQuery.Set("field", "notAField")
+	missingFieldRequest := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+formQuery.Encode(), nil)
+	missingFieldRequest.Header.Set("HX-Request", "true")
+	missingFieldResponse := httptest.NewRecorder()
+	handler.ServeHTTP(missingFieldResponse, missingFieldRequest)
+	if missingFieldResponse.Code != http.StatusNotFound {
+		t.Fatalf("missing field form status = %d, want %d; body: %s", missingFieldResponse.Code, http.StatusNotFound, missingFieldResponse.Body.String())
+	}
+	if !strings.Contains(missingFieldResponse.Body.String(), "item not found: path=core1.cue") {
+		t.Fatalf("missing field form response does not identify the missing item: %s", missingFieldResponse.Body.String())
+	}
+
+	formQuery.Set("file", "missing.cue")
+	missingRequest := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+formQuery.Encode(), nil)
+	missingRequest.Header.Set("HX-Request", "true")
+	missingResponse := httptest.NewRecorder()
+	handler.ServeHTTP(missingResponse, missingRequest)
+	if missingResponse.Code != http.StatusNotFound {
+		t.Fatalf("missing file form status = %d, want %d; body: %s", missingResponse.Code, http.StatusNotFound, missingResponse.Body.String())
+	}
+	if !strings.Contains(missingResponse.Body.String(), "file not found: path=missing.cue") {
+		t.Fatalf("missing file form response does not identify the missing file: %s", missingResponse.Body.String())
+	}
 }
 
 func TestReadOnlySourceRejectsOpeningEditForm(t *testing.T) {
@@ -250,22 +274,22 @@ func TestEditFailures(t *testing.T) {
 			name:       "missing field is not found",
 			values:     editValues("core1.cue", "0", "notAField", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusInternalServerError,
-			wantNotice: "Field not found.",
+			wantStatus: http.StatusNotFound,
+			wantNotice: "item not found: path=core1.cue",
 		},
 		{
 			name:       "out of range entry is not found",
 			values:     editValues("core1.cue", "9", "Name", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusInternalServerError,
-			wantNotice: "Entry not found.",
+			wantStatus: http.StatusNotFound,
+			wantNotice: "item not found: path=core1.cue",
 		},
 		{
 			name:       "path traversal is not found",
 			values:     editValues("../core1.cue", "0", "Name", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusInternalServerError,
-			wantNotice: "CUE file not found.",
+			wantStatus: http.StatusNotFound,
+			wantNotice: "file not found: path=../core1.cue",
 		},
 		{
 			name:       "cross-origin submit is forbidden",

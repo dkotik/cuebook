@@ -107,8 +107,18 @@ func TestMoveRejectsReadOnlyAndInvalidIndexes(t *testing.T) {
 		t.Fatal(err)
 	}
 	response = submitMove(t, writable, "core1.cue", 0, 100, "http://example.test", true)
-	if response.Code != http.StatusInternalServerError {
-		t.Fatalf("invalid position status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("invalid position status = %d, want %d; body: %s", response.Code, http.StatusNotFound, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), "item not found: path=core1.cue") {
+		t.Fatalf("invalid position response does not identify the missing item: %s", response.Body.String())
+	}
+	response = submitMove(t, writable, "missing.cue", 0, 1, "http://example.test", true)
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("missing source status = %d, want %d; body: %s", response.Code, http.StatusNotFound, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), "file not found: path=missing.cue") {
+		t.Fatalf("missing source response does not identify the missing file: %s", response.Body.String())
 	}
 	if committer.calls != 0 {
 		t.Fatalf("committer calls = %d, want 0", committer.calls)
@@ -262,8 +272,8 @@ func TestMoveTransferFailures(t *testing.T) {
 			name:        "unknown destination",
 			documents:   transferTestDocuments(),
 			destination: "../outside.cue",
-			wantStatus:  http.StatusInternalServerError,
-			wantNotice:  "CUE file not found.",
+			wantStatus:  http.StatusNotFound,
+			wantNotice:  "file not found: path=../outside.cue",
 		},
 		{
 			name: "destination constraint failure leaves both files unchanged",

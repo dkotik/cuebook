@@ -41,7 +41,7 @@ func (a *handler) add(_ context.Context, request *addRequest) (addResponse, erro
 	}
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	if status != http.StatusOK {
-		return addResponse{}, errors.New(message)
+		return addResponse{}, documentReadError(fileName, status, message)
 	}
 	fieldNames := make([]string, len(request.Entries))
 	values := make([]string, len(request.Entries))
