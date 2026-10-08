@@ -43,8 +43,7 @@ func itemRequestFromQuery(query url.Values) (ItemRequest, error) {
 }
 
 func itemFailure(status int, message string) (itemResponse, error) {
-	response := itemResponse{message: message}
-	return responseResult(response, responseErrorForStatus(status))
+	return itemResponse{}, responseErrorForStatus(status, message)
 }
 
 type itemRouteRequest struct {
@@ -59,7 +58,6 @@ func (*itemRouteRequest) Validate(context.Context) error { return nil }
 type itemResponse struct {
 	pageData
 	entryView
-	message string
 }
 
 func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse, error) {

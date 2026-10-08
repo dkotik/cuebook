@@ -8,41 +8,61 @@ import (
 	"github.com/dkotik/htadaptor"
 )
 
-type responseFailure struct {
+type httpStatusError struct {
+	status  int
+	message string
+}
+
+var _ htadaptor.Error = (*httpStatusError)(nil)
+
+func (e *httpStatusError) Error() string {
+	return e.message
+}
+
+func (e *httpStatusError) HyperTextStatusCode() int {
+	return e.status
+}
+
+type retryAfterError struct {
 	cause error
-	value any
+	value string
 }
 
-func (e *responseFailure) Error() string {
-	return "domain response requires a non-success HTTP status"
+func (e *retryAfterError) Error() string {
+	return e.cause.Error()
 }
 
-func (e *responseFailure) Unwrap() error {
+func (e *retryAfterError) Unwrap() error {
 	return e.cause
 }
 
-type responseStatusError int
-
-func (e responseStatusError) Error() string {
-	return fmt.Sprintf("HTTP status %d", int(e))
+func (e *retryAfterError) RetryAfter() string {
+	return e.value
 }
 
-func (e responseStatusError) HyperTextStatusCode() int {
-	return int(e)
-}
-
-func responseErrorForStatus(status int) error {
+func responseErrorForStatus(status int, message string) error {
 	if status == 0 || status == http.StatusOK {
 		return nil
 	}
-	return responseStatusError(status)
+	if message == "" {
+		message = http.StatusText(status)
+		if message == "" {
+			message = fmt.Sprintf("HTTP status %d", status)
+		}
+	}
+	if status == http.StatusInternalServerError {
+		return errors.New(message)
+	}
+	return &httpStatusError{status: status, message: message}
 }
 
-func responseResult[T any](value T, cause error) (T, error) {
-	if cause == nil {
-		return value, nil
+func pageResponseMessage(data pageData) string {
+	for _, message := range []string{data.Error, data.AddError, data.DocumentError} {
+		if message != "" {
+			return message
+		}
 	}
-	return value, &responseFailure{cause: cause, value: value}
+	return ""
 }
 
 func pageValues(data pageData) pageData {
@@ -52,72 +72,39 @@ func pageValues(data pageData) pageData {
 
 func editResponseFrom(data pageData, status int) (editResponse, error) {
 	response := editResponse{pageData: pageValues(data)}
-	return responseResult(response, responseErrorForStatus(status))
+	return response, responseErrorForStatus(status, pageResponseMessage(data))
 }
 
 func addResponseFrom(data pageData, status int) (addResponse, error) {
 	response := addResponse{pageData: pageValues(data)}
-	return responseResult(response, responseErrorForStatus(status))
+	return response, responseErrorForStatus(status, pageResponseMessage(data))
 }
 
 func moveResponseFrom(data pageData, status int) (moveResponse, error) {
 	response := moveResponse{pageData: pageValues(data)}
-	return responseResult(response, responseErrorForStatus(status))
+	return response, responseErrorForStatus(status, pageResponseMessage(data))
 }
 
 func archiveResponseFrom(data pageData, status int) (archiveResponse, error) {
 	response := archiveResponse{pageData: pageValues(data)}
-	return responseResult(response, responseErrorForStatus(status))
+	return response, responseErrorForStatus(status, pageResponseMessage(data))
 }
 
-func responseErrorHandler(encoder htadaptor.Encoder) htadaptor.ErrorHandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request, err error) {
-		var failure *responseFailure
-		if errors.As(err, &failure) {
-			writeResponseFailure(w, r, failure, encoder)
-			return
-		}
-
-		status := htadaptor.GetHyperTextStatusCode(err)
+func responseErrorHandler() htadaptor.ErrorHandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request, err error) {
 		var decodingError *htadaptor.DecodingError
 		message := err.Error()
 		if errors.As(err, &decodingError) {
-			status = http.StatusBadRequest
 			message = "The request is invalid."
 		}
-		http.Error(w, message, status)
-	}
-}
 
-func writeResponseFailure(w http.ResponseWriter, r *http.Request, failure *responseFailure, encoder htadaptor.Encoder) {
-	status := htadaptor.GetHyperTextStatusCode(failure)
-	switch response := failure.value.(type) {
-	case itemResponse:
-		if response.message != "" {
-			_ = writeText(w, status, response.message)
-			return
-		}
-	case editFormResponse:
-		if response.message != "" {
-			_ = writeText(w, status, response.message)
-			return
-		}
-	case searchResponse:
-		if response.retryAfter != "" {
-			w.Header().Set("Retry-After", response.retryAfter)
-		}
-		if response.message != "" {
-			_ = writeText(w, status, response.message)
-			return
+		var retryAfter interface{ RetryAfter() string }
+		if errors.As(err, &retryAfter) {
+			if value := retryAfter.RetryAfter(); value != "" {
+				w.Header().Set("Retry-After", value)
+			}
 		}
 
+		http.Error(w, message, htadaptor.GetHyperTextStatusCode(err))
 	}
-	if err := encoder.Encode(w, r, status, failure.value); err != nil {
-		http.Error(w, "Unable to encode the response.", http.StatusInternalServerError)
-	}
-}
-
-func writeText(w http.ResponseWriter, status int, message string) error {
-	http.Error(w, message, status)
-	return nil
 }

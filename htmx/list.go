@@ -64,7 +64,7 @@ type listResponse struct {
 func (a *handler) list(_ context.Context, request *listRequest) (listResponse, error) {
 	data, status := a.loadPage(request.File, "")
 	response := listResponse{pageData: pageValues(data)}
-	return responseResult(response, responseErrorForStatus(status))
+	return response, responseErrorForStatus(status, pageResponseMessage(data))
 }
 
 func (a *handler) loadPage(fileName, notice string) (pageData, int) {

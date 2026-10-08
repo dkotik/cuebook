@@ -132,7 +132,7 @@ func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
 				app.searchFS = completedSearchFS{FS: fstest.MapFS{}}
 			}
 			request := httptest.NewRequest(http.MethodGet, "http://example.test"+test.path, nil)
-			response, err := app.search(context.Background(), &searchRequest{
+			_, err := app.search(context.Background(), &searchRequest{
 				Query: request.URL.Query().Get("q"),
 				Alt:   request.URL.Query().Get("query"),
 			})
@@ -143,8 +143,8 @@ func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
 			} else if status := htadaptor.GetHyperTextStatusCode(err); status != test.wantStatus {
 				t.Fatalf("error status = %d, want %d; error: %v", status, test.wantStatus, err)
 			}
-			if !strings.Contains(response.message, test.wantBody) {
-				t.Errorf("message does not contain %q: %s", test.wantBody, response.message)
+			if err == nil || !strings.Contains(err.Error(), test.wantBody) {
+				t.Errorf("error does not contain %q: %v", test.wantBody, err)
 			}
 		})
 	}

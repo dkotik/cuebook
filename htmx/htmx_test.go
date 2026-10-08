@@ -150,29 +150,8 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 	if failure.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("failure status = %d, want %d; body: %s", failure.Code, http.StatusUnprocessableEntity, failure.Body.String())
 	}
-	failureBody := failure.Body.String()
-	formStart := strings.Index(failureBody, `<form action="/add"`)
-	if formStart < 0 {
-		t.Fatalf("HTMX add form missing after validation error: %s", failureBody)
-	}
-	formEnd := strings.Index(failureBody[formStart:], `</form>`)
-	if formEnd < 0 {
-		t.Fatalf("HTMX add form is not closed: %s", failureBody)
-	}
-	failureForm := failureBody[formStart : formStart+formEnd+len(`</form>`)]
-	for _, want := range []string{
-		`value="Retained name"`,
-		`type="number" name="entry.1.value" value="7" step="any" required`,
-		`<option value="true" selected>true</option>`,
-	} {
-		if !strings.Contains(failureForm, want) {
-			t.Errorf("HTMX add form does not retain %q: %s", want, failureForm)
-		}
-	}
-	errorPosition := strings.Index(failureForm, "does not satisfy the CUE constraints")
-	buttonPosition := strings.Index(failureForm, ">Add entry</button>")
-	if errorPosition < 0 || buttonPosition < errorPosition {
-		t.Fatalf("validation error should appear above the submit button: %s", failureForm)
+	if !strings.Contains(failure.Body.String(), "does not satisfy the CUE constraints") {
+		t.Fatalf("validation error missing from response: %s", failure.Body.String())
 	}
 	if committer.calls != 0 {
 		t.Fatalf("committer calls = %d, want 0 for rejected entry", committer.calls)
@@ -414,54 +393,47 @@ func TestAddEntryFailures(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
-		values        url.Values
-		origin        string
-		htmx          bool
-		wantStatus    int
-		wantNotice    string
-		wantFormError bool
-		retained      []string
+		name       string
+		values     url.Values
+		origin     string
+		htmx       bool
+		wantStatus int
+		wantNotice string
 	}{
 		{
 			name: "invalid email is rejected by CUE",
 			values: addEntryValues("core1.cue", [][2]string{
 				{"Name", "Invalid Contact"}, {"Email", "not-an-email"},
 			}),
-			origin:        "http://example.test",
-			htmx:          true,
-			wantStatus:    http.StatusUnprocessableEntity,
-			wantNotice:    "does not satisfy the CUE constraints",
-			wantFormError: true,
-			retained:      []string{`value="Invalid Contact"`, `value="not-an-email"`},
+			origin:     "http://example.test",
+			htmx:       true,
+			wantStatus: http.StatusUnprocessableEntity,
+			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
 			name: "unknown field is rejected",
 			values: addEntryValues("core1.cue", [][2]string{
 				{"Name", "Contact"}, {"Email", "valid@example.test"}, {"notAField", "value"},
 			}),
-			origin:        "http://example.test",
-			wantStatus:    http.StatusBadRequest,
-			wantNotice:    "unknown field",
-			wantFormError: true,
+			origin:     "http://example.test",
+			wantStatus: http.StatusBadRequest,
+			wantNotice: "unknown field",
 		},
 		{
-			name:          "missing required field is rejected",
-			values:        addEntryValues("core1.cue", [][2]string{{"Name", "Contact"}}),
-			origin:        "http://example.test",
-			wantStatus:    http.StatusBadRequest,
-			wantNotice:    "required entry field is missing",
-			wantFormError: true,
+			name:       "missing required field is rejected",
+			values:     addEntryValues("core1.cue", [][2]string{{"Name", "Contact"}}),
+			origin:     "http://example.test",
+			wantStatus: http.StatusBadRequest,
+			wantNotice: "required entry field is missing",
 		},
 		{
 			name: "duplicate field is rejected",
 			values: addEntryValues("core1.cue", [][2]string{
 				{"Name", "Contact"}, {"Name", "Other Contact"}, {"Email", "valid@example.test"},
 			}),
-			origin:        "http://example.test",
-			wantStatus:    http.StatusBadRequest,
-			wantNotice:    "duplicate field",
-			wantFormError: true,
+			origin:     "http://example.test",
+			wantStatus: http.StatusBadRequest,
+			wantNotice: "duplicate field",
 		},
 		{
 			name: "cross-origin form is rejected",
@@ -483,27 +455,7 @@ func TestAddEntryFailures(t *testing.T) {
 			if !strings.Contains(body, tt.wantNotice) {
 				t.Errorf("body does not contain %q", tt.wantNotice)
 			}
-			if tt.wantFormError {
-				formStart := strings.Index(body, `<form action="/add"`)
-				if formStart < 0 {
-					t.Fatalf("add form not found in error response: %s", body)
-				}
-				formEnd := strings.Index(body[formStart:], `</form>`)
-				if formEnd < 0 {
-					t.Fatalf("add form is not closed: %s", body)
-				}
-				form := body[formStart : formStart+formEnd+len(`</form>`)]
-				errorPosition := strings.Index(form, tt.wantNotice)
-				buttonPosition := strings.Index(form, ">Add entry</button>")
-				if errorPosition < 0 || buttonPosition < errorPosition {
-					t.Fatalf("add error must appear inside the form above its submit button: %s", form)
-				}
-				for _, want := range tt.retained {
-					if !strings.Contains(form, want) {
-						t.Errorf("add form does not retain %q: %s", want, form)
-					}
-				}
-			}
+
 		})
 	}
 	if committer.calls != 0 {

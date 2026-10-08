@@ -224,30 +224,27 @@ func TestEditFailures(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
-		values        url.Values
-		origin        string
-		htmx          bool
-		wantStatus    int
-		wantNotice    string
-		preserveValue string
+		name       string
+		values     url.Values
+		origin     string
+		htmx       bool
+		wantStatus int
+		wantNotice string
 	}{
 		{
-			name:          "invalid email is rejected by cue validation",
-			values:        editValues("core1.cue", "0", "Email", "not-an-email"),
-			origin:        "http://example.test",
-			wantStatus:    http.StatusUnprocessableEntity,
-			wantNotice:    "does not satisfy the CUE constraints",
-			preserveValue: "not-an-email",
+			name:       "invalid email is rejected by cue validation",
+			values:     editValues("core1.cue", "0", "Email", "not-an-email"),
+			origin:     "http://example.test",
+			wantStatus: http.StatusUnprocessableEntity,
+			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
-			name:          "htmx validation error retains the submitted value",
-			values:        editValues("core1.cue", "0", "Email", "not-an-email"),
-			origin:        "http://example.test",
-			htmx:          true,
-			wantStatus:    http.StatusUnprocessableEntity,
-			wantNotice:    "does not satisfy the CUE constraints",
-			preserveValue: "not-an-email",
+			name:       "htmx validation error reports its status",
+			values:     editValues("core1.cue", "0", "Email", "not-an-email"),
+			origin:     "http://example.test",
+			htmx:       true,
+			wantStatus: http.StatusUnprocessableEntity,
+			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
 			name:       "missing field is not found",
@@ -288,9 +285,7 @@ func TestEditFailures(t *testing.T) {
 			if !strings.Contains(response.Body.String(), tt.wantNotice) {
 				t.Errorf("body does not contain %q", tt.wantNotice)
 			}
-			if tt.preserveValue != "" && !strings.Contains(response.Body.String(), `name="value" value="`+tt.preserveValue+`"`) {
-				t.Errorf("validation response does not preserve the submitted value %q: %s", tt.preserveValue, response.Body.String())
-			}
+
 		})
 	}
 	if committer.calls != 0 {

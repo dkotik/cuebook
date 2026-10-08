@@ -50,13 +50,14 @@ func (a *handler) searchClearButton(_ context.Context, request *searchClearReque
 
 type searchResponse struct {
 	searchResultsView
-	message    string
-	retryAfter string
 }
 
 func searchFailure(status int, message, retryAfter string) (searchResponse, error) {
-	response := searchResponse{message: message, retryAfter: retryAfter}
-	return responseResult(response, responseErrorForStatus(status))
+	err := responseErrorForStatus(status, message)
+	if retryAfter != "" && err != nil {
+		err = &retryAfterError{cause: err, value: retryAfter}
+	}
+	return searchResponse{}, err
 }
 
 type searchRequest struct {

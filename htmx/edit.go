@@ -14,8 +14,7 @@ import (
 )
 
 func editFormFailure(status int, message string) (editFormResponse, error) {
-	response := editFormResponse{message: message}
-	return responseResult(response, responseErrorForStatus(status))
+	return editFormResponse{}, responseErrorForStatus(status, message)
 }
 
 type editFormRequest struct {
@@ -32,7 +31,6 @@ func (*editFormRequest) Validate(context.Context) error {
 type editFormResponse struct {
 	fieldView
 	templateName string
-	message      string
 }
 
 func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFormResponse, error) {
