@@ -1,0 +1,21 @@
+<div class="field field-item">
+  <form action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-target="#workspace" hx-swap="outerHTML">
+    <input type="hidden" name="file" value="{{.File}}">
+    <input type="hidden" name="entry" value="{{.Index}}">
+    <input type="hidden" name="field" value="{{.Name}}">
+    <label>
+      <span class="field-name label">{{.Name}}:</span>
+      {{if .Secret}}
+        <input class="input" type="password" name="value" value="{{if .Editing}}{{.Value}}{{end}}" autocomplete="new-password" placeholder="Leave blank to keep current value">
+      {{else if .MultiLine}}
+        <textarea class="textarea" name="value" rows="3">{{.Value}}</textarea>
+      {{else}}
+        <input class="input" type="text" name="value" value="{{.Value}}">
+      {{end}}
+    </label>
+    <div class="field-edit-actions">
+      <button class="button is-link" type="submit">Save</button>
+      <button class="button is-light" type="button" hx-get="{{route .ViewURL}}" hx-target="closest .field-item" hx-swap="outerHTML">Cancel</button>
+    </div>
+  </form>
+</div>

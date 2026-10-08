@@ -1,0 +1,43 @@
+<main id="workspace" tabindex="-1" aria-live="polite">
+  {{if .Error}}<p class="notice notification is-danger" role="alert">{{.Error}}</p>{{end}}
+  {{if .Selected}}
+    <h1 class="document-title title is-4">{{.FileTitle}}</h1>
+    {{- with .FileDescription -}}
+      {{ . }}
+    {{- end -}}
+    {{if .ReadOnly}}<p class="muted">Read-only source</p>{{end}}
+    {{if .DocumentError}}
+      <p class="notice notification is-danger" role="alert">{{.DocumentError}}</p>
+    {{else if .SelectedEntry}}
+      {{template "entry-item.html" .SelectedEntry}}
+    {{else if .Entries}}
+      <div class="grid is-col-min-16 is-gap-2 entries-grid">
+        {{range .Entries}}{{template "entry-list.html" .}}{{end}}
+      </div>
+    {{else}}
+      <p class="muted">This document has no entries.</p>
+    {{end}}
+    {{if and (not .SelectedEntry) .AddFields}}
+    <section class="add-entry box" aria-labelledby="add-entry-heading">
+      <h2 id="add-entry-heading">Add entry</h2>
+      <form action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="outerHTML">
+        <input type="hidden" name="file" value="{{.Selected}}">
+        {{range .RequiredAddFields}}{{template "add-entry-field.html" .}}{{end}}
+        {{if .OptionalAddFields}}
+        <remember-details data-storage-key="add-entry-optional">
+          <summary>Optional fields</summary>
+          <div id="add-entry-optional-content" data-details-content>
+            {{range .OptionalAddFields}}{{template "add-entry-field.html" .}}{{end}}
+          </div>
+        </remember-details>
+        {{end}}
+        {{if .AddError}}<p class="notice notification is-danger add-entry-error" role="alert">{{.AddError}}</p>{{end}}
+        <button class="button is-link" type="submit">Add entry</button>
+      </form>
+    </section>
+    {{end}}
+  {{else}}
+    <h1 class="title is-4">Select a CUE file</h1>
+    <p class="muted">Choose a file from the tree to view its entries.</p>
+  {{end}}
+</main>

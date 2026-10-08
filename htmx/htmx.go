@@ -28,7 +28,7 @@ import (
 	"github.com/dkotik/htadaptor"
 )
 
-//go:embed templates/page.html
+//go:embed templates/*.html
 var templateFiles embed.FS
 
 //go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/delete-confirm.js assets/move-confirm.js assets/live-reload.js assets/favicon.svg
@@ -76,7 +76,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		"route": func(target string) string {
 			return routeWithPrefix(config.ServeMuxPrefix, target)
 		},
-	}).ParseFS(templateFiles, "templates/page.html")
+	}).ParseFS(templateFiles, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("htmx: parse page templates: %w", err)
 	}
@@ -95,7 +95,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	errorHandler := htadaptor.NewErrorHandlerFromTemplate(htadaptor.DefaultErrorTemplate())
 	listPageHandler, err := config.Adaptor.AdaptFunc(app.list,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
 		htadaptor.WithQueryValues("file"),
 	)
 	if err != nil {
@@ -103,7 +103,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	}
 	listWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.list,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("workspace")),
+		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
 		htadaptor.WithQueryValues("file"),
 	)
 	if err != nil {
@@ -113,7 +113,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	editFormHandler, err := config.Adaptor.AdaptFunc(app.editForm,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("field-form")),
+		htadaptor.WithTemplate(templates.Lookup("field-form.html")),
 		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
 	)
 	if err != nil {
@@ -121,7 +121,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	}
 	editFieldHandler, err := config.Adaptor.AdaptFunc(app.editForm,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("field")),
+		htadaptor.WithTemplate(templates.Lookup("field.html")),
 		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
 	)
 	if err != nil {
@@ -134,7 +134,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	itemPageHandler, err := config.Adaptor.AdaptFunc(app.item,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
 		htadaptor.WithQueryValues("path", "file", "head", "tail"),
 	)
 	if err != nil {
@@ -142,7 +142,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	}
 	itemFragmentHandler, err := config.Adaptor.AdaptFunc(app.item,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("entry-item")),
+		htadaptor.WithTemplate(templates.Lookup("entry-item.html")),
 		htadaptor.WithQueryValues("path", "file", "head", "tail"),
 	)
 	if err != nil {
@@ -152,7 +152,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	searchHandler, err := config.Adaptor.AdaptFunc(app.search,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("search-results")),
+		htadaptor.WithTemplate(templates.Lookup("search-results.html")),
 		htadaptor.WithQueryValues("q", "query"),
 	)
 	if err != nil {
@@ -162,7 +162,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	clearButtonHandler, err := config.Adaptor.AdaptFunc(app.searchClearButton,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("search-clear-button")),
+		htadaptor.WithTemplate(templates.Lookup("search-clear-button.html")),
 		htadaptor.WithQueryValues("q"),
 	)
 	if err != nil {
@@ -208,14 +208,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	editPageHandler, err := config.Adaptor.AdaptFunc(app.edit,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit route: %w", err)
 	}
 	editWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.edit,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("workspace")),
+		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit HTMX route: %w", err)
@@ -224,14 +224,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	addPageHandler, err := config.Adaptor.AdaptFunc(app.add,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add route: %w", err)
 	}
 	addWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.add,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("workspace")),
+		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add HTMX route: %w", err)
@@ -240,14 +240,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	movePageHandler, err := config.Adaptor.AdaptFunc(app.move,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt move route: %w", err)
 	}
 	moveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.move,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("workspace")),
+		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt move HTMX route: %w", err)
@@ -256,14 +256,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	archivePageHandler, err := config.Adaptor.AdaptFunc(app.archive,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("page")),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt delete route: %w", err)
 	}
 	archiveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.archive,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("workspace")),
+		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt delete HTMX route: %w", err)

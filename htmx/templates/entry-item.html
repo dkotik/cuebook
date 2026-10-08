@@ -1,0 +1,17 @@
+<article class="card" id="entry-{{.Index}}" data-entry-index="{{.Index}}" data-file="{{.File}}">
+  <header class="card-header">
+    {{template "entry-heading.html" .}}
+    {{if .CanDelete}}
+    <form class="card-header-icon entry-delete-form" action="{{route "/delete"}}" method="post" hx-post="{{route "/delete"}}" hx-target="#workspace" hx-swap="outerHTML">
+      <input type="hidden" name="file" value="{{.File}}">
+      <input type="hidden" name="entry" value="{{.Index}}">
+      <button class="button is-ghost" type="submit" aria-label="Archive {{.Title}}" title="Archive {{.Title}}">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/>
+        </svg>
+      </button>
+    </form>
+    {{end}}
+  </header>
+  {{template "entry-content.html" .}}
+</article>
