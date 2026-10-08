@@ -97,8 +97,8 @@ func TestMoveRejectsReadOnlyAndInvalidIndexes(t *testing.T) {
 		t.Fatal(err)
 	}
 	response := submitMove(t, readOnly, "core1.cue", 0, 1, "http://example.test", true)
-	if response.Code != http.StatusForbidden {
-		t.Fatalf("read-only status = %d, want %d; body: %s", response.Code, http.StatusForbidden, response.Body.String())
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("read-only status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
 
 	committer := &recordingCommitter{}
@@ -107,8 +107,8 @@ func TestMoveRejectsReadOnlyAndInvalidIndexes(t *testing.T) {
 		t.Fatal(err)
 	}
 	response = submitMove(t, writable, "core1.cue", 0, 100, "http://example.test", true)
-	if response.Code != http.StatusBadRequest {
-		t.Fatalf("invalid position status = %d, want %d; body: %s", response.Code, http.StatusBadRequest, response.Body.String())
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("invalid position status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
 	if committer.calls != 0 {
 		t.Fatalf("committer calls = %d, want 0", committer.calls)
@@ -135,8 +135,8 @@ func TestMoveRejectsInvalidReorderedDocument(t *testing.T) {
 		t.Fatal(err)
 	}
 	response := submitMove(t, handler, "ordered.cue", 0, 1, "http://example.test", false)
-	if response.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusUnprocessableEntity, response.Body.String())
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
 	if !strings.Contains(response.Body.String(), "does not satisfy the CUE constraints") {
 		t.Fatalf("validation error missing from response: %s", response.Body.String())
@@ -255,14 +255,14 @@ func TestMoveTransferFailures(t *testing.T) {
 			documents:   transferTestDocuments(),
 			readOnly:    true,
 			destination: "destination.cue",
-			wantStatus:  http.StatusForbidden,
+			wantStatus:  http.StatusInternalServerError,
 			wantNotice:  "This source is read-only.",
 		},
 		{
 			name:        "unknown destination",
 			documents:   transferTestDocuments(),
 			destination: "../outside.cue",
-			wantStatus:  http.StatusNotFound,
+			wantStatus:  http.StatusInternalServerError,
 			wantNotice:  "CUE file not found.",
 		},
 		{
@@ -276,7 +276,7 @@ func TestMoveTransferFailures(t *testing.T) {
 `),
 			},
 			destination: "destination.cue",
-			wantStatus:  http.StatusUnprocessableEntity,
+			wantStatus:  http.StatusInternalServerError,
 			wantNotice:  "does not satisfy the destination file",
 		},
 		{
@@ -290,7 +290,7 @@ func TestMoveTransferFailures(t *testing.T) {
 `),
 			},
 			destination: "destination.cue",
-			wantStatus:  http.StatusUnprocessableEntity,
+			wantStatus:  http.StatusInternalServerError,
 			wantNotice:  "does not satisfy the source file",
 		},
 		{

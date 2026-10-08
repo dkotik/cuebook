@@ -111,14 +111,14 @@ func TestSearchHandlerChecksReadinessAndQuery(t *testing.T) {
 		{
 			name:       "index is still building",
 			path:       "/search?q=needle",
-			wantStatus: http.StatusServiceUnavailable,
+			wantStatus: http.StatusInternalServerError,
 			wantBody:   "The search index is still being built.",
 		},
 		{
 			name:       "missing query after indexing",
 			ready:      true,
 			path:       "/search",
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 			wantBody:   "A search query is required.",
 		},
 	}
@@ -226,7 +226,7 @@ func waitForSearchResponse(t *testing.T, handler http.Handler, query string) *ht
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		response := issueSearchRequest(t, handler, query)
-		if response.Code != http.StatusServiceUnavailable {
+		if !strings.Contains(response.Body.String(), "The search index is still being built.") {
 			return response
 		}
 		if time.Now().After(deadline) {

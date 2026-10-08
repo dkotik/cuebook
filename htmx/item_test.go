@@ -122,7 +122,7 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 			name:       "missing file path is rejected",
 			head:       strconv.Itoa(secondRange.Head),
 			tail:       strconv.Itoa(secondRange.Tail),
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 			contains:   []string{"The item request is invalid."},
 		},
 		{
@@ -130,7 +130,7 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 			path:       filePath,
 			head:       "not-an-integer",
 			tail:       strconv.Itoa(secondRange.Tail),
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 			contains:   []string{"The item request is invalid."},
 		},
 		{
@@ -138,14 +138,14 @@ func TestItemHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 			path:       filePath,
 			head:       "0",
 			tail:       "1",
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name:       "unknown file is not found",
 			path:       "missing.cue",
 			head:       strconv.Itoa(secondRange.Head),
 			tail:       strconv.Itoa(secondRange.Tail),
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusInternalServerError,
 		},
 	}
 

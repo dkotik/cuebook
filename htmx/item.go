@@ -2,6 +2,7 @@ package htmx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -42,10 +43,6 @@ func itemRequestFromQuery(query url.Values) (ItemRequest, error) {
 	}, nil
 }
 
-func itemFailure(status int, message string) (itemResponse, error) {
-	return itemResponse{}, responseErrorForStatus(status, message)
-}
-
 type itemRouteRequest struct {
 	Path string `schema:"path"`
 	File string `schema:"file"`
@@ -68,28 +65,28 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 	head, headErr := strconv.Atoi(input.Head)
 	tail, tailErr := strconv.Atoi(input.Tail)
 	if headErr != nil || tailErr != nil || head < 0 || tail <= head || filePath == "" {
-		return itemFailure(http.StatusBadRequest, "The item request is invalid.")
+		return itemResponse{}, errors.New("The item request is invalid.")
 	}
 	requestedRange := cuebook.ByteRange{Head: head, Tail: tail}
 
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return itemFailure(http.StatusInternalServerError, "Unable to list CUE files.")
+		return itemResponse{}, errors.New("Unable to list CUE files.")
 	}
 	raw, document, status, message := a.readDocument(filePath, fileNames)
 	if status != http.StatusOK {
-		return itemFailure(status, message)
+		return itemResponse{}, errors.New(message)
 	}
 
 	var selected *entryView
 	index := 0
 	for entry, err := range document.EachEntry() {
 		if err != nil {
-			return itemFailure(http.StatusUnprocessableEntity, "Unable to display this CUE document.")
+			return itemResponse{}, errors.New("Unable to display this CUE document.")
 		}
 		entryRange, err := cuebook.NewByteRange(entry.Value)
 		if err != nil {
-			return itemFailure(http.StatusUnprocessableEntity, "Unable to locate this item in the CUE file.")
+			return itemResponse{}, errors.New("Unable to locate this item in the CUE file.")
 		}
 		if entryRange == requestedRange {
 			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil)
@@ -99,7 +96,7 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 		index++
 	}
 	if selected == nil {
-		return itemFailure(http.StatusNotFound, "404 page not found")
+		return itemResponse{}, errors.New("404 page not found")
 	}
 
 	page := a.basePage(fileNames, filePath, "")
@@ -107,6 +104,5 @@ func (a *handler) item(_ context.Context, input *itemRouteRequest) (itemResponse
 	setFileFrontmatter(&page, filePath, raw)
 	page.SelectedEntry = selected
 
-	response := itemResponse{pageData: pageValues(page), entryView: *selected}
-	return response, nil
+	return itemResponse{pageData: page, entryView: *selected}, nil
 }

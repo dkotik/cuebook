@@ -120,8 +120,8 @@ func TestReadOnlySourceRejectsOpeningEditForm(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "http://example.test/edit?entry=0&field=Name&file=core1.cue", nil)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
-	if response.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusForbidden, response.Body.String())
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
 }
 
@@ -235,36 +235,36 @@ func TestEditFailures(t *testing.T) {
 			name:       "invalid email is rejected by cue validation",
 			values:     editValues("core1.cue", "0", "Email", "not-an-email"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusUnprocessableEntity,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
-			name:       "htmx validation error reports its status",
+			name:       "htmx validation error uses the default status",
 			values:     editValues("core1.cue", "0", "Email", "not-an-email"),
 			origin:     "http://example.test",
 			htmx:       true,
-			wantStatus: http.StatusUnprocessableEntity,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
 			name:       "missing field is not found",
 			values:     editValues("core1.cue", "0", "notAField", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "Field not found.",
 		},
 		{
 			name:       "out of range entry is not found",
 			values:     editValues("core1.cue", "9", "Name", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "Entry not found.",
 		},
 		{
 			name:       "path traversal is not found",
 			values:     editValues("../core1.cue", "0", "Name", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "CUE file not found.",
 		},
 		{
@@ -299,8 +299,8 @@ func TestReadOnlySourceRejectsEdits(t *testing.T) {
 		t.Fatal(err)
 	}
 	response := submitEdit(t, handler, false, editValues("core1.cue", "0", "Name", "Updated"))
-	if response.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusForbidden, response.Body.String())
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
 	if !strings.Contains(response.Body.String(), "This source is read-only.") {
 		t.Fatal("expected read-only explanation")

@@ -106,7 +106,7 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 			file:       "source.cue",
 			readOnly:   true,
 			origin:     "http://example.test",
-			wantStatus: http.StatusForbidden,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "This source is read-only.",
 		},
 		{
@@ -114,7 +114,7 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 			file:       "core1.cue",
 			noCreator:  true,
 			origin:     "http://example.test",
-			wantStatus: http.StatusNotImplemented,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "This source cannot create archive files.",
 		},
 		{
@@ -122,14 +122,14 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 			file:       "source.cue",
 			entry:      100,
 			origin:     "http://example.test",
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "The entry position is invalid.",
 		},
 		{
 			name:       "entry already in archive",
 			file:       archiveDirectory + "old.cue",
 			origin:     "http://example.test",
-			wantStatus: http.StatusForbidden,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "Entries in the archive cannot be deleted.",
 		},
 		{

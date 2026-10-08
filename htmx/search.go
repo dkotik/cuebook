@@ -2,7 +2,7 @@ package htmx
 
 import (
 	"context"
-	"net/http"
+	"errors"
 	"strings"
 
 	"github.com/dkotik/cuebook/patch"
@@ -52,14 +52,6 @@ type searchResponse struct {
 	searchResultsView
 }
 
-func searchFailure(status int, message, retryAfter string) (searchResponse, error) {
-	err := responseErrorForStatus(status, message)
-	if retryAfter != "" && err != nil {
-		err = &retryAfterError{cause: err, value: retryAfter}
-	}
-	return searchResponse{}, err
-}
-
 type searchRequest struct {
 	Query string `schema:"q"`
 	Alt   string `schema:"query"`
@@ -69,10 +61,10 @@ func (*searchRequest) Validate(context.Context) error { return nil }
 
 func (a *handler) search(_ context.Context, request *searchRequest) (searchResponse, error) {
 	if a.searchFS == nil || !a.searchFS.IndexReady() {
-		return searchFailure(http.StatusServiceUnavailable, "The search index is still being built.", "1")
+		return searchResponse{}, errors.New("The search index is still being built.")
 	}
 	if a.searchFS.IndexError() != nil {
-		return searchFailure(http.StatusInternalServerError, "Unable to build the search index.", "")
+		return searchResponse{}, errors.New("Unable to build the search index.")
 	}
 
 	query := strings.TrimSpace(request.Query)
@@ -80,12 +72,12 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 		query = strings.TrimSpace(request.Alt)
 	}
 	if query == "" {
-		return searchFailure(http.StatusBadRequest, "A search query is required.", "")
+		return searchResponse{}, errors.New("A search query is required.")
 	}
 
 	results, err := a.searchFS.Query(query)
 	if err != nil {
-		return searchFailure(http.StatusBadRequest, "The search query is invalid.", "")
+		return searchResponse{}, errors.New("The search query is invalid.")
 	}
 	view := searchResultsView{Query: query, Results: make([]searchResultView, 0, len(results))}
 	for _, result := range results {

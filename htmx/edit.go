@@ -13,10 +13,6 @@ import (
 	"github.com/dkotik/cuebook/patch"
 )
 
-func editFormFailure(status int, message string) (editFormResponse, error) {
-	return editFormResponse{}, responseErrorForStatus(status, message)
-}
-
 type editFormRequest struct {
 	File  string `schema:"file"`
 	Entry string `schema:"entry"`
@@ -35,33 +31,33 @@ type editFormResponse struct {
 
 func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFormResponse, error) {
 	if a.committer == nil {
-		return editFormFailure(http.StatusForbidden, "This source is read-only.")
+		return editFormResponse{}, errors.New("This source is read-only.")
 	}
 
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return editFormFailure(http.StatusInternalServerError, "Unable to list CUE files.")
+		return editFormResponse{}, errors.New("Unable to list CUE files.")
 	}
 	_, document, status, message := a.readDocument(request.File, fileNames)
 	if status != http.StatusOK {
-		return editFormFailure(status, message)
+		return editFormResponse{}, errors.New(message)
 	}
 
 	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil || entryIndex < 0 {
-		return editFormFailure(http.StatusBadRequest, "The entry index is invalid.")
+		return editFormResponse{}, errors.New("The entry index is invalid.")
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		return editFormFailure(http.StatusNotFound, "Entry not found.")
+		return editFormResponse{}, errors.New("Entry not found.")
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
-		return editFormFailure(http.StatusUnprocessableEntity, "Unable to read this entry.")
+		return editFormResponse{}, errors.New("Unable to read this entry.")
 	}
 	field, ok := entry.GetFieldByName(request.Field)
 	if !ok || request.Field == "" {
-		return editFormFailure(http.StatusNotFound, "Field not found.")
+		return editFormResponse{}, errors.New("Field not found.")
 	}
 
 	view := makeFieldView(field, request.File, entryIndex, false)
@@ -86,121 +82,79 @@ type editResponse struct {
 	pageData
 }
 
-func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {
+func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, error) {
 	if a.committer == nil {
-		return editResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
+		return editResponse{}, errors.New("This source is read-only.")
 	}
 	if request.Value == nil {
-		return editResponseFrom(a.editFailure(ctx, request.File, "The edit request is invalid.", http.StatusBadRequest))
+		return editResponse{}, errors.New("The edit request is invalid.")
 	}
 	value := *request.Value
 
 	fileName := request.File
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return editResponseFrom(a.editFailure(ctx, "", "Unable to list CUE files.", http.StatusInternalServerError))
+		return editResponse{}, errors.New("Unable to list CUE files.")
 	}
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	if status != http.StatusOK {
-		return editResponseFrom(a.editFailure(ctx, fileName, message, status))
+		return editResponse{}, errors.New(message)
 	}
-	page, _ := a.pageForDocument(fileName, fileNames, raw, document, "")
 
 	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil || entryIndex < 0 {
-		return editResponseFrom(withNotice(page, "The entry index is invalid."), http.StatusBadRequest)
+		return editResponse{}, errors.New("The entry index is invalid.")
 	}
 	entryValue, err := document.GetValue(entryIndex)
 	if err != nil {
-		return editResponseFrom(withNotice(page, "Entry not found."), http.StatusNotFound)
+		return editResponse{}, errors.New("Entry not found.")
 	}
 	entry, err := cuebook.NewEntry(entryValue)
 	if err != nil {
-		return editResponseFrom(withNotice(page, "Unable to read this entry."), http.StatusUnprocessableEntity)
+		return editResponse{}, errors.New("Unable to read this entry.")
 	}
 	fieldName := request.Field
 	field, ok := entry.GetFieldByName(fieldName)
 	if !ok || fieldName == "" {
-		return editResponseFrom(withNotice(page, "Field not found."), http.StatusNotFound)
+		return editResponse{}, errors.New("Field not found.")
 	}
 	if isSecretField(field.Value) && value == "" && field.String() != "" {
-		return editResponseFrom(a.finishEdit(fileName))
+		data, err := a.renderEditedFile(fileName)
+		return editResponse{pageData: data}, err
 	}
 
 	change, err := patch.UpdateFieldValue(raw, entryValue, field.Value, value)
 	if err != nil {
-		return editResponseFrom(a.renderEditInputFailure(ctx, page, entryIndex, fieldName, value, "The field value could not be formatted.", http.StatusUnprocessableEntity))
+		return editResponse{}, errors.New("The field value could not be formatted.")
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		return editResponseFrom(a.renderEditInputFailure(ctx, page, entryIndex, fieldName, value, "The entry changed before the edit could be applied. Reload and try again.", http.StatusConflict))
+		return editResponse{}, errors.New("The entry changed before the edit could be applied. Reload and try again.")
 	}
 	if _, err = cuebook.New(candidate); err != nil {
-		return editResponseFrom(a.renderEditInputFailure(ctx, page, entryIndex, fieldName, value, "The submitted value does not satisfy the CUE constraints: "+err.Error(), http.StatusUnprocessableEntity))
+		return editResponse{}, errors.New("The submitted value does not satisfy the CUE constraints: " + err.Error())
 	}
 	if err = a.commitFile(fileName, change); err != nil {
-		status = http.StatusInternalServerError
-		notice := "The edit could not be saved."
 		if errors.Is(err, patch.ErrByteRangeNotFound) {
-			status = http.StatusConflict
-			notice = "The entry changed before the edit could be applied. Reload and try again."
+			return editResponse{}, errors.New("The entry changed before the edit could be applied. Reload and try again.")
 		}
-		return editResponseFrom(a.editFailure(ctx, fileName, notice, status))
+		return editResponse{}, errors.New("The edit could not be saved.")
 	}
-	return editResponseFrom(a.finishEdit(fileName))
+	data, err := a.renderEditedFile(fileName)
+	return editResponse{pageData: data}, err
 }
 
-func (a *handler) renderEditInputFailure(_ context.Context, page pageData, entryIndex int, fieldName, value, notice string, status int) (pageData, int) {
-	for i := range page.Entries {
-		entry := &page.Entries[i]
-		if entry.Index != entryIndex {
-			continue
-		}
-		if markEditingField(entry.Fields, fieldName, value) || markEditingField(entry.Details, fieldName, value) {
-			break
-		}
-	}
-	return withNotice(page, notice), status
-}
-
-func markEditingField(fields []fieldView, fieldName, value string) bool {
-	for i := range fields {
-		if fields[i].Name != fieldName {
-			continue
-		}
-		fields[i].Editing = true
-		fields[i].Value = value
-		return true
-	}
-	return false
-}
-
-func (a *handler) finishEdit(fileName string) (pageData, int) {
-	return a.renderEditedFile(fileName)
-}
-
-func (a *handler) renderEditedFile(fileName string) (pageData, int) {
+func (a *handler) renderEditedFile(fileName string) (pageData, error) {
 	data, status := a.loadPage(fileName, "")
 	if status != http.StatusOK {
-		data.Error = "The edit was saved, but the updated document could not be displayed."
-		status = http.StatusInternalServerError
+		return pageData{}, errors.New("The edit was saved, but the updated document could not be displayed.")
 	}
-	return data, status
-}
-
-func (a *handler) editFailure(_ context.Context, fileName, notice string, status int) (pageData, int) {
-	data, _ := a.loadPage(fileName, notice)
-	return data, status
+	return data, nil
 }
 
 func isSecretField(field cue.Value) bool {
 	_, ok := metadata.GetFieldAttributes(field, "cuebook").GetFirstOf("argon2id")
 	return ok
-}
-
-func withNotice(data pageData, notice string) pageData {
-	data.Error = notice
-	return data
 }
 
 type fieldView struct {

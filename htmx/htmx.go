@@ -92,8 +92,9 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		searchFS:  searchableSource,
 	}
 	mux := config.ServeMux
+	errorHandler := htadaptor.NewErrorHandlerFromTemplate(htadaptor.DefaultErrorTemplate())
 	listPageHandler, err := config.Adaptor.AdaptFunc(app.list,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page")),
 		htadaptor.WithQueryValues("file"),
 	)
@@ -101,7 +102,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		return nil, fmt.Errorf("htmx: adapt list route: %w", err)
 	}
 	listWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.list,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
 		htadaptor.WithQueryValues("file"),
 	)
@@ -111,7 +112,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "{$}"), NewHTMXSwitch(listPageHandler, listWorkspaceHandler))
 
 	editFormHandler, err := config.Adaptor.AdaptFunc(app.editForm,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("field-form")),
 		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
 	)
@@ -119,7 +120,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		return nil, fmt.Errorf("htmx: adapt edit form route: %w", err)
 	}
 	editFieldHandler, err := config.Adaptor.AdaptFunc(app.editForm,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("field")),
 		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
 	)
@@ -132,7 +133,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	))
 
 	itemPageHandler, err := config.Adaptor.AdaptFunc(app.item,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page")),
 		htadaptor.WithQueryValues("path", "file", "head", "tail"),
 	)
@@ -140,7 +141,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		return nil, fmt.Errorf("htmx: adapt item route: %w", err)
 	}
 	itemFragmentHandler, err := config.Adaptor.AdaptFunc(app.item,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("entry-item")),
 		htadaptor.WithQueryValues("path", "file", "head", "tail"),
 	)
@@ -150,7 +151,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "item"), NewHTMXSwitch(itemPageHandler, itemFragmentHandler))
 
 	searchHandler, err := config.Adaptor.AdaptFunc(app.search,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("search-results")),
 		htadaptor.WithQueryValues("q", "query"),
 	)
@@ -160,7 +161,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "search"), NewHTMXSwitch(searchHandler, searchHandler))
 
 	clearButtonHandler, err := config.Adaptor.AdaptFunc(app.searchClearButton,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("search-clear-button")),
 		htadaptor.WithQueryValues("q"),
 	)
@@ -206,14 +207,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	)
 
 	editPageHandler, err := config.Adaptor.AdaptFunc(app.edit,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit route: %w", err)
 	}
 	editWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.edit,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
 	)
 	if err != nil {
@@ -222,14 +223,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "edit"), sameOriginMiddleware(NewHTMXSwitch(editPageHandler, editWorkspaceHandler)))
 
 	addPageHandler, err := config.Adaptor.AdaptFunc(app.add,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add route: %w", err)
 	}
 	addWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.add,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
 	)
 	if err != nil {
@@ -238,14 +239,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "add"), sameOriginMiddleware(NewHTMXSwitch(addPageHandler, addWorkspaceHandler)))
 
 	movePageHandler, err := config.Adaptor.AdaptFunc(app.move,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt move route: %w", err)
 	}
 	moveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.move,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
 	)
 	if err != nil {
@@ -254,14 +255,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "move"), sameOriginMiddleware(NewHTMXSwitch(movePageHandler, moveWorkspaceHandler)))
 
 	archivePageHandler, err := config.Adaptor.AdaptFunc(app.archive,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt delete route: %w", err)
 	}
 	archiveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.archive,
-		htadaptor.WithErrorHandler(responseErrorHandler()),
+		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("workspace")),
 	)
 	if err != nil {

@@ -21,7 +21,7 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [x] live reload should wait for the server to come back online every 2000ms, then immediately call window.reload
+- [ ] re-introduce 404 Not Found errors to htmx package
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value.
   - [ ] fill out @item.go with an HTMX view that shows one list item fetched by UUID
 - [x] HTMX interface

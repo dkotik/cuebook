@@ -63,8 +63,14 @@ type listResponse struct {
 
 func (a *handler) list(_ context.Context, request *listRequest) (listResponse, error) {
 	data, status := a.loadPage(request.File, "")
-	response := listResponse{pageData: pageValues(data)}
-	return response, responseErrorForStatus(status, pageResponseMessage(data))
+	if status != http.StatusOK {
+		message := data.Error
+		if message == "" {
+			message = data.DocumentError
+		}
+		return listResponse{}, errors.New(message)
+	}
+	return listResponse{pageData: data}, nil
 }
 
 func (a *handler) loadPage(fileName, notice string) (pageData, int) {
@@ -90,6 +96,7 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 	}
 	if !data.ReadOnly {
 		data.AddFields = makeAddFieldViews(document)
+		data.RequiredAddFields, data.OptionalAddFields = splitAddFieldViews(data.AddFields)
 	}
 	entries, err := makeEntryViews(document, fileName, data.ReadOnly)
 	if err != nil {
@@ -205,22 +212,6 @@ func itemURL(fileName string, entryRange cuebook.ByteRange) string {
 	query.Set("head", strconv.Itoa(entryRange.Head))
 	query.Set("tail", strconv.Itoa(entryRange.Tail))
 	return "/item?" + query.Encode()
-}
-
-func (a *handler) pageForDocument(fileName string, fileNames []string, raw []byte, document cuebook.Book, notice string) (pageData, int) {
-	data := a.basePage(fileNames, fileName, notice)
-	data.Selected = fileName
-	setFileFrontmatter(&data, fileName, raw)
-	if !data.ReadOnly {
-		data.AddFields = makeAddFieldViews(document)
-	}
-	entries, err := makeEntryViews(document, fileName, data.ReadOnly)
-	if err != nil {
-		data.DocumentError = "Unable to display this CUE document: " + err.Error()
-		return data, http.StatusUnprocessableEntity
-	}
-	data.Entries = entries
-	return data, http.StatusOK
 }
 
 const (

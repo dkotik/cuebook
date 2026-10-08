@@ -147,8 +147,8 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 	failure := submitAdd(t, handler, true, addEntryValues("defaults.cue", [][2]string{
 		{"Name", "Retained name"}, {"Count", "7"}, {"Enabled", "true"},
 	}))
-	if failure.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("failure status = %d, want %d; body: %s", failure.Code, http.StatusUnprocessableEntity, failure.Body.String())
+	if failure.Code != http.StatusInternalServerError {
+		t.Fatalf("failure status = %d, want %d; body: %s", failure.Code, http.StatusInternalServerError, failure.Body.String())
 	}
 	if !strings.Contains(failure.Body.String(), "does not satisfy the CUE constraints") {
 		t.Fatalf("validation error missing from response: %s", failure.Body.String())
@@ -407,7 +407,7 @@ func TestAddEntryFailures(t *testing.T) {
 			}),
 			origin:     "http://example.test",
 			htmx:       true,
-			wantStatus: http.StatusUnprocessableEntity,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
@@ -416,14 +416,14 @@ func TestAddEntryFailures(t *testing.T) {
 				{"Name", "Contact"}, {"Email", "valid@example.test"}, {"notAField", "value"},
 			}),
 			origin:     "http://example.test",
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "unknown field",
 		},
 		{
 			name:       "missing required field is rejected",
 			values:     addEntryValues("core1.cue", [][2]string{{"Name", "Contact"}}),
 			origin:     "http://example.test",
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "required entry field is missing",
 		},
 		{
@@ -432,7 +432,7 @@ func TestAddEntryFailures(t *testing.T) {
 				{"Name", "Contact"}, {"Name", "Other Contact"}, {"Email", "valid@example.test"},
 			}),
 			origin:     "http://example.test",
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 			wantNotice: "duplicate field",
 		},
 		{
@@ -471,8 +471,8 @@ func TestReadOnlySourceRejectsAdding(t *testing.T) {
 	response := submitAdd(t, handler, false, addEntryValues("core1.cue", [][2]string{
 		{"Name", "Contact"}, {"Email", "valid@example.test"},
 	}))
-	if response.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusForbidden, response.Body.String())
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
 	if !strings.Contains(response.Body.String(), "This source is read-only.") {
 		t.Fatal("expected read-only explanation")
