@@ -26,9 +26,6 @@ type moveResponse struct {
 }
 
 func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse, error) {
-	if !isSameOriginContext(ctx) {
-		return moveResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
-	}
 	if a.committer == nil {
 		return moveResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
 	}

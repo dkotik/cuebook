@@ -113,6 +113,14 @@ func TestMoveRejectsReadOnlyAndInvalidIndexes(t *testing.T) {
 	if committer.calls != 0 {
 		t.Fatalf("committer calls = %d, want 0", committer.calls)
 	}
+
+	response = submitMove(t, writable, "core1.cue", 0, 1, "http://attacker.test", true)
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "Cross-origin edits are not allowed.") {
+		t.Fatalf("cross-origin status/body = %d/%q; want forbidden response", response.Code, response.Body.String())
+	}
+	if committer.calls != 0 {
+		t.Fatalf("committer calls = %d after cross-origin request, want 0", committer.calls)
+	}
 }
 
 func TestMoveRejectsInvalidReorderedDocument(t *testing.T) {

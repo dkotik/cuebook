@@ -1,7 +1,6 @@
 package htmx
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -157,13 +156,4 @@ func writeEventStream(w http.ResponseWriter, r *http.Request, status int) error 
 			flusher.Flush()
 		}
 	}
-}
-
-type contextFlag uint8
-
-const sameOriginContextFlag contextFlag = 1
-
-func isSameOriginContext(ctx context.Context) bool {
-	sameOrigin, _ := ctx.Value(sameOriginContextFlag).(bool)
-	return sameOrigin
 }

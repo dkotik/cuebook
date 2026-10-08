@@ -22,9 +22,6 @@ type archiveResponse struct {
 }
 
 func (a *handler) archive(ctx context.Context, request *archiveRequest) (archiveResponse, error) {
-	if !isSameOriginContext(ctx) {
-		return archiveResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
-	}
 	if a.committer == nil {
 		return archiveResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
 	}

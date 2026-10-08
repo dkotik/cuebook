@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
@@ -90,9 +89,6 @@ type editResponse struct {
 }
 
 func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {
-	if !isSameOriginContext(ctx) {
-		return editResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
-	}
 	if a.committer == nil {
 		return editResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
 	}
@@ -197,24 +193,6 @@ func (a *handler) renderEditedFile(fileName string) (pageData, int) {
 func (a *handler) editFailure(_ context.Context, fileName, notice string, status int) (pageData, int) {
 	data, _ := a.loadPage(fileName, notice)
 	return data, status
-}
-
-func sameOrigin(r *http.Request) bool {
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		return !strings.EqualFold(r.Header.Get("Sec-Fetch-Site"), "cross-site")
-	}
-	parsed, err := url.Parse(origin)
-	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return false
-	}
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
-	} else if r.URL.Scheme != "" {
-		scheme = r.URL.Scheme
-	}
-	return strings.EqualFold(parsed.Host, r.Host) && strings.EqualFold(parsed.Scheme, scheme)
 }
 
 func isSecretField(field cue.Value) bool {

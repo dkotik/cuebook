@@ -30,9 +30,6 @@ type addResponse struct {
 }
 
 func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, error) {
-	if !isSameOriginContext(ctx) {
-		return addResponseFrom(pageData{ReadOnly: a.committer == nil, Error: "Cross-origin edits are not allowed."}, http.StatusForbidden)
-	}
 	if a.committer == nil {
 		return addResponseFrom(a.editFailure(ctx, "", "This source is read-only.", http.StatusForbidden))
 	}

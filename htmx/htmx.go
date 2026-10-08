@@ -14,7 +14,6 @@ writes through the patch workflow.
 package htmx
 
 import (
-	"context"
 	"embed"
 	"errors"
 	"fmt"
@@ -186,7 +185,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit HTMX route: %w", err)
 	}
-	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "edit"), NewHTMXSwitch(editPageHandler, editWorkspaceHandler))
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "edit"), sameOriginMiddleware(NewHTMXSwitch(editPageHandler, editWorkspaceHandler)))
 
 	addPageHandler, err := config.Adaptor.AdaptFunc(app.add,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
@@ -202,7 +201,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add HTMX route: %w", err)
 	}
-	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "add"), NewHTMXSwitch(addPageHandler, addWorkspaceHandler))
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "add"), sameOriginMiddleware(NewHTMXSwitch(addPageHandler, addWorkspaceHandler)))
 
 	movePageHandler, err := config.Adaptor.AdaptFunc(app.move,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
@@ -218,7 +217,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt move HTMX route: %w", err)
 	}
-	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "move"), NewHTMXSwitch(movePageHandler, moveWorkspaceHandler))
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "move"), sameOriginMiddleware(NewHTMXSwitch(movePageHandler, moveWorkspaceHandler)))
 
 	archivePageHandler, err := config.Adaptor.AdaptFunc(app.archive,
 		htadaptor.WithErrorHandler(responseErrorHandler(htadaptor.NewTemplateEncoder(templates.Lookup("page")))),
@@ -234,7 +233,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt delete HTMX route: %w", err)
 	}
-	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "delete"), NewHTMXSwitch(archivePageHandler, archiveWorkspaceHandler))
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "delete"), sameOriginMiddleware(NewHTMXSwitch(archivePageHandler, archiveWorkspaceHandler)))
 
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "assets/{name}"), http.HandlerFunc(serveAsset))
 
@@ -270,9 +269,6 @@ func NewHTMXSwitch(normal, htmx http.Handler) http.Handler {
 func (s htmxSwitch) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Vary", "HX-Request")
-
-	ctx := context.WithValue(r.Context(), sameOriginContextFlag, sameOrigin(r))
-	r = r.WithContext(ctx)
 
 	if r.Header.Get("HX-Request") != "" {
 		s.HTMX.ServeHTTP(w, r)
