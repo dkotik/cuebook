@@ -19,21 +19,25 @@
     {{end}}
     {{if and (not .SelectedEntry) .AddFields}}
     <section class="add-entry box" aria-labelledby="add-entry-heading">
-      <h2 id="add-entry-heading">Add entry</h2>
-      <form action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="outerHTML">
-        <input type="hidden" name="file" value="{{.Selected}}">
-        {{range .RequiredAddFields}}{{template "entry-add-field.html" .}}{{end}}
-        {{if .OptionalAddFields}}
-        <remember-details data-storage-key="add-entry-optional">
-          <summary>Optional fields</summary>
-          <div id="add-entry-optional-content" data-details-content>
-            {{range .OptionalAddFields}}{{template "entry-add-field.html" .}}{{end}}
-          </div>
-        </remember-details>
-        {{end}}
-        {{if .AddError}}<p class="notice notification is-danger add-entry-error" role="alert">{{.AddError}}</p>{{end}}
-        <button class="button is-link" type="submit">Add entry</button>
-      </form>
+      {{if .AddError}}<p class="notice notification is-danger add-entry-error" role="alert">{{.AddError}}</p>{{end}}
+      <remember-details data-storage-key="add-entry-form">
+        <summary id="add-entry-heading">Add entry</summary>
+        <div id="add-entry-form-content" data-details-content>
+          <form action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="outerHTML">
+            <input type="hidden" name="file" value="{{.Selected}}">
+            {{range .RequiredAddFields}}{{template "entry-add-field.html" .}}{{end}}
+            {{if .OptionalAddFields}}
+            <remember-details data-storage-key="add-entry-optional">
+              <summary>Optional fields</summary>
+              <div id="add-entry-optional-content" data-details-content>
+                {{range .OptionalAddFields}}{{template "entry-add-field.html" .}}{{end}}
+              </div>
+            </remember-details>
+            {{end}}
+            <button class="button is-link" type="submit">Add entry</button>
+          </form>
+        </div>
+      </remember-details>
     </section>
     {{end}}
   {{else}}

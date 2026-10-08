@@ -125,7 +125,7 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 		if err != nil {
 			return nil, fmt.Errorf("entry %d: unable to locate entry in CUE file: %w", index, err)
 		}
-		view := makeEntryView(entry, fileName, index, entryRange, readOnly)
+		view := makeEntryView(entry, fileName, index, entryRange, readOnly, false)
 		for fieldIndex := range view.Fields {
 			view.Fields[fieldIndex].ShowEditIcon = false
 			view.Fields[fieldIndex].HideLabel = true
@@ -140,7 +140,7 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 	return result, nil
 }
 
-func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange cuebook.ByteRange, readOnly bool) entryView {
+func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange cuebook.ByteRange, readOnly, includeTitleField bool) entryView {
 	view := entryView{
 		Index:     index,
 		File:      fileName,
@@ -152,10 +152,25 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 	if view.Title == "" {
 		view.Title = fmt.Sprintf("Entry %d", index+1)
 	}
-	for _, field := range entry.Fields {
+	hasTitleField := false
+	if !includeTitleField {
+		for _, field := range entry.Fields {
+			hasTitleField = hasTitleField || metadata.IsTitleField(field.Value)
+		}
+		for _, field := range entry.Details {
+			hasTitleField = hasTitleField || metadata.IsTitleField(field.Value)
+		}
+	}
+	for fieldIndex, field := range entry.Fields {
+		if !includeTitleField && (metadata.IsTitleField(field.Value) || (!hasTitleField && fieldIndex == 0 && entry.GetTitle() != "")) {
+			continue
+		}
 		view.Fields = append(view.Fields, makeFieldView(field, fileName, index, readOnly))
 	}
 	for _, field := range entry.Details {
+		if !includeTitleField && metadata.IsTitleField(field.Value) {
+			continue
+		}
 		view.Details = append(view.Details, makeFieldView(field, fileName, index, readOnly))
 	}
 	return view

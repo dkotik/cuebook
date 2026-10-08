@@ -131,6 +131,77 @@ func TestIndexEntryLinksOpenMatchingEntry(t *testing.T) {
 	}
 }
 
+func TestEntryTitleFieldIsOmittedFromEntryContent(t *testing.T) {
+	tests := []struct {
+		name            string
+		source          string
+		title           string
+		wantContent     []string
+		wantTitleCounts int
+	}{
+		{
+			name: "annotated title field is hidden while matching field values remain",
+			source: `#person: {
+	Title: string @cuebook(title)
+	Alias: string
+	Email: string
+}
+[...#person] & [{Title: "Ada Title", Alias: "Ada Title", Email: "ada@example.test"}]`,
+			title:           "Ada Title",
+			wantContent:     []string{"Ada Title", "ada@example.test"},
+			wantTitleCounts: 1,
+		},
+		{
+			name:            "fallback title field is hidden",
+			source:          `[{Name: "Fallback title"}]`,
+			title:           "Fallback title",
+			wantTitleCounts: 0,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			handler, err := New(fstest.MapFS{
+				"people.cue": &fstest.MapFile{Data: []byte(test.source)},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "http://example.test/?file=people.cue", nil)
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+
+			body := response.Body.String()
+			if !strings.Contains(body, test.title) {
+				t.Fatalf("entry title %q is missing: %s", test.title, body)
+			}
+			contentStart := strings.Index(body, `<div class="card-content entry-content">`)
+			if contentStart < 0 {
+				t.Fatalf("entry content is missing: %s", body)
+			}
+			contentEnd := strings.Index(body[contentStart:], `</article>`)
+			if contentEnd < 0 {
+				t.Fatalf("entry article is not closed: %s", body[contentStart:])
+			}
+			content := body[contentStart : contentStart+contentEnd]
+			if got := strings.Count(content, test.title); got != test.wantTitleCounts {
+				t.Errorf("title appears %d times in entry content, want %d: %s", got, test.wantTitleCounts, content)
+			}
+			for _, want := range test.wantContent {
+				if !strings.Contains(content, want) {
+					t.Errorf("entry content does not contain %q: %s", want, content)
+				}
+			}
+		})
+	}
+}
+
 func TestFileFrontmatterView(t *testing.T) {
 	t.Parallel()
 

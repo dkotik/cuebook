@@ -29,11 +29,11 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 		t.Fatalf("page status = %d, want %d; body: %s", pageResponse.Code, http.StatusOK, pageResponse.Body.String())
 	}
 	for _, want := range []string{
-		`<div class="field field-item" title="Name">`,
+		`<div class="field field-item" title="Email">`,
 		`<output>`,
 		`field-value-edit`,
-		`aria-label="Edit Name value"`,
-		`hx-get="/edit?entry=0&amp;field=Name&amp;file=core1.cue"`,
+		`aria-label="Edit Email value"`,
+		`hx-get="/edit?entry=0&amp;field=Email&amp;file=core1.cue"`,
 	} {
 		if !strings.Contains(pageResponse.Body.String(), want) {
 			t.Errorf("writable page does not contain %q; body: %s", want, pageResponse.Body.String())
@@ -66,7 +66,10 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 		t.Fatal("entry view should retain pencil edit icons")
 	}
 	if !strings.Contains(entryResponse.Body.String(), `<span class="field-name label">Name:</span>`) {
-		t.Fatal("entry view should retain visible field labels")
+		t.Fatal("entry view should show the title field")
+	}
+	if !strings.Contains(entryResponse.Body.String(), `<span class="field-name label">Email:</span>`) {
+		t.Fatal("entry view should retain labels for non-title fields")
 	}
 	if strings.Contains(pageResponse.Body.String(), `hx-post="/edit"`) {
 		t.Fatal("field edit forms should not be rendered until requested")
@@ -161,7 +164,7 @@ func TestReadOnlyPageShowsStaticFieldsWithoutEditControls(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
 	body := response.Body.String()
-	if !strings.Contains(body, `<output>First11111aa1</output>`) {
+	if !strings.Contains(body, `<output>test1@testdomain.com</output>`) {
 		t.Fatal("read-only page should show the static field value")
 	}
 	for _, unwanted := range []string{`field-edit-button`, `field-value-edit`, `hx-get="/edit`, `<form action="/edit"`} {

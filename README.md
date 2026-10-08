@@ -42,6 +42,7 @@ changes in data to other users and, most importantly, programs.
     - [x] locate the entry with identical byte content as the last change, taking duplicates into account
 - [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
 - [x] Add `@cuebook(secret=argon2id)` attribute that hashes and salts input when saved
+- [ ] use kronk to embed llama into the htmx view
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute
 - [ ] turn replace patch into insert patch, if the original entry disappeared, but not without letting the user choose
 - [ ] rewrite documentation

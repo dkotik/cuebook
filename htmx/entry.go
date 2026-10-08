@@ -89,7 +89,7 @@ func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryRespo
 			return entryResponse{}, errors.New("Unable to locate this entry in the CUE file.")
 		}
 		if entryRange == requestedRange {
-			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil)
+			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil, true)
 			selected = &view
 			break
 		}

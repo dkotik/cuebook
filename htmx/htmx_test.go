@@ -55,6 +55,9 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 	for _, want := range []string{
 		`action="/add"`,
 		`hx-post="/add"`,
+		`<remember-details data-storage-key="add-entry-form">`,
+		`<summary id="add-entry-heading">Add entry</summary>`,
+		`<div id="add-entry-form-content" data-details-content>`,
 		`name="entry.0.field" value="Name"`,
 		`name="entry.1.field" value="Email"`,
 		`name="entry.2.field" value="Notes"`,
@@ -72,6 +75,22 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 	}
 
 	body := response.Body.String()
+	addFormStart := strings.Index(body, `<remember-details data-storage-key="add-entry-form">`)
+	addFormEnd := strings.LastIndex(body, `</remember-details>`)
+	if addFormStart < 0 || addFormEnd <= addFormStart {
+		t.Fatalf("add-entry form is not inside the persistent details component: %s", body)
+	}
+	addFormMarkup := body[addFormStart:addFormEnd]
+	if !strings.Contains(addFormMarkup, "<div id=\"add-entry-form-content\" data-details-content>\n          <form action=\"/add\"") ||
+		!strings.Contains(addFormMarkup, "</form>\n        </div>") {
+		t.Fatalf("add-entry form is not inside its collapsible content: %s", addFormMarkup)
+	}
+	for _, want := range []string{`name="entry.0.field" value="Name"`, `name="entry.1.field" value="Email"`} {
+		if !strings.Contains(addFormMarkup, want) {
+			t.Errorf("add-entry details component does not contain %q: %s", want, addFormMarkup)
+		}
+	}
+
 	componentStart := strings.Index(body, `<remember-details data-storage-key="add-entry-optional">`)
 	if componentStart < 0 {
 		t.Fatalf("optional fields are not wrapped by the persistent details component: %s", body)
