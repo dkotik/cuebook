@@ -50,6 +50,8 @@ func TestSearchFormIsInHeaderAndTargetsMainContent(t *testing.T) {
 		`<main id="workspace"`,
 		`hx-get="/search/clear-button"`,
 		`hx-target="#search-clear-control"`,
+		`src="/assets/search-clear.js"`,
+
 		`id="search-clear-control"`,
 		`aria-label="Search">🔍</button>`,
 	} {
@@ -60,7 +62,7 @@ func TestSearchFormIsInHeaderAndTargetsMainContent(t *testing.T) {
 	if strings.Contains(body, `id="search-results"`) {
 		t.Errorf("page still has a separate search results target: %s", body)
 	}
-	if strings.Contains(body, `type="reset" aria-label="Clear search"`) {
+	if strings.Contains(body, `data-clear-search`) {
 		t.Errorf("clear search button is visible before a query is entered: %s", body)
 	}
 }
@@ -92,7 +94,7 @@ func TestSearchClearButtonTracksQuery(t *testing.T) {
 			if response.Code != http.StatusOK {
 				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 			}
-			gotButton := strings.Contains(response.Body.String(), `type="reset" aria-label="Clear search"`)
+			gotButton := strings.Contains(response.Body.String(), `data-clear-search`)
 			if gotButton != test.wantButton {
 				t.Errorf("clear button visible = %t, want %t; body: %s", gotButton, test.wantButton, response.Body.String())
 			}
