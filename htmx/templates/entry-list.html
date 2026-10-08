@@ -2,5 +2,7 @@
   <header class="card-header">
     {{template "entry-heading.html" .}}
   </header>
-  {{template "entry-content.html" .}}
+  <div class="card-content">
+    {{range .Fields}}{{template "field.html" .}}{{end}}
+  </div>
 </article>
