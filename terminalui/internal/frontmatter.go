@@ -51,7 +51,7 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			func() tea.Msg {
 				return window.TranslatableFunc(func(lc *i18n.Localizer) tea.Cmd {
 					return func() tea.Msg {
-						md := metadata.NewFrontmatter(msg.Source)
+						md := metadata.NewFrontmatter(msg.Source, metadata.NewParser())
 						return frontMatterListItems{
 							markdown.New(string(md.Source)),
 							list.NewButton(&i18n.LocalizeConfig{
@@ -71,7 +71,7 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case frontMatterUpdate:
 		source := v.state.Source
 		return v, func() tea.Msg {
-			md := metadata.NewFrontmatter(source)
+			md := metadata.NewFrontmatter(source, metadata.NewParser())
 			form, err := textarea.New(
 				textarea.WithLabel("Description"),
 				textarea.WithValue(string(md.Source)),

@@ -64,11 +64,15 @@ func (m Frontmatter) Get(frontMatterFieldName string) any {
 	return m.Node.OwnerDocument().Metadata()[frontMatterFieldName]
 }
 
-func NewFrontmatter(source []byte) Frontmatter {
+func NewFrontmatter(source []byte, p parser.Parser) Frontmatter {
 	source, tail := ReadLeadingComments(source)
 	return Frontmatter{
-		Node:             parser.New().Parse(source),
+		Node:             p.Parse(source),
 		Source:           source,
 		TailBytePosition: tail,
 	}
+}
+
+func NewParser() parser.Parser {
+	return parser.New()
 }

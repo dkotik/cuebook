@@ -35,7 +35,7 @@ func TestFrontmatterGet(t *testing.T) {
 
 			var frontmatter metadata.Frontmatter
 			if !tt.zeroValue {
-				frontmatter = metadata.NewFrontmatter([]byte("// A title\\n"))
+				frontmatter = metadata.NewFrontmatter([]byte("// A title\\n"), metadata.NewParser())
 				if tt.metadata != nil {
 					frontmatter.Node.OwnerDocument().AddMeta("field", tt.metadata)
 				}
@@ -76,7 +76,7 @@ func TestFrontmatterTitleAndDescription(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			frontmatter := metadata.NewFrontmatter([]byte(tt.source))
+			frontmatter := metadata.NewFrontmatter([]byte(tt.source), metadata.NewParser())
 			if got := frontmatter.Title(); got != tt.wantTitle {
 				t.Errorf("Title() = %q, want %q", got, tt.wantTitle)
 			}

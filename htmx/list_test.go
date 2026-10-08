@@ -135,18 +135,29 @@ func TestFileFrontmatterView(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		fileName    string
-		source      string
-		wantTitle   string
-		wantDetails string
+		name          string
+		fileName      string
+		source        string
+		wantTitle     string
+		wantVisible   string
+		wantCollapsed string
+		wantComponent bool
 	}{
 		{
-			name:        "frontmatter title and description",
-			fileName:    "described.cue",
-			source:      "// Document title\n//\n// Description with <em>markup</em>.\n[{Name: \"entry\"}]\n",
-			wantTitle:   "Document title",
-			wantDetails: "Description with &lt;em&gt;markup&lt;/em&gt;.",
+			name:          "frontmatter details after thematic break are collapsible",
+			fileName:      "described.cue",
+			source:        "// Document title\n//\n// Description with **markup**.\n//\n// ---\n// Additional details.\n[{Name: \"entry\"}]\n",
+			wantTitle:     "Document title",
+			wantVisible:   "Description with <strong>markup</strong>.",
+			wantCollapsed: "Additional details.",
+			wantComponent: true,
+		},
+		{
+			name:        "description without thematic break remains visible",
+			fileName:    "plain-description.cue",
+			source:      "// Plain title\n//\n// Plain description.\n[{Name: \"entry\"}]\n",
+			wantTitle:   "Plain title",
+			wantVisible: "Plain description.",
 		},
 		{
 			name:      "filename fallback when title is absent",
@@ -177,27 +188,35 @@ func TestFileFrontmatterView(t *testing.T) {
 			if !strings.Contains(body, `<h1 class="document-title title is-4">`+test.wantTitle+`</h1>`) {
 				t.Errorf("file title %q not shown: %s", test.wantTitle, body)
 			}
+			if test.wantVisible != "" && !strings.Contains(body, test.wantVisible) {
+				t.Errorf("visible description %q not shown: %s", test.wantVisible, body)
+			}
 			componentStart := strings.Index(body, `<remember-details data-storage-key="view-file-frontmatter">`)
-			if test.wantDetails == "" {
+			if !test.wantComponent {
 				if componentStart >= 0 {
 					t.Errorf("unexpected frontmatter details component: %s", body)
 				}
 				return
 			}
 			if componentStart < 0 {
-				t.Fatalf("frontmatter description is not inside remember-details: %s", body)
+				t.Fatalf("frontmatter details component is absent: %s", body)
 			}
 			componentEndOffset := strings.Index(body[componentStart:], `</remember-details>`)
 			if componentEndOffset < 0 {
-				t.Fatalf("frontmatter description is not inside remember-details: %s", body)
+				t.Fatalf("frontmatter details component is not closed: %s", body)
 			}
 			componentEnd := componentStart + componentEndOffset
 			component := body[componentStart:componentEnd]
-			if !strings.Contains(component, "<summary>Description</summary>") || !strings.Contains(component, test.wantDetails) {
+			if !strings.Contains(component, "<summary>Description</summary>") ||
+				!strings.Contains(component, `data-details-content`) ||
+				!strings.Contains(component, test.wantCollapsed) {
 				t.Errorf("description component missing expected content: %s", component)
 			}
 			if titlePosition := strings.Index(body, test.wantTitle); titlePosition > componentStart {
 				t.Errorf("title should appear before the collapsible description: %s", body)
+			}
+			if visiblePosition := strings.Index(body, test.wantVisible); visiblePosition > componentStart {
+				t.Errorf("visible description should precede the collapsed details: %s", body)
 			}
 		})
 	}

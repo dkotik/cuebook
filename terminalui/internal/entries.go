@@ -205,7 +205,7 @@ func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
 				return m, nil
 			}
 		})(list.Title{
-			Text:  cmp.Or(metadata.NewFrontmatter(r.Source).Title(), informationUnavailable),
+			Text:  cmp.Or(metadata.NewFrontmatter(r.Source, metadata.NewParser()).Title(), informationUnavailable),
 			Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		})
 		result.Cards = append(result.Cards, title)

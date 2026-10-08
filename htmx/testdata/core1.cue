@@ -1,6 +1,11 @@
 // # Core1 Title
 //
 // Some markdown contents is here.
+//
+// ---
+//
+// File details...
+//
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
 	// current definition scanner cannot detect abstract definitions yet

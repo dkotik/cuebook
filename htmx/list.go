@@ -1,9 +1,11 @@
 package htmx
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -14,6 +16,10 @@ import (
 
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
+	"github.com/yuin/goldmark/v2/ast"
+	"github.com/yuin/goldmark/v2/parser"
+	markdownhtml "github.com/yuin/goldmark/v2/renderer/html"
+	"github.com/yuin/goldmark/v2/util"
 )
 
 type pageData struct {
@@ -22,7 +28,7 @@ type pageData struct {
 	ArchiveOpen       bool
 	Selected          string
 	FileTitle         string
-	FileDescription   string
+	FileDescription   template.HTML
 	Entries           []entryView
 	SelectedEntry     *entryView
 	AddFields         []addFieldView
@@ -215,13 +221,40 @@ func (a *handler) pageForDocument(fileName string, fileNames []string, raw []byt
 	return data, http.StatusOK
 }
 
+const (
+	fileFrontmatterDetailsHead = `<remember-details data-storage-key="view-file-frontmatter"><summary>More...</summary><div id="file-frontmatter-description" class="file-description" data-details-content>`
+	fileFrontmatterDetailsTail = `</div></remember-details>`
+)
+
 func setFileFrontmatter(data *pageData, fileName string, source []byte) {
 	data.FileTitle = fileName
-	frontmatter := metadata.NewFrontmatter(source)
+	descriptionParser := parser.New(parser.WithASTTransformers(util.Prioritized(
+		metadata.NewDetailsTransformer(fileFrontmatterDetailsHead, fileFrontmatterDetailsTail), 0,
+	)))
+	frontmatter := metadata.NewFrontmatter(source, descriptionParser)
 	if title := frontmatter.Title(); strings.TrimSpace(title) != "" {
 		data.FileTitle = title
 	}
-	data.FileDescription = frontmatter.Description()
+	data.FileDescription = renderFrontmatterDescription(frontmatter)
+}
+
+func renderFrontmatterDescription(frontmatter metadata.Frontmatter) template.HTML {
+	if frontmatter.Node == nil || frontmatter.Node.FirstChild() == nil {
+		return ""
+	}
+
+	var rendered bytes.Buffer
+	renderer := markdownhtml.New()
+	for block := frontmatter.Node.FirstChild().NextSibling(); block != nil; block = block.NextSibling() {
+		if rawHTML, ok := block.(*ast.HTMLBlock); ok && rawHTML.Value.IsOwned() {
+			_, _ = rawHTML.Value.WriteTo(&rendered, frontmatter.Source)
+			continue
+		}
+		if err := renderer.Render(&rendered, frontmatter.Source, block); err != nil {
+			return template.HTML(template.HTMLEscapeString(frontmatter.Description()))
+		}
+	}
+	return template.HTML(rendered.String())
 }
 
 func (a *handler) basePage(fileNames []string, selected, notice string) pageData {
