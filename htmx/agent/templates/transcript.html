@@ -1,0 +1,16 @@
+{{if .Error}}<p class="agent-error" role="alert">{{.Error}}</p>{{end}}
+{{if .Messages}}
+  {{range .Messages}}
+  <article class="agent-message agent-message-{{.Role}}">
+    <h3 class="agent-message-label">{{if eq .Role "user"}}You{{else}}Assistant{{end}}</h3>
+    <p class="agent-message-content">{{.Content}}</p>
+    {{if .Sources}}
+    <p class="agent-sources"><span>Sources:</span>
+      {{range $index, $source := .Sources}}{{if $index}}, {{end}}<code>{{$source}}</code>{{end}}
+    </p>
+    {{end}}
+  </article>
+  {{end}}
+{{else if not .Error}}
+  <p class="agent-empty">Ask a question about the files in this workspace.</p>
+{{end}}

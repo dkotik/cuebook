@@ -30,6 +30,8 @@ func documentReadError(filePath string, status int, message string) error {
 }
 
 type pageData struct {
+	AgentEnabled      bool
+	AgentBaseURL      string
 	Files             []fileTreeNode
 	ArchiveFiles      []fileTreeNode
 	ArchiveOpen       bool
@@ -81,7 +83,12 @@ func (a *handler) list(_ context.Context, request *listRequest) (listResponse, e
 }
 
 func (a *handler) loadPage(fileName, notice string) (pageData, int) {
-	data := pageData{ReadOnly: a.committer == nil, Error: notice}
+	data := pageData{
+		ReadOnly:     a.committer == nil,
+		Error:        notice,
+		AgentEnabled: a.agentEnabled,
+		AgentBaseURL: a.agentBaseURL,
+	}
 	fileNames, err := a.fileNames()
 	if err != nil {
 		data.Error = "Unable to list CUE files."
@@ -275,6 +282,8 @@ func renderFrontmatterDescription(frontmatter metadata.Frontmatter) template.HTM
 func (a *handler) basePage(fileNames []string, selected, notice string) pageData {
 	files, archiveFiles := makeSidebarTrees(fileNames, selected)
 	return pageData{
+		AgentEnabled: a.agentEnabled,
+		AgentBaseURL: a.agentBaseURL,
 		ReadOnly:     a.committer == nil,
 		Error:        notice,
 		Files:        files,

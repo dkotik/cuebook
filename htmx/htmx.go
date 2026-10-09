@@ -41,10 +41,12 @@ type Committer interface {
 }
 
 type handler struct {
-	source    fs.FS
-	committer Committer
-	templates *template.Template
-	searchFS  search.SearchFS
+	source       fs.FS
+	committer    Committer
+	templates    *template.Template
+	searchFS     search.SearchFS
+	agentEnabled bool
+	agentBaseURL string
 }
 
 // New returns a read-only HTTP handler for CUE files in source. The filesystem
@@ -85,13 +87,19 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	if err != nil {
 		return nil, fmt.Errorf("htmx: wrap source filesystem for search: %w", err)
 	}
-	app := &handler{
-		source:    searchableSource,
-		committer: committer,
-		templates: templates,
-		searchFS:  searchableSource,
-	}
 	mux := config.ServeMux
+	app := &handler{
+		source:       searchableSource,
+		committer:    committer,
+		templates:    templates,
+		searchFS:     searchableSource,
+		agentEnabled: config.Agent != nil,
+	}
+	if config.Agent != nil {
+		app.agentBaseURL = routeWithPrefix(config.ServeMuxPrefix, "agent")
+		mountedAgent := config.Agent.Mount(app.agentBaseURL)
+		mux.Handle(app.agentBaseURL+"/", http.StripPrefix(app.agentBaseURL, mountedAgent))
+	}
 	errorHandler := htadaptor.NewErrorHandlerFromTemplate(htadaptor.DefaultErrorTemplate())
 	listPageHandler, err := config.Adaptor.AdaptFunc(app.list,
 		htadaptor.WithErrorHandler(errorHandler),

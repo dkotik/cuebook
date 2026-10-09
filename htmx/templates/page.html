@@ -9,6 +9,9 @@
   <script src="{{route "/assets/theme.js"}}"></script>
   <link rel="stylesheet" href="{{route "/assets/bulma.css"}}">
   <link rel="stylesheet" href="{{route "/assets/app.css"}}">
+  {{if .AgentEnabled}}
+  <link rel="stylesheet" href="{{.AgentBaseURL}}/assets/agent.css">
+  {{end}}
   <script src="{{route "/assets/htmx-2.0.4.min.js"}}" defer></script>
   <script src="{{route "/assets/file-tree.js"}}" defer></script>
   <script src="{{route "/assets/entry-move.js"}}" defer></script>
@@ -17,6 +20,9 @@
   <script src="{{route "/assets/move-confirm.js"}}" defer></script>
   <script src="{{route "/assets/search-control.js"}}" defer></script>
   <script src="{{route "/assets/live-reload.js"}}" defer></script>
+  {{if .AgentEnabled}}
+  <script src="{{.AgentBaseURL}}/assets/agent.js" defer></script>
+  {{end}}
 </head>
 <body data-route-prefix="{{route ""}}">
   <header class="topbar navbar">
@@ -130,6 +136,11 @@
       </footer>
     </div>
   </div>
+  {{if .AgentEnabled}}
+  <div class="agent-widget-loader" hx-get="{{.AgentBaseURL}}/widget" hx-trigger="load" hx-swap="outerHTML">
+    <span class="visually-hidden" role="status">Loading assistant…</span>
+  </div>
+  {{end}}
   <live-reload data-events-url="{{route "/events"}}"></live-reload>
 </body>
 </html>

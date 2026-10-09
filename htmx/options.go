@@ -14,10 +14,33 @@ type options struct {
 	Adaptor        *htadaptor.Adaptor
 	ServeMux       *http.ServeMux
 	ServeMuxPrefix string
+	Agent          AgentHandler
+}
+
+// AgentHandler is implemented by the independent htmx/agent package. Mount
+// lets this package provide the route prefix without importing that package.
+type AgentHandler interface {
+	http.Handler
+	Mount(prefix string) http.Handler
 }
 
 // Option configures a handler constructor.
 type Option func(*options) error
+
+// WithAgent enables an embeddable agent handler under the "agent" route and
+// renders its dockable component in full Cuebook pages.
+func WithAgent(agent AgentHandler) Option {
+	return func(options *options) error {
+		if agent == nil {
+			return errors.New("htmx: agent handler is nil")
+		}
+		if options.Agent != nil {
+			return errors.New("htmx: agent handler is already set")
+		}
+		options.Agent = agent
+		return nil
+	}
+}
 
 func WithAdaptor(adaptor *htadaptor.Adaptor) Option {
 	return func(options *options) error {

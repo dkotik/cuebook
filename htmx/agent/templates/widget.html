@@ -1,0 +1,26 @@
+<cuebook-agent class="cuebook-agent" data-storage-key="cuebook-agent-window">
+  <section class="agent-window" aria-label="Cuebook assistant" hidden>
+    <header class="agent-titlebar" data-agent-drag-handle>
+      <h2 class="agent-title">Cuebook assistant</h2>
+      <div class="agent-window-controls">
+        <button class="agent-dock-control" type="button" data-agent-dock="left" aria-label="Dock assistant left" title="Dock left">⇤</button>
+        <button class="agent-dock-control" type="button" data-agent-dock="right" aria-label="Dock assistant right" title="Dock right">⇥</button>
+        <button class="agent-minimize" type="button" aria-label="Minimize assistant" aria-expanded="true">−</button>
+      </div>
+    </header>
+    <div class="agent-panel">
+      <div id="agent-transcript" class="agent-transcript" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text">
+        <p class="agent-empty">Ask a question about the files in this workspace.</p>
+      </div>
+      <form class="agent-form" action="{{.BaseURL}}/chat" method="post" hx-post="{{.BaseURL}}/chat" hx-target="#agent-transcript" hx-swap="innerHTML" hx-disabled-elt="find button[type='submit']">
+        <label class="agent-input-label" for="agent-message">Message</label>
+        <textarea id="agent-message" name="message" class="agent-message-input" rows="2" minlength="1" maxlength="{{.MaxMessageBytes}}" required placeholder="Ask about your files…"></textarea>
+        <div class="agent-form-footer">
+          <span class="agent-local-note">Runs locally · file contents stay on this server</span>
+          <button class="agent-send button is-link" type="submit">Send</button>
+        </div>
+      </form>
+    </div>
+  </section>
+  <button class="agent-launcher button is-link" type="button" aria-label="Open Cuebook assistant" aria-expanded="false">Ask Cuebook</button>
+</cuebook-agent>
