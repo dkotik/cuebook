@@ -1,4 +1,5 @@
 <main id="workspace" tabindex="-1" aria-live="polite">
+  {{if .FlashMessage}}<p class="notice notification is-success" role="status">{{.FlashMessage}}</p>{{end}}
   {{if .Error}}<p class="notice notification is-danger" role="alert">{{.Error}}</p>{{end}}
   {{if .Selected}}
     <h1 class="document-title title is-4">{{.FileTitle}}</h1>

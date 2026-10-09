@@ -558,6 +558,7 @@ remember-details > [data-details-content][hidden] {
   }
 }
 
+
 @media (max-width: 42rem) {
   .topbar {
     grid-template-columns: minmax(0, 1fr) auto;

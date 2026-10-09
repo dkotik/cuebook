@@ -269,6 +269,12 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 			if response.Code != tt.wantStatus {
 				t.Fatalf("status = %d, want %d; body: %s", response.Code, tt.wantStatus, response.Body.String())
 			}
+			if got := response.Header().Get("HX-Trigger"); got != "Field saved." {
+				t.Errorf("HX-Trigger = %q, want %q", got, "Field saved.")
+			}
+			if !strings.Contains(response.Body.String(), `class="notice notification is-success" role="status">Field saved.</p>`) {
+				t.Errorf("success flash message missing from response: %s", response.Body.String())
+			}
 			if tt.fragment {
 				if !strings.Contains(response.Body.String(), `<main id="workspace"`) || strings.Contains(response.Body.String(), "<!doctype html>") {
 					t.Fatalf("expected HTMX workspace fragment, got: %s", response.Body.String())

@@ -206,14 +206,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 
 	editPageHandler, err := config.Adaptor.AdaptFunc(app.edit,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("page.html")),
+		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("page.html")))),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit route: %w", err)
 	}
 	editWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.edit,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
+		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("workspace.html")))),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit HTMX route: %w", err)

@@ -85,6 +85,10 @@ type editResponse struct {
 	pageData
 }
 
+func (response editResponse) GetFlashMessage() string {
+	return response.FlashMessage
+}
+
 func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, error) {
 	if a.committer == nil {
 		return editResponse{}, errors.New("This source is read-only.")
@@ -147,6 +151,7 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 		return editResponse{}, errors.New("The edit could not be saved.")
 	}
 	data, err := a.renderEditedFile(fileName)
+	data.FlashMessage = "Field saved."
 	return editResponse{pageData: data}, err
 }
 
