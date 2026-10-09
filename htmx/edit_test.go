@@ -313,6 +313,100 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 	}
 }
 
+func TestEditCanUpdateDetailFieldsWithoutRemovingTheirMetadata(t *testing.T) {
+	directory := t.TempDir()
+	source := []byte(`[{Name: "Ada", Note: "before" @cuebook(detail)}]`)
+	filePath := filepath.Join(directory, "people.cue")
+	if err := os.WriteFile(filePath, source, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	handler, err := NewDirectory(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	query := url.Values{"entry": {"0"}, "field": {"Note"}, "file": {"people.cue"}}
+	formRequest := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+query.Encode(), nil)
+	formRequest.Header.Set("HX-Request", "true")
+	formResponse := httptest.NewRecorder()
+	handler.ServeHTTP(formResponse, formRequest)
+	if formResponse.Code != http.StatusOK || !strings.Contains(formResponse.Body.String(), `value="before"`) {
+		t.Fatalf("detail edit form was not rendered: status = %d; body: %s", formResponse.Code, formResponse.Body.String())
+	}
+
+	response := submitEdit(t, handler, false, editValues("people.cue", "0", "Note", "after"))
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusSeeOther, response.Body.String())
+	}
+
+	updated, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	book, err := cuebook.New(updated)
+	if err != nil {
+		t.Fatalf("saved source is invalid: %v", err)
+	}
+	entryValue, err := book.GetValue(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := cuebook.NewEntry(entryValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	field, ok := entry.GetFieldByName("Note")
+	if !ok || field.String() != "after" {
+		t.Fatalf("saved detail Note = %q, found = %t", field.String(), ok)
+	}
+	if len(entry.Details) != 1 || entry.Details[0].Name != "Note" {
+		t.Fatalf("updated field is no longer a detail: %+v", entry.Details)
+	}
+}
+
+func TestEditCanPopulateAbsentOptionalDetailFields(t *testing.T) {
+	directory := t.TempDir()
+	source := []byte(`#person: {Name: string, Note?: string @cuebook(detail)}
+[...#person] & [{Name: "Ada"}]`)
+	filePath := filepath.Join(directory, "people.cue")
+	if err := os.WriteFile(filePath, source, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	handler, err := NewDirectory(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response := submitEdit(t, handler, false, editValues("people.cue", "0", "Note", "added"))
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusSeeOther, response.Body.String())
+	}
+
+	updated, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	book, err := cuebook.New(updated)
+	if err != nil {
+		t.Fatalf("saved source is invalid: %v", err)
+	}
+	entryValue, err := book.GetValue(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := cuebook.NewEntry(entryValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	field, ok := entry.GetFieldByName("Note")
+	if !ok || field.String() != "added" {
+		t.Fatalf("saved detail Note = %q, found = %t", field.String(), ok)
+	}
+	if len(entry.Details) != 1 || entry.Details[0].Name != "Note" {
+		t.Fatalf("populated field is not a detail: %+v", entry.Details)
+	}
+}
+
 func TestEditRedirectUsesMountedRoutePrefix(t *testing.T) {
 	handler, err := NewWithCommitter(testSource(), &recordingCommitter{}, WithServeMuxPrefix("/catalog"))
 	if err != nil {

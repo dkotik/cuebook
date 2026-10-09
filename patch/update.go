@@ -77,39 +77,45 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	if !ok {
 		return nil, errors.New("target field not a struct field") // TODO: model error
 	}
-	iterator, err := entry.Value().Fields(cue.Optional(true))
+	replacement, err := cuebook.Field{
+		Name:  search,
+		Value: field,
+	}.WithValue(value)
 	if err != nil {
-		return nil, fmt.Errorf("unable to iterate through fields of a structured object: %w", err)
+		return nil, err
 	}
-	i := 0
-	for iterator.Next() {
-		label, ok := iterator.Value().Label()
-		if !ok {
-			return nil, errors.New("source field not a struct field") // TODO: model error
-		}
-		if label == search {
-			fields.Elts[i], err = cuebook.Field{
-				Name:  search,
-				Value: field,
-			}.WithValue(value)
-			if err != nil {
-				return nil, err
-			}
 
-			content, err := format.Node(
-				fields,
-				format.Simplify(),
-				format.IndentPrefix(1),
-				format.UseSpaces(4),
-			)
-			if err != nil {
-				return nil, err
-			}
-			return ReplaceStructListEntry(source, entry, content)
+	found := false
+	for _, element := range fields.Elts {
+		sourceField, ok := element.(*ast.Field)
+		if !ok {
+			continue
 		}
-		i++
+		label, _, err := ast.LabelName(sourceField.Label)
+		if err != nil {
+			continue
+		}
+		if label != search {
+			continue
+		}
+		sourceField.Value = replacement.Value
+		found = true
+		break
 	}
-	return nil, errors.New("field not found") // TODO: model error
+	if !found {
+		fields.Elts = append(fields.Elts, replacement)
+	}
+
+	content, err := format.Node(
+		fields,
+		format.Simplify(),
+		format.IndentPrefix(1),
+		format.UseSpaces(4),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return ReplaceStructListEntry(source, entry, content)
 }
 
 func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) (_ Patch, err error) {

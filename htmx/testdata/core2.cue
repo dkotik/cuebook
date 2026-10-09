@@ -19,8 +19,9 @@
 		Email: "sdfjkh@sdfs1df.com"
 	},
   {
-		Name:  "third and finaleee"
+		Name:  "third and finaleee" @cuebook(title)
 		Email: "third@some.email2"
+		Notes: "1212"
 	},
   {
 		Name:  "First11111aa1"
