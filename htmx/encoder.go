@@ -15,6 +15,10 @@ type Redirecter interface {
 	GetRedirect() string
 }
 
+type URLReplacer interface {
+	GetURLReplacement() string
+}
+
 type encoder struct {
 	htadaptor.Encoder
 }
@@ -40,6 +44,17 @@ func (e encoder) Encode(w http.ResponseWriter, r *http.Request, status int, resp
 		if !continueEncoding {
 			w.WriteHeader(http.StatusNoContent) // dropped status
 			return nil
+		}
+	}
+	if replacer, ok := response.(URLReplacer); ok {
+		if location := replacer.GetURLReplacement(); location != "" {
+			if isHTMX(r) {
+				w.Header().Set("HX-Replace-Url", location)
+			} else {
+				w.Header().Set("Location", location)
+				w.WriteHeader(http.StatusSeeOther)
+				return nil
+			}
 		}
 	}
 	if redirecter, ok := response.(Redirecter); ok {

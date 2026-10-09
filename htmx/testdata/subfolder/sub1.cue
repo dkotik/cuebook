@@ -18,10 +18,6 @@
 		Email: "sdf@sdf.com1"
 	},
   {
-		Name:  "Super Rambo 123" @cuebook(title)
-		Email: "test1@testdomain.com"
-	},
-  {
 		Name:  "12sdf33zz"
 		Email: "sdffsd@perfect.com"
 	},
@@ -40,6 +36,10 @@
   {
 		Name:  "new entry"
 		Email: "test1@testdomain.com"
+	},
+  {
+		Name:  "Super Rambo 123" @cuebook(title)
+		Email: "test1@testdom1ain.com"
 	},
   {
 		Name:  "23424n33" @cuebook(title)

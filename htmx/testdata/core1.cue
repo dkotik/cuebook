@@ -21,12 +21,14 @@
 
 [...#contact] & [
   {
-		Name:  "23424n33"
+		Name:  "23424n33" @cuebook(title)
 		Email: "234234@31234a1.com"
+		Notes: "sfs sdf sdfsdf"
 	},
   {
-		Name:  "new entry"
+		Name:  "new entry" @cuebook(title)
 		Email: "test1@testdomain.com"
+		Notes: "sdfsdf"
 	},
   {
 		Name:  "First11111aa1"
@@ -56,5 +58,13 @@
   {
 		Name:  "new entry"
 		Email: "test1@testdomain.com"
+	},
+  {
+		Name:  "Maria" @cuebook(title)
+		Email: "mr@sfsdf.com"
+	},
+  {
+		Name:  "Maria" @cuebook(title)
+		Email: "mr@sfsdf.com"
 	}
 ]

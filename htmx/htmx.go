@@ -124,7 +124,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	editFormHandler, err := config.Adaptor.AdaptFunc(app.editForm,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("field-form.html")),
-		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
+		htadaptor.WithQueryValues("file", "entry", "field", "mode", "view"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit form route: %w", err)
@@ -132,7 +132,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	editFieldHandler, err := config.Adaptor.AdaptFunc(app.editForm,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("field.html")),
-		htadaptor.WithQueryValues("file", "entry", "field", "mode"),
+		htadaptor.WithQueryValues("file", "entry", "field", "mode", "view"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit field route: %w", err)

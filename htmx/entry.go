@@ -69,8 +69,10 @@ func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryRespo
 	if headErr != nil || tailErr != nil || head < 0 || tail <= head || filePath == "" {
 		return entryResponse{}, errors.New("The entry request is invalid.")
 	}
-	requestedRange := cuebook.ByteRange{Head: head, Tail: tail}
+	return a.loadEntryPage(filePath, cuebook.ByteRange{Head: head, Tail: tail}, -1)
+}
 
+func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRange, requestedIndex int) (entryResponse, error) {
 	fileNames, err := a.fileNames()
 	if err != nil {
 		return entryResponse{}, errors.New("Unable to list CUE files.")
@@ -90,7 +92,7 @@ func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryRespo
 		if err != nil {
 			return entryResponse{}, errors.New("Unable to locate this entry in the CUE file.")
 		}
-		if entryRange == requestedRange {
+		if (requestedIndex >= 0 && index == requestedIndex) || (requestedIndex < 0 && entryRange == requestedRange) {
 			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil, true)
 			source, err := format.Node(entry.Value.Syntax(cue.Final(), cue.Concrete(true)), format.Simplify())
 			if err != nil {

@@ -3,6 +3,7 @@
     <input type="hidden" name="file" value="{{.File}}">
     <input type="hidden" name="entry" value="{{.Index}}">
     <input type="hidden" name="field" value="{{.Name}}">
+    {{if .EntryView}}<input type="hidden" name="view" value="entry">{{end}}
     <label>
       <span class="field-name label">{{.Name}}:</span>
       {{if .Secret}}
