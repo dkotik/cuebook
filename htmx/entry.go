@@ -94,11 +94,12 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 		}
 		if (requestedIndex >= 0 && index == requestedIndex) || (requestedIndex < 0 && entryRange == requestedRange) {
 			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil, true)
-			source, err := format.Node(entry.Value.Syntax(cue.Final(), cue.Concrete(true)), format.Simplify())
+			source, err := entryCUESource(entry.Value)
 			if err != nil {
 				return entryResponse{}, fmt.Errorf("Unable to format this entry as CUE: %w", err)
 			}
-			view.CUESource = string(source)
+			view.CUESource = source
+			view.CutFingerprint = entrySourceFingerprint(source)
 			if view.CanMove {
 				for _, name := range fileNames {
 					view.MoveFiles = append(view.MoveFiles, moveFileView{Name: name, Current: name == filePath})
@@ -119,4 +120,9 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 	page.SelectedEntry = selected
 
 	return entryResponse{pageData: page, entryView: *selected}, nil
+}
+
+func entryCUESource(value cue.Value) (string, error) {
+	source, err := format.Node(value.Syntax(cue.Final(), cue.Concrete(true)), format.Simplify())
+	return string(source), err
 }

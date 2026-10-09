@@ -50,16 +50,17 @@ type pageData struct {
 }
 
 type entryView struct {
-	Index      int
-	File       string
-	EntryURL   string
-	CUESource  string
-	Title      string
-	CanMove    bool
-	CanArchive bool
-	MoveFiles  []moveFileView
-	Fields     []fieldView
-	Details    []fieldView
+	Index          int
+	File           string
+	EntryURL       string
+	CUESource      string
+	CutFingerprint string
+	Title          string
+	CanMove        bool
+	CanArchive     bool
+	MoveFiles      []moveFileView
+	Fields         []fieldView
+	Details        []fieldView
 }
 
 type moveFileView struct {
