@@ -10,12 +10,13 @@ import (
 )
 
 // RunDemo serves a writable Cuebook directory on the local IPv4 loopback
-// interface. It is available only in builds that include the demo tag.
-func RunDemo(directory string, port int) error {
+// interface. opts configure the HTMX routes and may enable integrations such as
+// the dockable assistant.
+func RunDemo(directory string, port int, opts ...Option) error {
 	if port < 1 || port > 65535 {
 		return fmt.Errorf("invalid port %d: expected a value between 1 and 65535", port)
 	}
-	handler, err := NewDirectory(directory)
+	handler, err := NewDirectory(directory, opts...)
 	if err != nil {
 		return fmt.Errorf("create demo handler: %w", err)
 	}

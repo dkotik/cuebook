@@ -28,6 +28,14 @@ if err != nil {
 
 The agent is disabled unless `htmx.WithAgent` is provided. When enabled, Cuebook renders the dockable `<cuebook-agent>` custom element and mounts its widget, chat, and embedded assets beneath `/cuebook/agent/` (or `/agent/` at the root). The integration uses HTMX for widget loading and chat submissions. The widget JavaScript handles drag-to-dock, left/right docking, minimize/restore, resizing, and local persistence.
 
+The bundled demo exposes the same integration with an explicit flag; without `-agent` it does not load or download a model:
+
+```sh
+go run -tags kronk ./cmd/htmx-demo -agent
+```
+
+This requires the native runtime prerequisites below. On first launch Kronk downloads the model/runtime into its cache before the HTTP server starts.
+
 To mount the handler independently, strip the mount path and use `Mount` so generated widget URLs match the route:
 
 ```go
