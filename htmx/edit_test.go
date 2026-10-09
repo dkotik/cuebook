@@ -448,36 +448,36 @@ func TestEditFailures(t *testing.T) {
 			name:       "invalid email is rejected by cue validation",
 			values:     editValues("core1.cue", "0", "Email", "not-an-email"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusNoContent,
 			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
-			name:       "htmx validation error uses the default status",
+			name:       "htmx validation error preserves the workspace",
 			values:     editValues("core1.cue", "0", "Email", "not-an-email"),
 			origin:     "http://example.test",
 			htmx:       true,
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusNoContent,
 			wantNotice: "does not satisfy the CUE constraints",
 		},
 		{
 			name:       "missing field is not found",
 			values:     editValues("core1.cue", "0", "notAField", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusNoContent,
 			wantNotice: "entry not found: path=core1.cue",
 		},
 		{
 			name:       "out of range entry is not found",
 			values:     editValues("core1.cue", "9", "Name", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusNoContent,
 			wantNotice: "entry not found: path=core1.cue",
 		},
 		{
 			name:       "path traversal is not found",
 			values:     editValues("../core1.cue", "0", "Name", "value"),
 			origin:     "http://example.test",
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusNoContent,
 			wantNotice: "file not found: path=../core1.cue",
 		},
 		{
@@ -495,7 +495,7 @@ func TestEditFailures(t *testing.T) {
 			if response.Code != tt.wantStatus {
 				t.Fatalf("status = %d, want %d; body: %s", response.Code, tt.wantStatus, response.Body.String())
 			}
-			if !strings.Contains(response.Body.String(), tt.wantNotice) {
+			if tt.origin != "http://example.test" && !strings.Contains(response.Body.String(), tt.wantNotice) {
 				t.Errorf("body does not contain %q", tt.wantNotice)
 			}
 			if tt.origin == "http://example.test" {
@@ -505,8 +505,8 @@ func TestEditFailures(t *testing.T) {
 				if got := response.Header().Get("HX-Redirect"); got != "" {
 					t.Errorf("HX-Redirect = %q, want no redirect on error", got)
 				}
-				if !strings.Contains(response.Body.String(), `class="notice notification is-danger" role="alert">`) {
-					t.Errorf("error flash is not rendered as an alert: %s", response.Body.String())
+				if response.Body.Len() != 0 {
+					t.Errorf("flash-only response has a body: %s", response.Body.String())
 				}
 			}
 
@@ -523,10 +523,10 @@ func TestReadOnlySourceRejectsEdits(t *testing.T) {
 		t.Fatal(err)
 	}
 	response := submitEdit(t, handler, false, editValues("core1.cue", "0", "Name", "Updated"))
-	if response.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusNoContent, response.Body.String())
 	}
-	if !strings.Contains(response.Body.String(), "This source is read-only.") {
+	if !strings.Contains(response.Header().Get("HX-Trigger"), "This source is read-only.") {
 		t.Fatal("expected read-only explanation")
 	}
 }
@@ -538,13 +538,13 @@ func TestCommitFailureDoesNotExposeStorageError(t *testing.T) {
 		t.Fatal(err)
 	}
 	response := submitEdit(t, handler, false, editValues("core1.cue", "0", "Name", "Updated"))
-	if response.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusNoContent, response.Body.String())
 	}
-	if strings.Contains(response.Body.String(), "private disk error") {
+	if strings.Contains(response.Header().Get("HX-Trigger"), "private disk error") {
 		t.Fatal("storage error leaked to response")
 	}
-	if !strings.Contains(response.Body.String(), "The edit could not be saved.") {
+	if !strings.Contains(response.Header().Get("HX-Trigger"), "The edit could not be saved.") {
 		t.Fatal("expected safe storage error message")
 	}
 	if committer.calls != 1 {

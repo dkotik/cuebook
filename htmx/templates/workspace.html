@@ -1,4 +1,7 @@
 <main id="workspace" tabindex="-1" aria-live="polite">
+  {{if and .Selected (not .SelectedEntry) (not .ReadOnly) (not .DocumentError)}}
+  <div hidden data-paste-file="{{.Selected}}" data-paste-url="{{route "/paste"}}"></div>
+  {{end}}
   {{if .Error}}<p class="notice notification is-danger" role="alert">{{.Error}}</p>{{end}}
   {{if .Selected}}
     <h1 class="document-title title is-4">{{.FileTitle}}</h1>

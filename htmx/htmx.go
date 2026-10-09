@@ -31,7 +31,7 @@ import (
 //go:embed templates/*.html
 var templateFiles embed.FS
 
-//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/archive-confirm.js assets/move-confirm.js assets/search-control.js assets/live-reload.js assets/favicon.svg
+//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/archive-confirm.js assets/move-confirm.js assets/search-control.js assets/live-reload.js assets/entry-paste.js assets/flash.js assets/favicon.svg
 var assetFiles embed.FS
 
 // Committer applies a prepared Cuebook patch to a named source file.
@@ -248,6 +248,21 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		return nil, fmt.Errorf("htmx: adapt add HTMX route: %w", err)
 	}
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "add"), sameOriginMiddleware(NewHTMXSwitch(addPageHandler, addWorkspaceHandler)))
+
+	pasteEncoder := NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("workspace.html")))
+	pasteHandler, err := config.Adaptor.AdaptFunc(app.paste,
+		htadaptor.WithEncoder(pasteEncoder),
+		htadaptor.WithErrorHandler(htadaptor.ErrorHandlerFunc(func(w http.ResponseWriter, r *http.Request, cause error) {
+			response := editErrorResponse{pageData: pageData{Error: cause.Error()}}
+			if err := pasteEncoder.Encode(w, r, htadaptor.GetHyperTextStatusCode(cause), response); err != nil {
+				panic(err)
+			}
+		})),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt paste route: %w", err)
+	}
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "paste"), sameOriginMiddleware(pasteHandler))
 
 	movePageHandler, err := config.Adaptor.AdaptFunc(app.move,
 		htadaptor.WithErrorHandler(errorHandler),

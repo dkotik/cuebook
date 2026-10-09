@@ -21,9 +21,9 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] add copy-paste support
 - [ ] do not change view when edit.go fails for some reason
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
+- [x] add copy-paste support
 - [x] HTMX interface
   - [ ] divide @detail decorated properties from the rest of the properties in cards. They should show only when card is :target?
 - [x] Ctrl+J and Ctrl+K entry reordering of entries

@@ -96,7 +96,7 @@ type editErrorResponse struct {
 }
 
 func (response editErrorResponse) GetFlashMessage() (string, bool) {
-	return response.Error, true
+	return response.Error, response.Error == ""
 }
 
 func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, error) {

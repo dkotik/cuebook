@@ -19,6 +19,8 @@
   <script src="{{route "/assets/archive-confirm.js"}}" defer></script>
   <script src="{{route "/assets/move-confirm.js"}}" defer></script>
   <script src="{{route "/assets/search-control.js"}}" defer></script>
+  <script src="{{route "/assets/entry-paste.js"}}" defer></script>
+  <script src="{{route "/assets/flash.js"}}" defer></script>
 
   <script src="{{route "/assets/live-reload.js"}}" defer></script>
   {{if .AgentEnabled}}
@@ -52,6 +54,10 @@
     </button>
   </header>
 
+  <div id="flash-message" class="notice notification is-danger" role="alert" hidden>
+    <button class="delete" type="button" aria-label="Dismiss message" data-flash-dismiss></button>
+    <span data-flash-text></span>
+  </div>
   <div class="layout">
     <nav class="file-nav menu" aria-label="CUE files">
       <h1 class="menu-label">Files</h1>

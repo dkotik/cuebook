@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -81,6 +82,12 @@ func TestNewEncoder(t *testing.T) {
 			wantWrapped: false,
 		},
 		{
+			name:        "flash safely encodes punctuation unicode and newlines",
+			response:    flashResponse{message: "Invalid, \"CUE\"\nfield: café <script>"},
+			wantFlash:   "Invalid, \"CUE\"\nfield: café <script>",
+			wantWrapped: false,
+		},
+		{
 			name:        "flash-and-redirect response stops before redirecting",
 			response:    flashRedirectResponse{message: "Saved.", location: "/entries"},
 			wantFlash:   "Saved.",
@@ -95,9 +102,7 @@ func TestNewEncoder(t *testing.T) {
 			called := false
 			wrap := htadaptor.EncoderFunc(func(w http.ResponseWriter, r *http.Request, status int, response any) error {
 				called = true
-				if got := w.Header().Get("HX-Trigger"); got != test.wantFlash {
-					t.Errorf("HX-Trigger = %q, want %q", got, test.wantFlash)
-				}
+
 				if got := w.Header().Get("HX-Redirect"); got != test.wantTarget {
 					t.Errorf("HX-Redirect = %q, want %q", got, test.wantTarget)
 				}
@@ -111,7 +116,9 @@ func TestNewEncoder(t *testing.T) {
 			})
 
 			response := httptest.NewRecorder()
-			gotErr := NewEncoder(wrap).Encode(response, httptest.NewRequest(http.MethodGet, "/", nil), http.StatusAccepted, test.response)
+			request := httptest.NewRequest(http.MethodGet, "/", nil)
+			request.Header.Set("HX-Request", "true")
+			gotErr := NewEncoder(wrap).Encode(response, request, http.StatusAccepted, test.response)
 			if test.wantEncodeErr && !errors.Is(gotErr, encodeErr) {
 				t.Errorf("Encode() error = %v, want %v", gotErr, encodeErr)
 			}
@@ -121,8 +128,24 @@ func TestNewEncoder(t *testing.T) {
 			if called != test.wantWrapped {
 				t.Errorf("wrapped encoder called = %t, want %t", called, test.wantWrapped)
 			}
-			if !test.wantWrapped && response.Code != http.StatusAccepted {
-				t.Errorf("response status = %d, want %d", response.Code, http.StatusAccepted)
+			if test.wantFlash != "" {
+				var trigger map[string]struct {
+					Message string `json:"message"`
+				}
+				if err := json.Unmarshal([]byte(response.Header().Get("HX-Trigger")), &trigger); err != nil {
+					t.Fatalf("invalid flash trigger: %v", err)
+				}
+				if got := trigger["cuebook:flash"].Message; got != test.wantFlash {
+					t.Errorf("flash = %q, want %q", got, test.wantFlash)
+				}
+			} else if got := response.Header().Get("HX-Trigger"); got != "" {
+				t.Errorf("unexpected flash trigger: %q", got)
+			}
+			if !test.wantWrapped && response.Code != http.StatusNoContent {
+				t.Errorf("response status = %d, want %d", response.Code, http.StatusNoContent)
+			}
+			if !test.wantWrapped && response.Body.Len() != 0 {
+				t.Errorf("flash-only response has a body: %s", response.Body.String())
 			}
 			if !test.wantWrapped && response.Header().Get("HX-Redirect") != "" {
 				t.Errorf("HX-Redirect = %q, want empty after short circuit", response.Header().Get("HX-Redirect"))

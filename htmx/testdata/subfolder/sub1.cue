@@ -36,5 +36,9 @@
   {
 		Name:  "First11111aa1axx44"
 		Email: "test1@testdomain.com"
+	},
+  {
+		Name:  "new entry"
+		Email: "test1@testdomain.com"
 	}
 ]

@@ -21,7 +21,7 @@
 
 [...#contact] & [
   {
-		Name:  "23424n33" @cuebook(title)
+		Name:  "23424n33"
 		Email: "234234@31234a1.com"
 	},
   {
@@ -36,5 +36,9 @@
 		Name:  "dsf lsadjl fksjdfl ksjdflkj"
 		Email: "sdkfjsdlkfjsdlkfj2@sdfsdaf.cdsom"
 		Notes: "skdjfksjd fs"
+	},
+  {
+		Name:  "new entry"
+		Email: "test1@testdomain.com"
 	}
 ]

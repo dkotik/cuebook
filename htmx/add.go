@@ -97,25 +97,29 @@ func (a *handler) add(_ context.Context, request *addRequest) (addResponse, erro
 	if err := entry.Err(); err != nil {
 		return addResponse{}, errors.New("The submitted entry is invalid.")
 	}
+	data, err := a.appendEntry(fileName, raw, entry)
+	return addResponse{pageData: data}, err
+}
+
+func (a *handler) appendEntry(fileName string, raw []byte, entry cue.Value) (pageData, error) {
 	change, err := patch.AppendToStructList(raw, entry)
 	if err != nil {
-		return addResponse{}, errors.New("The entry could not be added to this CUE document.")
+		return pageData{}, errors.New("The entry could not be added to this CUE document.")
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		return addResponse{}, errors.New("The document changed before the entry could be added. Reload and try again.")
+		return pageData{}, errors.New("The document changed before the entry could be added. Reload and try again.")
 	}
 	if _, err := cuebook.New(candidate); err != nil {
-		return addResponse{}, errors.New("The submitted entry does not satisfy the CUE constraints: " + err.Error())
+		return pageData{}, errors.New("The submitted entry does not satisfy the CUE constraints: " + err.Error())
 	}
 	if err := a.commitFile(fileName, change); err != nil {
 		if errors.Is(err, patch.ErrByteRangeNotFound) {
-			return addResponse{}, errors.New("The document changed before the entry could be added. Reload and try again.")
+			return pageData{}, errors.New("The document changed before the entry could be added. Reload and try again.")
 		}
-		return addResponse{}, errors.New("The entry could not be saved.")
+		return pageData{}, errors.New("The entry could not be saved.")
 	}
-	data, err := a.renderEditedFile(fileName)
-	return addResponse{pageData: data}, err
+	return a.renderEditedFile(fileName)
 }
 
 func addFieldDeclaration(field cuebook.Field, input string) (ast.Decl, error) {
