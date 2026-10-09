@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func TestDeleteArchivesEntries(t *testing.T) {
+func TestArchiveArchivesEntries(t *testing.T) {
 	tests := []struct {
 		name           string
 		initialArchive []byte
@@ -54,31 +54,31 @@ func TestDeleteArchivesEntries(t *testing.T) {
 			if pageResponse.Code != http.StatusOK {
 				t.Fatalf("writable entry page status = %d, want %d; body: %s", pageResponse.Code, http.StatusOK, pageResponse.Body.String())
 			}
-			if strings.Contains(pageResponse.Body.String(), `action="/delete"`) {
+			if strings.Contains(pageResponse.Body.String(), `action="/archive"`) {
 				t.Fatalf("list view unexpectedly shows an archive button: %s", pageResponse.Body.String())
 			}
 			for _, want := range []string{
-				`id="delete-confirmation"`,
+				`id="archive-confirmation"`,
 				`role="dialog" aria-modal="true"`,
-				`aria-labelledby="delete-confirmation-title"`,
-				`aria-describedby="delete-confirmation-description"`,
-				`<p class="delete-confirmation-eyebrow">Confirm archive</p>`,
-				`<script src="/assets/delete-confirm.js" defer></script>`,
+				`aria-labelledby="archive-confirmation-title"`,
+				`aria-describedby="archive-confirmation-description"`,
+				`<p class="archive-confirmation-eyebrow">Confirm archive</p>`,
+				`<script src="/assets/archive-confirm.js" defer></script>`,
 			} {
 				if !strings.Contains(pageResponse.Body.String(), want) {
 					t.Errorf("writable entry page does not contain confirmation markup %q", want)
 				}
 			}
 
-			response := submitDelete(t, handler, "source.cue", 0, "http://example.test")
+			response := submitArchive(t, handler, "source.cue", 0, "http://example.test")
 			if response.Code != http.StatusOK {
 				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 			}
 			if !strings.Contains(response.Body.String(), archiveName) || !strings.Contains(response.Body.String(), "Move me") {
 				t.Fatalf("response does not display the archive destination and moved entry: %s", response.Body.String())
 			}
-			if strings.Contains(response.Body.String(), `action="/delete"`) {
-				t.Fatalf("archive entries should not show a delete button: %s", response.Body.String())
+			if strings.Contains(response.Body.String(), `action="/archive"`) {
+				t.Fatalf("archive entries should not show a archive button: %s", response.Body.String())
 			}
 
 			assertEntryTitles(t, committer.files["source.cue"].Data, []string{"Keep me", "Third source"})
@@ -90,7 +90,7 @@ func TestDeleteArchivesEntries(t *testing.T) {
 	}
 }
 
-func TestDeleteRejectsInvalidRequests(t *testing.T) {
+func TestArchiveRejectsInvalidRequests(t *testing.T) {
 	tests := []struct {
 		name       string
 		file       string
@@ -138,7 +138,7 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 			file:       archiveDirectory + "old.cue",
 			origin:     "http://example.test",
 			wantStatus: http.StatusInternalServerError,
-			wantNotice: "Entries in the archive cannot be deleted.",
+			wantNotice: "Entries in the archive cannot be archived again.",
 		},
 		{
 			name:       "cross-origin request",
@@ -174,7 +174,7 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			response := submitDelete(t, handler, test.file, test.entry, test.origin)
+			response := submitArchive(t, handler, test.file, test.entry, test.origin)
 			if response.Code != test.wantStatus {
 				t.Fatalf("status = %d, want %d; body: %s", response.Code, test.wantStatus, response.Body.String())
 			}
@@ -188,7 +188,7 @@ func TestDeleteRejectsInvalidRequests(t *testing.T) {
 	}
 }
 
-func TestDeleteRollsBackArchiveIfSourceCommitFails(t *testing.T) {
+func TestArchiveRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 	t.Parallel()
 
 	documents := transferTestDocuments()
@@ -204,7 +204,7 @@ func TestDeleteRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 	originalSource := append([]byte(nil), files["source.cue"].Data...)
 	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
 
-	response := submitDelete(t, handler, "source.cue", 0, "http://example.test")
+	response := submitArchive(t, handler, "source.cue", 0, "http://example.test")
 	if response.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
@@ -220,7 +220,7 @@ func TestDeleteRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 	}
 }
 
-func TestDeleteDoesNotFollowArchiveDirectorySymlink(t *testing.T) {
+func TestArchiveDoesNotFollowArchiveDirectorySymlink(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
@@ -239,7 +239,7 @@ func TestDeleteDoesNotFollowArchiveDirectorySymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	response := submitDelete(t, handler, "source.cue", 0, "http://example.test")
+	response := submitArchive(t, handler, "source.cue", 0, "http://example.test")
 	if response.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
@@ -259,13 +259,13 @@ func TestDeleteDoesNotFollowArchiveDirectorySymlink(t *testing.T) {
 	}
 }
 
-func submitDelete(t *testing.T, handler http.Handler, file string, entry int, origin string) *httptest.ResponseRecorder {
+func submitArchive(t *testing.T, handler http.Handler, file string, entry int, origin string) *httptest.ResponseRecorder {
 	t.Helper()
 	values := url.Values{
 		"file":  {file},
 		"entry": {strconv.Itoa(entry)},
 	}
-	request := httptest.NewRequest(http.MethodPost, "http://example.test/delete", strings.NewReader(values.Encode()))
+	request := httptest.NewRequest(http.MethodPost, "http://example.test/archive", strings.NewReader(values.Encode()))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("Origin", origin)
 	request.Header.Set("HX-Request", "true")

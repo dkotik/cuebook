@@ -50,14 +50,14 @@ type pageData struct {
 }
 
 type entryView struct {
-	Index     int
-	File      string
-	EntryURL  string
-	Title     string
-	CanMove   bool
-	CanDelete bool
-	Fields    []fieldView
-	Details   []fieldView
+	Index      int
+	File       string
+	EntryURL   string
+	Title      string
+	CanMove    bool
+	CanArchive bool
+	Fields     []fieldView
+	Details    []fieldView
 }
 
 type listRequest struct {
@@ -149,12 +149,12 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 
 func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange cuebook.ByteRange, readOnly, includeTitleField bool) entryView {
 	view := entryView{
-		Index:     index,
-		File:      fileName,
-		EntryURL:  entryURL(fileName, entryRange),
-		Title:     entry.GetTitle(),
-		CanMove:   !readOnly,
-		CanDelete: !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
+		Index:      index,
+		File:       fileName,
+		EntryURL:   entryURL(fileName, entryRange),
+		Title:      entry.GetTitle(),
+		CanMove:    !readOnly,
+		CanArchive: !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
 	}
 	if view.Title == "" {
 		view.Title = fmt.Sprintf("Entry %d", index+1)

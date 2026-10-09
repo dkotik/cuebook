@@ -16,7 +16,7 @@
   <script src="{{route "/assets/file-tree.js"}}" defer></script>
   <script src="{{route "/assets/entry-move.js"}}" defer></script>
   <script src="{{route "/assets/remember-details.js"}}" defer></script>
-  <script src="{{route "/assets/delete-confirm.js"}}" defer></script>
+  <script src="{{route "/assets/archive-confirm.js"}}" defer></script>
   <script src="{{route "/assets/move-confirm.js"}}" defer></script>
   <script src="{{route "/assets/search-control.js"}}" defer></script>
   <script src="{{route "/assets/live-reload.js"}}" defer></script>
@@ -75,30 +75,30 @@
     </nav>
     {{template "workspace.html" .}}
   </div>
-  <div id="delete-confirmation" class="modal" aria-hidden="true">
+  <div id="archive-confirmation" class="modal" aria-hidden="true">
     <div class="modal-background" data-confirmation-dismiss></div>
-    <div class="modal-card delete-confirmation-card" role="dialog" aria-modal="true" aria-labelledby="delete-confirmation-title" aria-describedby="delete-confirmation-description">
-      <header class="modal-card-head delete-confirmation-head">
-        <div class="delete-confirmation-heading">
-          <span class="delete-confirmation-icon" aria-hidden="true">
+    <div class="modal-card archive-confirmation-card" role="dialog" aria-modal="true" aria-labelledby="archive-confirmation-title" aria-describedby="archive-confirmation-description">
+      <header class="modal-card-head archive-confirmation-head">
+        <div class="archive-confirmation-heading">
+          <span class="archive-confirmation-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/>
             </svg>
           </span>
           <div>
-            <p class="delete-confirmation-eyebrow">Confirm archive</p>
-            <p id="delete-confirmation-title" class="modal-card-title">Archive this entry?</p>
+            <p class="archive-confirmation-eyebrow">Confirm archive</p>
+            <p id="archive-confirmation-title" class="modal-card-title">Archive this entry?</p>
           </div>
         </div>
-        <button class="delete-confirmation-close" type="button" aria-label="Cancel archive" data-confirmation-dismiss>×</button>
+        <button class="archive-confirmation-close" type="button" aria-label="Cancel archive" data-confirmation-dismiss>×</button>
       </header>
       <section class="modal-card-body">
-        <p id="delete-confirmation-description" class="delete-confirmation-description">This entry will be removed from this document and added to today's archive.</p>
-        <p class="delete-confirmation-entry" data-confirmation-entry></p>
+        <p id="archive-confirmation-description" class="archive-confirmation-description">This entry will be removed from this document and added to today's archive.</p>
+        <p class="archive-confirmation-entry" data-confirmation-entry></p>
       </section>
       <footer class="modal-card-foot is-justify-content-flex-end">
-        <button class="button is-light delete-confirmation-cancel" type="button" data-confirmation-dismiss>Keep entry</button>
-        <button class="button is-danger delete-confirmation-submit" type="button" data-confirmation-confirm>
+        <button class="button is-light archive-confirmation-cancel" type="button" data-confirmation-dismiss>Keep entry</button>
+        <button class="button is-danger archive-confirmation-submit" type="button" data-confirmation-confirm>
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/></svg>
           Archive entry
         </button>

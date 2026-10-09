@@ -36,7 +36,7 @@ func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveRe
 
 	fileName := request.File
 	if strings.HasPrefix(fileName, archiveDirectory) {
-		return archiveResponse{}, errors.New("Entries in the archive cannot be deleted.")
+		return archiveResponse{}, errors.New("Entries in the archive cannot be archived again.")
 	}
 
 	fileNames, err := a.fileNames()

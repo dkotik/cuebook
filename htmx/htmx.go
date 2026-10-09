@@ -31,7 +31,7 @@ import (
 //go:embed templates/*.html
 var templateFiles embed.FS
 
-//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/delete-confirm.js assets/move-confirm.js assets/search-control.js assets/live-reload.js assets/favicon.svg
+//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/archive-confirm.js assets/move-confirm.js assets/search-control.js assets/live-reload.js assets/favicon.svg
 var assetFiles embed.FS
 
 // Committer applies a prepared Cuebook patch to a named source file.
@@ -257,16 +257,16 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		htadaptor.WithTemplate(templates.Lookup("page.html")),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("htmx: adapt delete route: %w", err)
+		return nil, fmt.Errorf("htmx: adapt archive route: %w", err)
 	}
 	archiveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.archive,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("htmx: adapt delete HTMX route: %w", err)
+		return nil, fmt.Errorf("htmx: adapt archive HTMX route: %w", err)
 	}
-	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "delete"), sameOriginMiddleware(NewHTMXSwitch(archivePageHandler, archiveWorkspaceHandler)))
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "archive"), sameOriginMiddleware(NewHTMXSwitch(archivePageHandler, archiveWorkspaceHandler)))
 
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "assets/{name}"), http.HandlerFunc(serveAsset))
 

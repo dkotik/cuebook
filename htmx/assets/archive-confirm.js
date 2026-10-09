@@ -1,12 +1,12 @@
 (() => {
-  const modal = document.getElementById("delete-confirmation");
+  const modal = document.getElementById("archive-confirmation");
   if (!modal) {
     return;
   }
 
   const entryLabel = modal.querySelector("[data-confirmation-entry]");
   const confirmButton = modal.querySelector("[data-confirmation-confirm]");
-  const cancelButton = modal.querySelector(".delete-confirmation-cancel");
+  const cancelButton = modal.querySelector(".archive-confirmation-cancel");
   let pendingForm = null;
   let pendingSubmitter = null;
   let returnFocus = null;
@@ -40,7 +40,7 @@
 
   document.addEventListener("submit", (event) => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || !form.matches('form[action$="/delete"], form[hx-post$="/delete"]')) {
+    if (!(form instanceof HTMLFormElement) || !form.matches('form[action$="/archive"], form[hx-post$="/archive"]')) {
       return;
     }
     if (form.dataset.confirmed === "true") {

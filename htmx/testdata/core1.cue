@@ -21,10 +21,6 @@
 
 [...#contact] & [
   {
-		Name:  "First11111aa1axx44"
-		Email: "test1@testdomain.com"
-	},
-  {
 		Name:  "23424n33"
 		Email: "234234@31234a.com"
 	},

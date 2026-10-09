@@ -86,7 +86,7 @@ func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 	if listResponse.Code != http.StatusOK {
 		t.Fatalf("list status = %d, want %d; body: %s", listResponse.Code, http.StatusOK, listResponse.Body.String())
 	}
-	if strings.Contains(listResponse.Body.String(), `action="/delete"`) {
+	if strings.Contains(listResponse.Body.String(), `action="/archive"`) {
 		t.Errorf("list view unexpectedly includes the archive form: %s", listResponse.Body.String())
 	}
 
@@ -100,8 +100,15 @@ func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 	if !strings.Contains(entryBody, "<!doctype html>") {
 		t.Errorf("normal entry view should render the full page: %s", entryBody)
 	}
-	if !strings.Contains(entryBody, `action="/delete"`) {
+	archiveFormIndex := strings.Index(entryBody, `action="/archive"`)
+	articleEndIndex := strings.Index(entryBody, `</article>`)
+	if archiveFormIndex == -1 {
 		t.Errorf("entry view does not include the archive form: %s", entryBody)
+	} else if articleEndIndex == -1 || archiveFormIndex < articleEndIndex {
+		t.Errorf("archive form is not placed below the entry container: %s", entryBody)
+	}
+	if !strings.Contains(entryBody, `<div class="buttons entry-actions">`) || !strings.Contains(entryBody, `>Archive Entry</button>`) {
+		t.Errorf("entry view does not render the Archive Entry button group: %s", entryBody)
 	}
 }
 

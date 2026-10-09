@@ -428,23 +428,23 @@ remember-details > [data-details-content][hidden] {
   opacity: 0.75;
 }
 
-.delete-confirmation-card,
+.archive-confirmation-card,
 .move-confirmation-card {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
   border-radius: 1rem;
   box-shadow: 0 1.5rem 5rem rgb(0 0 0 / 35%);
-  animation: delete-confirmation-enter 180ms ease-out both;
+  animation: archive-confirmation-enter 180ms ease-out both;
 }
 
-.delete-confirmation-head,
+.archive-confirmation-head,
 .move-confirmation-head {
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
 }
 
-.delete-confirmation-heading,
+.archive-confirmation-heading,
 .move-confirmation-heading {
   display: flex;
   align-items: center;
@@ -452,7 +452,7 @@ remember-details > [data-details-content][hidden] {
   min-width: 0;
 }
 
-.delete-confirmation-icon,
+.archive-confirmation-icon,
 .move-confirmation-icon {
   display: grid;
   flex: 0 0 auto;
@@ -462,7 +462,7 @@ remember-details > [data-details-content][hidden] {
   border-radius: 0.9rem;
 }
 
-.delete-confirmation-icon {
+.archive-confirmation-icon {
   background: color-mix(in srgb, var(--bulma-danger) 14%, transparent);
   color: var(--bulma-danger);
 }
@@ -472,7 +472,7 @@ remember-details > [data-details-content][hidden] {
   color: var(--bulma-link);
 }
 
-.delete-confirmation-eyebrow,
+.archive-confirmation-eyebrow,
 .move-confirmation-eyebrow {
   margin-bottom: 0.2rem;
   font-size: 0.72rem;
@@ -481,7 +481,7 @@ remember-details > [data-details-content][hidden] {
   text-transform: uppercase;
 }
 
-.delete-confirmation-eyebrow {
+.archive-confirmation-eyebrow {
   color: var(--bulma-danger);
 }
 
@@ -489,12 +489,12 @@ remember-details > [data-details-content][hidden] {
   color: var(--bulma-link);
 }
 
-.delete-confirmation-head .modal-card-title,
+.archive-confirmation-head .modal-card-title,
 .move-confirmation-head .modal-card-title {
   overflow-wrap: anywhere;
 }
 
-.delete-confirmation-close,
+.archive-confirmation-close,
 .move-confirmation-close {
   flex: 0 0 auto;
   min-height: auto;
@@ -508,18 +508,18 @@ remember-details > [data-details-content][hidden] {
   opacity: 0.65;
 }
 
-.delete-confirmation-close:hover,
+.archive-confirmation-close:hover,
 .move-confirmation-close:hover {
   background: color-mix(in srgb, currentColor 9%, transparent);
   opacity: 1;
 }
 
-.delete-confirmation-description,
+.archive-confirmation-description,
 .move-confirmation-description {
   line-height: 1.65;
 }
 
-.delete-confirmation-entry,
+.archive-confirmation-entry,
 .move-confirmation-entry {
   margin-top: 0.9rem;
   overflow-wrap: anywhere;
@@ -533,14 +533,14 @@ remember-details > [data-details-content][hidden] {
   opacity: 0.8;
 }
 
-.delete-confirmation-submit,
+.archive-confirmation-submit,
 .move-confirmation-submit {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-@keyframes delete-confirmation-enter {
+@keyframes archive-confirmation-enter {
   from {
     opacity: 0;
     transform: translateY(0.6rem) scale(0.98);
@@ -552,7 +552,7 @@ remember-details > [data-details-content][hidden] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .delete-confirmation-card,
+  .archive-confirmation-card,
   .move-confirmation-card {
     animation: none;
   }
