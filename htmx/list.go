@@ -53,6 +53,7 @@ type entryView struct {
 	Index      int
 	File       string
 	EntryURL   string
+	CUESource  string
 	Title      string
 	CanMove    bool
 	CanArchive bool

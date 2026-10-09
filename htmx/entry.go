@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strconv"
 
+	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/format"
 	"github.com/dkotik/cuebook"
 )
 
@@ -90,6 +92,11 @@ func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryRespo
 		}
 		if entryRange == requestedRange {
 			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil, true)
+			source, err := format.Node(entry.Value.Syntax(cue.Final(), cue.Concrete(true)), format.Simplify())
+			if err != nil {
+				return entryResponse{}, fmt.Errorf("Unable to format this entry as CUE: %w", err)
+			}
+			view.CUESource = string(source)
 			selected = &view
 			break
 		}

@@ -31,7 +31,7 @@ import (
 //go:embed templates/*.html
 var templateFiles embed.FS
 
-//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/archive-confirm.js assets/move-confirm.js assets/search-control.js assets/live-reload.js assets/entry-paste.js assets/flash.js assets/favicon.svg
+//go:embed assets/app.css assets/bulma.css assets/bulma-LICENSE.txt assets/htmx-2.0.4.min.js assets/htmx-LICENSE.txt assets/theme.js assets/file-tree.js assets/entry-move.js assets/remember-details.js assets/archive-confirm.js assets/move-confirm.js assets/search-control.js assets/live-reload.js assets/entry-paste.js assets/entry-copy.js assets/flash.js assets/favicon.svg
 var assetFiles embed.FS
 
 // Committer applies a prepared Cuebook patch to a named source file.

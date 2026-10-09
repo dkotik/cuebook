@@ -4,12 +4,15 @@
   </header>
   {{template "entry-content.html" .}}
 </article>
-{{if .CanArchive}}
 <div class="buttons entry-actions">
+  <pre id="entry-cue-{{.Index}}" hidden>{{.CUESource}}</pre>
+  <button class="button is-ghost" type="button" data-entry-copy="entry-cue-{{.Index}}" title="Copy entry as CUE">Copy CUE</button>
+  <span class="muted" data-entry-copy-status role="status"></span>
+  {{if .CanArchive}}
   <form class="entry-archive-form" action="{{route "/archive"}}" method="post" hx-post="{{route "/archive"}}" hx-target="#workspace" hx-swap="outerHTML">
     <input type="hidden" name="file" value="{{.File}}">
     <input type="hidden" name="entry" value="{{.Index}}">
     <button class="button is-ghost" type="submit">Archive Entry</button>
   </form>
+  {{end}}
 </div>
-{{end}}

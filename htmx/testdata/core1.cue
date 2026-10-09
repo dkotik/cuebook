@@ -38,7 +38,11 @@
 		Notes: "skdjfksjd fs"
 	},
   {
-		Name:  "new entry"
-		Email: "test1@testdomain.com"
+		Name:  "new entry" @cuebook(title)
+		Email: "test1@doodod.co"
+	},
+  {
+		Name:  "23424n33" @cuebook(title)
+		Email: "234234@31234a1.com"
 	}
 ]
