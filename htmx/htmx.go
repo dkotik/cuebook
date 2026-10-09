@@ -47,6 +47,7 @@ type handler struct {
 	searchFS     search.SearchFS
 	agentEnabled bool
 	agentBaseURL string
+	routePrefix  string
 }
 
 // New returns a read-only HTTP handler for CUE files in source. The filesystem
@@ -94,6 +95,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		templates:    templates,
 		searchFS:     searchableSource,
 		agentEnabled: config.Agent != nil,
+		routePrefix:  config.ServeMuxPrefix,
 	}
 	if config.Agent != nil {
 		app.agentBaseURL = routeWithPrefix(config.ServeMuxPrefix, "agent")
@@ -204,15 +206,26 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		}),
 	)
 
+	editErrorHandler := func(pageTemplate *template.Template) htadaptor.ErrorHandlerFunc {
+		wrappedEncoder := NewEncoder(htadaptor.NewTemplateEncoder(pageTemplate))
+		return func(w http.ResponseWriter, r *http.Request, cause error) {
+			data, _ := app.loadPage(r.FormValue("file"), cause.Error())
+			response := editErrorResponse{pageData: data}
+			if encodeErr := wrappedEncoder.Encode(w, r, htadaptor.GetHyperTextStatusCode(cause), response); encodeErr != nil {
+				panic(encodeErr)
+			}
+		}
+	}
+
 	editPageHandler, err := config.Adaptor.AdaptFunc(app.edit,
-		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("page.html"))),
 		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("page.html")))),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt edit route: %w", err)
 	}
 	editWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.edit,
-		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("workspace.html"))),
 		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("workspace.html")))),
 	)
 	if err != nil {

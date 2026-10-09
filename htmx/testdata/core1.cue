@@ -25,7 +25,7 @@
 		Email: "234234@31234a1.com"
 	},
   {
-		Name:  "new entry22"
+		Name:  "new entry"
 		Email: "test1@testdomain.com"
 	},
   {

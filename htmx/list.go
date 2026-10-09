@@ -44,7 +44,6 @@ type pageData struct {
 	RequiredAddFields []addFieldView
 	OptionalAddFields []addFieldView
 	AddError          string
-	FlashMessage      string
 	ReadOnly          bool
 	Error             string
 	DocumentError     string

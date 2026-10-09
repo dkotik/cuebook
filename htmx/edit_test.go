@@ -237,13 +237,14 @@ func TestReadOnlyPageShowsStaticFieldsWithoutEditControls(t *testing.T) {
 
 func TestWritableDirectoryCommitsEdits(t *testing.T) {
 	tests := []struct {
-		name       string
-		htmx       bool
-		wantStatus int
-		fragment   bool
+		name         string
+		htmx         bool
+		wantStatus   int
+		wantRedirect string
+		fragment     bool
 	}{
-		{name: "browser form receives updated page", wantStatus: http.StatusOK},
-		{name: "htmx form receives updated fragment", htmx: true, wantStatus: http.StatusOK, fragment: true},
+		{name: "browser form redirects to updated file list", wantStatus: http.StatusSeeOther, wantRedirect: "/?file=contacts.cue"},
+		{name: "htmx form redirects to updated file list", htmx: true, wantStatus: http.StatusOK, wantRedirect: "/?file=contacts.cue", fragment: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -269,11 +270,13 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 			if response.Code != tt.wantStatus {
 				t.Fatalf("status = %d, want %d; body: %s", response.Code, tt.wantStatus, response.Body.String())
 			}
-			if got := response.Header().Get("HX-Trigger"); got != "Field saved." {
-				t.Errorf("HX-Trigger = %q, want %q", got, "Field saved.")
+			if got := response.Header().Get("HX-Redirect"); got != tt.wantRedirect {
+				t.Errorf("HX-Redirect = %q, want %q", got, tt.wantRedirect)
 			}
-			if !strings.Contains(response.Body.String(), `class="notice notification is-success" role="status">Field saved.</p>`) {
-				t.Errorf("success flash message missing from response: %s", response.Body.String())
+			if !tt.htmx {
+				if got := response.Header().Get("Location"); got != tt.wantRedirect {
+					t.Errorf("Location = %q, want %q", got, tt.wantRedirect)
+				}
 			}
 			if tt.fragment {
 				if !strings.Contains(response.Body.String(), `<main id="workspace"`) || strings.Contains(response.Body.String(), "<!doctype html>") {
@@ -307,6 +310,28 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 				t.Fatalf("saved Name = %q, found = %t", field.String(), ok)
 			}
 		})
+	}
+}
+
+func TestEditRedirectUsesMountedRoutePrefix(t *testing.T) {
+	handler, err := NewWithCommitter(testSource(), &recordingCommitter{}, WithServeMuxPrefix("/catalog"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	values := editValues("core1.cue", "0", "Name", "Updated")
+	request := httptest.NewRequest(http.MethodPost, "http://example.test/catalog/edit", strings.NewReader(values.Encode()))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Origin", "http://example.test")
+	request.Header.Set("HX-Request", "true")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	if got, want := response.Header().Get("HX-Redirect"), "/catalog/?file=core1.cue"; got != want {
+		t.Errorf("HX-Redirect = %q, want %q", got, want)
 	}
 }
 
@@ -378,6 +403,17 @@ func TestEditFailures(t *testing.T) {
 			}
 			if !strings.Contains(response.Body.String(), tt.wantNotice) {
 				t.Errorf("body does not contain %q", tt.wantNotice)
+			}
+			if tt.origin == "http://example.test" {
+				if got := response.Header().Get("HX-Trigger"); !strings.Contains(got, tt.wantNotice) {
+					t.Errorf("HX-Trigger = %q, want error flash %q", got, tt.wantNotice)
+				}
+				if got := response.Header().Get("HX-Redirect"); got != "" {
+					t.Errorf("HX-Redirect = %q, want no redirect on error", got)
+				}
+				if !strings.Contains(response.Body.String(), `class="notice notification is-danger" role="alert">`) {
+					t.Errorf("error flash is not rendered as an alert: %s", response.Body.String())
+				}
 			}
 
 		})

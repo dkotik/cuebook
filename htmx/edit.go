@@ -83,10 +83,19 @@ func (*editRequest) Validate(context.Context) error { return nil }
 
 type editResponse struct {
 	pageData
+	redirect string
 }
 
-func (response editResponse) GetFlashMessage() string {
-	return response.FlashMessage
+func (response editResponse) GetRedirect() string {
+	return response.redirect
+}
+
+type editErrorResponse struct {
+	pageData
+}
+
+func (response editErrorResponse) GetFlashMessage() string {
+	return response.Error
 }
 
 func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, error) {
@@ -130,7 +139,7 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 	}
 	if isSecretField(field.Value) && value == "" && field.String() != "" {
 		data, err := a.renderEditedFile(fileName)
-		return editResponse{pageData: data}, err
+		return editResponse{pageData: data, redirect: a.fileListURL(fileName)}, err
 	}
 
 	change, err := patch.UpdateFieldValue(raw, entryValue, field.Value, value)
@@ -151,8 +160,18 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 		return editResponse{}, errors.New("The edit could not be saved.")
 	}
 	data, err := a.renderEditedFile(fileName)
-	data.FlashMessage = "Field saved."
-	return editResponse{pageData: data}, err
+	return editResponse{pageData: data, redirect: a.fileListURL(fileName)}, err
+}
+
+func (a *handler) fileListURL(fileName string) string {
+	path := routeWithPrefix(a.routePrefix, "")
+	if path == "" {
+		path = "/"
+	} else if path != "/" {
+		path += "/"
+	}
+	query := url.Values{"file": {fileName}}
+	return path + "?" + query.Encode()
 }
 
 func (a *handler) renderEditedFile(fileName string) (pageData, error) {

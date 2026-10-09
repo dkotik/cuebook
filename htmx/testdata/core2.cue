@@ -15,8 +15,8 @@
 		Email: "12312312@2324.2343"
 	},
   {
-		Name:  "Adam Bink"
-		Email: "sdfjkh@sdfsdf.com"
+		Name:  "Adam Bink 2"
+		Email: "sdfjkh@sdfs1df.com"
 	},
   {
 		Name:  "third and finaleee1"
@@ -27,6 +27,6 @@
 		Email: "test1@testdomain.com"
 	},
   {
-		Name:  "xcxcx"
-		Email: "cvxvxcv@dsafsd.com"
+		Name:  "xcxcx" @cuebook(title)
+		Email: "cvxvxcv@ds1afsd.com"
 	},]
