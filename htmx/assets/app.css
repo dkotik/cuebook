@@ -428,6 +428,20 @@ remember-details > [data-details-content][hidden] {
   opacity: 0.75;
 }
 
+.entry-move-dialog {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.entry-move-dialog::backdrop {
+  background: rgb(0 0 0 / 60%);
+}
+
+.entry-move-dialog > .modal-card {
+  margin: 0;
+}
+
 .archive-confirmation-card,
 .move-confirmation-card {
   overflow: hidden;

@@ -15,13 +15,9 @@
 		Email: "12312312@2324.2343"
 	},
   {
-		Name:  "Adam Bink 2"
-		Email: "sdfjkh@sdfs1df.com"
-	},
-  {
 		Name:  "third and finaleee" @cuebook(title)
 		Email: "third@some.email2"
-		Notes: "1212"
+		Notes: "1212a" @cuebook(detail)
 	},
   {
 		Name:  "First11111aa1"
@@ -30,14 +26,6 @@
   {
 		Name:  "xcxcx" @cuebook(title)
 		Email: "cvxvxcv@ds1afsd.com"
-	},
-  {
-		Name:  "new entry"
-		Email: "test1@testdomain.com"
-	},
-  {
-		Name:  "23424n33" @cuebook(title)
-		Email: "234234@31234a1.com"
 	},
   {
 		Name:  "23424n33" @cuebook(title)

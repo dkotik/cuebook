@@ -57,8 +57,14 @@ type entryView struct {
 	Title      string
 	CanMove    bool
 	CanArchive bool
+	MoveFiles  []moveFileView
 	Fields     []fieldView
 	Details    []fieldView
+}
+
+type moveFileView struct {
+	Name    string
+	Current bool
 }
 
 type listRequest struct {

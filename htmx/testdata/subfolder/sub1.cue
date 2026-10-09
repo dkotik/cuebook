@@ -10,8 +10,8 @@
 
 [...#contact] & [
   {
-		Name:  "aFirst11111aaDDD"
-		Email: "test1@testdomain.com"
+		Name:  "aFirst11111aaDDD" @cuebook(title)
+		Email: "test1@testdo1main.com"
 	},
   {
 		Name:  "2378" @cuebook(title)

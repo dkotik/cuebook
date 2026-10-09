@@ -44,5 +44,17 @@
   {
 		Name:  "23424n33" @cuebook(title)
 		Email: "234234@31234a1.com"
+	},
+  {
+		Name:  "23424n33"
+		Email: "234234@dsf.com"
+	},
+  {
+		Name:  "Adam Bink 2"
+		Email: "sdfjkh@sdfs1df.com"
+	},
+  {
+		Name:  "new entry"
+		Email: "test1@testdomain.com"
 	}
 ]

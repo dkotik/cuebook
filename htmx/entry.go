@@ -97,6 +97,11 @@ func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryRespo
 				return entryResponse{}, fmt.Errorf("Unable to format this entry as CUE: %w", err)
 			}
 			view.CUESource = string(source)
+			if view.CanMove {
+				for _, name := range fileNames {
+					view.MoveFiles = append(view.MoveFiles, moveFileView{Name: name, Current: name == filePath})
+				}
+			}
 			selected = &view
 			break
 		}

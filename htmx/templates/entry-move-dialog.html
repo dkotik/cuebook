@@ -1,0 +1,26 @@
+<dialog id="entry-move-dialog" class="entry-move-dialog" aria-labelledby="entry-move-title" aria-describedby="entry-move-description">
+  <form class="modal-card move-confirmation-card" action="{{route "/move"}}" method="post" hx-post="{{route "/move"}}" hx-target="#workspace" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" data-entry-move-form>
+    <input type="hidden" name="file" value="{{.File}}">
+    <input type="hidden" name="from" value="{{.Index}}">
+    <header class="modal-card-head">
+      <h2 id="entry-move-title" class="modal-card-title">Move entry</h2>
+      <button class="delete" type="button" aria-label="Cancel move" data-entry-move-dismiss></button>
+    </header>
+    <section class="modal-card-body">
+      <p id="entry-move-description">Choose a file to move “{{.Title}}” to.</p>
+      <fieldset class="mt-4">
+        <legend class="label">Destination file</legend>
+        {{range .MoveFiles}}
+        <label class="radio is-block mb-3{{if .Current}} has-text-danger{{end}}">
+          <input type="radio" name="destination" value="{{.Name}}"{{if .Current}} disabled{{else}} required{{end}}>
+          {{.Name}}{{if .Current}} (current file){{end}}
+        </label>
+        {{end}}
+      </fieldset>
+    </section>
+    <footer class="modal-card-foot is-justify-content-flex-end">
+      <button class="button is-light" type="button" data-entry-move-dismiss autofocus>Cancel</button>
+      <button class="button is-link" type="submit" data-entry-move-confirm disabled>Confirm move</button>
+    </footer>
+  </form>
+</dialog>

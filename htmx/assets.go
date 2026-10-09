@@ -7,7 +7,7 @@ func serveAsset(w http.ResponseWriter, r *http.Request) {
 	switch name := r.PathValue("name"); name {
 	case "app.css", "bulma.css":
 		contentType = "text/css; charset=utf-8"
-	case "theme.js", "file-tree.js", "entry-move.js", "remember-details.js", "archive-confirm.js", "move-confirm.js", "search-control.js", "live-reload.js", "entry-paste.js", "entry-copy.js", "flash.js":
+	case "theme.js", "file-tree.js", "entry-move.js", "entry-move-dialog.js", "remember-details.js", "archive-confirm.js", "move-confirm.js", "search-control.js", "live-reload.js", "entry-paste.js", "entry-copy.js", "flash.js":
 		contentType = "text/javascript; charset=utf-8"
 	case "bulma-LICENSE.txt", "htmx-LICENSE.txt":
 		contentType = "text/plain; charset=utf-8"
