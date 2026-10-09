@@ -7,14 +7,15 @@ import (
 )
 
 type addFieldView struct {
-	Index     int
-	Name      string
-	Value     string
-	MultiLine bool
-	Secret    bool
-	Numeric   bool
-	Boolean   bool
-	Optional  bool
+	Index       int
+	Name        string
+	Description string
+	Value       string
+	MultiLine   bool
+	Secret      bool
+	Numeric     bool
+	Boolean     bool
+	Optional    bool
 }
 
 type entryFieldDefinition struct {
@@ -29,11 +30,12 @@ func makeAddFieldViews(document cuebook.Book) []addFieldView {
 		_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
 		kind := field.Value.IncompleteKind()
 		view := addFieldView{
-			Index:     index,
-			Name:      field.Name,
-			MultiLine: metadata.IsMultiLine(field.Value),
-			Secret:    secret,
-			Optional:  definition.Optional,
+			Index:       index,
+			Name:        field.Name,
+			Description: field.Description,
+			MultiLine:   metadata.IsMultiLine(field.Value),
+			Secret:      secret,
+			Optional:    definition.Optional,
 		}
 		switch {
 		case kind&cue.NumberKind != 0:
@@ -69,7 +71,7 @@ func entryFieldDefinitions(document cuebook.Book) []entryFieldDefinition {
 	var result []entryFieldDefinition
 	for selector, value := range cuebook.EachFieldDefinition(document.Value) {
 		result = append(result, entryFieldDefinition{
-			Field:    cuebook.Field{Name: selector.Unquoted(), Value: value},
+			Field:    cuebook.NewField(selector.Unquoted(), value),
 			Optional: selector.ConstraintType() == cue.OptionalConstraint,
 		})
 	}

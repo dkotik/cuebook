@@ -10,9 +10,70 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/dkotik/cuebook"
 )
+
+func TestEditFormRendersFieldDocumentationBelowInput(t *testing.T) {
+	tests := []struct {
+		name        string
+		source      string
+		wantHelp    string
+		wantHelpNum int
+	}{
+		{
+			name: "escaped documentation appears after the input",
+			source: `[
+				{
+					Name: "Ada",
+					// Use a monitored <work> address & update it when needed.
+					Email: "ada@example.test",
+				}
+			]`,
+			wantHelp:    `<p class="help">Use a monitored &lt;work&gt; address &amp; update it when needed.</p>`,
+			wantHelpNum: 1,
+		},
+		{
+			name:        "field without documentation has no help paragraph",
+			source:      `[{Name: "Ada", Email: "ada@example.test"}]`,
+			wantHelpNum: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			handler, err := NewWithCommitter(fstest.MapFS{
+				"people.cue": &fstest.MapFile{Data: []byte(test.source)},
+			}, &recordingCommitter{})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			query := url.Values{"entry": {"0"}, "field": {"Email"}, "file": {"people.cue"}}
+			request := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+query.Encode(), nil)
+			request.Header.Set("HX-Request", "true")
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+
+			body := response.Body.String()
+			if got := strings.Count(body, `<p class="help">`); got != test.wantHelpNum {
+				t.Fatalf("help paragraph count = %d, want %d: %s", got, test.wantHelpNum, body)
+			}
+			if test.wantHelp != "" {
+				inputPosition := strings.Index(body, `value="ada@example.test"`)
+				helpPosition := strings.Index(body, test.wantHelp)
+				if inputPosition < 0 || helpPosition < inputPosition {
+					t.Fatalf("description should appear after the input: %s", body)
+				}
+			}
+		})
+	}
+}
 
 func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	t.Parallel()

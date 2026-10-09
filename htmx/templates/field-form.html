@@ -13,6 +13,7 @@
         <input class="input" type="text" name="value" value="{{.Value}}">
       {{end}}
     </label>
+    {{if .Description}}<p class="help">{{.Description}}</p>{{end}}
     <div class="field-edit-actions">
       <button class="button is-link" type="submit">Save</button>
       <button class="button is-light" type="button" hx-get="{{route .ViewURL}}" hx-target="closest .field-item" hx-swap="outerHTML">Cancel</button>

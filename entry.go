@@ -62,19 +62,11 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 		// 	return entry, fmt.Errorf("unable to read `detail` attribute on structed object field %q: %w", iterator.Selector().String(), err)
 		// }
 		if metadata.IsDetailField(value) {
-			entry.Details = append(entry.Details, Field{
-				// Parent: entry,
-				Name:  iterator.Selector().String(),
-				Value: value,
-			})
+			entry.Details = append(entry.Details, NewField(iterator.Selector().String(), value))
 			// panic(iterator.Selector().String())
 			continue
 		}
-		entry.Fields = append(entry.Fields, Field{
-			// Parent: entry,
-			Name:  iterator.Selector().Unquoted(),
-			Value: value,
-		})
+		entry.Fields = append(entry.Fields, NewField(iterator.Selector().Unquoted(), value))
 	}
 
 	if entry.title == "" && len(entry.Fields) > 0 {

@@ -12,6 +12,45 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
+func TestAddEntryFormRendersFieldDocumentationAsHelp(t *testing.T) {
+	t.Parallel()
+
+	source := []byte(`#person: {
+	// Display <name> & alias.
+	Name: string
+	// Optional contact address.
+	Email?: string
+	Active: bool
+}
+[...#person] & []`)
+	handler, err := NewWithCommitter(fstest.MapFS{
+		"people.cue": &fstest.MapFile{Data: source},
+	}, &recordingCommitter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/?file=people.cue", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+
+	body := response.Body.String()
+	for _, want := range []string{
+		`<p class="help">Display &lt;name&gt; &amp; alias.</p>`,
+		`<p class="help">Optional contact address.</p>`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("add form is missing help text %q: %s", want, body)
+		}
+	}
+	if got := strings.Count(body, `<p class="help">`); got != 2 {
+		t.Errorf("add form has %d help descriptions, want 2", got)
+	}
+}
+
 func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 	t.Parallel()
 

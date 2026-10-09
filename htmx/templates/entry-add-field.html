@@ -16,5 +16,6 @@
       <input class="input" type="text" name="entry.{{.Index}}.value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
     {{end}}
   </label>
+  {{if .Description}}<p class="help">{{.Description}}</p>{{end}}
   <input type="hidden" name="entry.{{.Index}}.field" value="{{.Name}}">
 </div>

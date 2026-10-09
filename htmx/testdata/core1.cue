@@ -9,7 +9,10 @@
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
 	// current definition scanner cannot detect abstract definitions yet
+
+	// Name help text.
 	Name: string @cuebook(title)
+	// Email help text.
 	Email: #email | [...#email]
 	Notes?:    string @cuebook(detail)
 	Password?: string @cuebook(detail,trim,argon2id)

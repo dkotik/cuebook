@@ -3,6 +3,7 @@ package cuebook
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
@@ -13,8 +14,25 @@ import (
 
 type Field struct {
 	// Parent Entry
-	Name  string
-	Value cue.Value
+	Name        string
+	Description string
+	Value       cue.Value
+}
+
+// NewField creates a field from a CUE value and its preceding documentation comments.
+func NewField(name string, value cue.Value) Field {
+	var description strings.Builder
+	for _, comment := range value.Doc() {
+		text := strings.TrimSpace(comment.Text())
+		if text == "" {
+			continue
+		}
+		if description.Len() > 0 {
+			description.WriteByte('\n')
+		}
+		description.WriteString(text)
+	}
+	return Field{Name: name, Description: description.String(), Value: value}
 }
 
 func (f Field) WithValue(value string) (_ *ast.Field, err error) {

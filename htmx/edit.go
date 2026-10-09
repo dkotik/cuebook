@@ -170,6 +170,7 @@ type fieldView struct {
 	File         string
 	Index        int
 	Name         string
+	Description  string
 	Value        string
 	EditURL      string
 	ViewURL      string
@@ -198,6 +199,7 @@ func makeFieldView(field cuebook.Field, fileName string, index int, readOnly boo
 		File:         fileName,
 		Index:        index,
 		Name:         field.Name,
+		Description:  field.Description,
 		Value:        field.String(),
 		EditURL:      fieldEditURL(fileName, index, field.Name, false),
 		ViewURL:      fieldEditURL(fileName, index, field.Name, true),
