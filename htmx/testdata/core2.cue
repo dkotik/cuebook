@@ -19,7 +19,7 @@
 		Email: "sdfjkh@sdfs1df.com"
 	},
   {
-		Name:  "third and finaleee1"
+		Name:  "third and finaleee"
 		Email: "third@some.email2"
 	},
   {

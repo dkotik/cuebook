@@ -2,18 +2,19 @@
   <label>
     <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
     {{if .Secret}}
-      <input class="input" type="password" name="entry.{{.Index}}.value" value="" autocomplete="new-password" {{if not .Optional}}required{{end}}>
+      <input class="input" type="password" name="entry.{{.Index}}.value" value="" autocomplete="new-password" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
     {{else if .Boolean}}
       <div class="select"><select name="entry.{{.Index}}.value" {{if not .Optional}}required{{end}}>
+        {{if .Optional}}<option value="" selected>...</option>{{end}}
         <option value="false"{{if eq .Value "false"}} selected{{end}}>false</option>
         <option value="true"{{if eq .Value "true"}} selected{{end}}>true</option>
       </select></div>
     {{else if .Numeric}}
-      <input class="input" type="number" name="entry.{{.Index}}.value" value="{{.Value}}" step="any" {{if not .Optional}}required{{end}}>
+      <input class="input" type="number" name="entry.{{.Index}}.value" value="{{.Value}}" step="any" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
     {{else if .MultiLine}}
-      <textarea class="textarea" name="entry.{{.Index}}.value" rows="3" {{if not .Optional}}required{{end}}>{{.Value}}</textarea>
+      <textarea class="textarea" name="entry.{{.Index}}.value" rows="3" {{if .Optional}}placeholder="..."{{else}}required{{end}}>{{.Value}}</textarea>
     {{else}}
-      <input class="input" type="text" name="entry.{{.Index}}.value" value="{{.Value}}" {{if not .Optional}}required{{end}}>
+      <input class="input" type="text" name="entry.{{.Index}}.value" value="{{.Value}}" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
     {{end}}
   </label>
   {{if .Description}}<p class="help">{{.Description}}</p>{{end}}

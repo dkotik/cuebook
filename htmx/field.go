@@ -40,16 +40,24 @@ func makeAddFieldViews(document cuebook.Book) []addFieldView {
 		switch {
 		case kind&cue.NumberKind != 0:
 			view.Numeric = true
-			view.Value = "0"
+			if !view.Optional {
+				view.Value = "0"
+			}
 		case kind&cue.BoolKind != 0:
 			view.Boolean = true
-			view.Value = "false"
+			if !view.Optional {
+				view.Value = "false"
+			}
 		case kind&cue.ListKind != 0:
 			view.MultiLine = true
-			view.Value = "[]"
+			if !view.Optional {
+				view.Value = "[]"
+			}
 		case kind&cue.StructKind != 0:
 			view.MultiLine = true
-			view.Value = "{}"
+			if !view.Optional {
+				view.Value = "{}"
+			}
 		}
 		result = append(result, view)
 	}

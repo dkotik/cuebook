@@ -1,9 +1,4 @@
 <div class="card-content entry-content">
   {{range .Fields}}{{template "field.html" .}}{{end}}
-  {{if .Details}}
-  <details class="details">
-    <summary>Details</summary>
-    {{range .Details}}{{template "field.html" .}}{{end}}
-  </details>
-  {{end}}
+  {{range .Details}}{{template "field.html" .}}{{end}}
 </div>

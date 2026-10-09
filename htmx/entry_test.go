@@ -112,6 +112,58 @@ func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 	}
 }
 
+func TestEntryViewAlwaysShowsDetailsAndEmptyOptionalFields(t *testing.T) {
+	t.Parallel()
+
+	const filePath = "people.cue"
+	source := []byte(`#person: {Name: string, Nick?: string, Note?: string @cuebook(detail)}
+[...#person] & [{Name: "Ada"}]`)
+	book, err := cuebook.New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var entryRange cuebook.ByteRange
+	for entry, err := range book.EachEntry() {
+		if err != nil {
+			t.Fatal(err)
+		}
+		entryRange, err = cuebook.NewByteRange(entry.Value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		break
+	}
+
+	handler, err := New(fstest.MapFS{
+		filePath: &fstest.MapFile{Data: source},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodGet, "http://example.test"+entryURL(filePath, entryRange), nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+
+	body := response.Body.String()
+	articleStart := strings.Index(body, `<article class="card"`)
+	articleEnd := strings.Index(body, `</article>`)
+	if articleStart < 0 || articleEnd < articleStart {
+		t.Fatalf("entry article not found: %s", body)
+	}
+	article := body[articleStart:articleEnd]
+	for _, want := range []string{`Ada`, `Nick`, `Note:`, `<output>...</output>`} {
+		if !strings.Contains(article, want) {
+			t.Errorf("entry view does not contain %q: %s", want, article)
+		}
+	}
+	if strings.Contains(article, "remember-details") || strings.Contains(article, "<details") {
+		t.Errorf("entry details are hidden behind a disclosure component: %s", article)
+	}
+}
+
 func TestEntryHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 	source := []byte(`[
 	{Name: "First entry", Email: "first@example.test"},

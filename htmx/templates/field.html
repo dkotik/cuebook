@@ -5,10 +5,10 @@
   {{if not .HideLabel}}<span class="field-name label">{{.Name}}:</span>{{end}}
   <div class="field-item__value">
     {{if .ReadOnly}}
-      <output>{{if .Secret}}••••••••{{else}}{{.Value}}{{end}}</output>
+      <output>{{if .Empty}}...{{else if .Secret}}••••••••{{else}}{{.Value}}{{end}}</output>
     {{else}}
       <button class="field-value-edit" type="button" aria-label="Edit {{.Name}} value" hx-get="{{route .EditURL}}" hx-target="closest .field-item" hx-swap="outerHTML">
-        <output>{{if .Secret}}••••••••{{else}}{{.Value}}{{end}}</output>
+        <output>{{if .Empty}}...{{else if .Secret}}••••••••{{else}}{{.Value}}{{end}}</output>
       </button>
       {{if .ShowEditIcon}}
       <button class="button is-small is-ghost field-edit-button" type="button" aria-label="Edit {{.Name}}" title="Edit {{.Name}}" hx-get="{{route .EditURL}}" hx-target="closest .field-item" hx-swap="outerHTML">

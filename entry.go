@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"net/http"
+	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
@@ -50,27 +51,23 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 	}
 	for iterator.Next() {
 		value := iterator.Value()
-		if metadata.IsTitleField(value) {
+		if metadata.IsTitleField(value) && value.IsConcrete() {
 			entry.title = metadata.ValueToString(value)
 		}
-		if !value.IsConcrete() {
-			continue // skip abstract fields
-		}
-		// attr := value.Attribute("detail")
-		// isDetail, _ := attr.Flag(0, attrDetail)
-		// if err != nil {
-		// 	return entry, fmt.Errorf("unable to read `detail` attribute on structed object field %q: %w", iterator.Selector().String(), err)
-		// }
 		if metadata.IsDetailField(value) {
-			entry.Details = append(entry.Details, NewField(iterator.Selector().String(), value))
-			// panic(iterator.Selector().String())
+			entry.Details = append(entry.Details, NewField(iterator.Selector().Unquoted(), value))
 			continue
 		}
 		entry.Fields = append(entry.Fields, NewField(iterator.Selector().Unquoted(), value))
 	}
 
-	if entry.title == "" && len(entry.Fields) > 0 {
-		entry.title = entry.Fields[0].String()
+	if entry.title == "" {
+		for _, field := range entry.Fields {
+			if field.Value.IsConcrete() && field.String() != "" {
+				entry.title = field.String()
+				break
+			}
+		}
 	}
 	return entry, nil
 }
@@ -80,11 +77,14 @@ func (e Entry) GetTitle() string {
 }
 
 func (e Entry) GetDescription() (description []string) {
-	for _, field := range e.Fields {
-		description = append(description, field.String())
-	}
-	if len(description) > 0 && description[0] == e.title {
-		return description[1:] // skip first line if identical to title
+	for _, fields := range [][]Field{e.Fields, e.Details} {
+		for _, field := range fields {
+			value := field.String()
+			if !field.Value.IsConcrete() || strings.TrimSpace(value) == "" {
+				value = "..."
+			}
+			description = append(description, value)
+		}
 	}
 	return description
 }

@@ -38,7 +38,7 @@ func testSource() fstest.MapFS {
 	}
 }
 
-func TestAddEntryFormUsesSchemaFields(t *testing.T) {
+func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 	t.Parallel()
 
 	handler, err := NewWithCommitter(testSource(), &recordingCommitter{})
@@ -52,65 +52,34 @@ func TestAddEntryFormUsesSchemaFields(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
 
+	body := response.Body.String()
 	for _, want := range []string{
 		`action="/add"`,
 		`hx-post="/add"`,
-		`<remember-details data-storage-key="add-entry-form">`,
-		`<summary id="add-entry-heading">Add entry</summary>`,
-		`<div id="add-entry-form-content" data-details-content>`,
+		`<h2 id="add-entry-heading" class="title is-5">Add entry</h2>`,
 		`name="entry.0.field" value="Name"`,
 		`name="entry.1.field" value="Email"`,
 		`name="entry.2.field" value="Notes"`,
 		`name="entry.3.field" value="Password"`,
+		`placeholder="..."`,
 		"(optional)",
-		`<remember-details data-storage-key="add-entry-optional">`,
-		"<summary>Optional fields</summary>",
-		`<div id="add-entry-optional-content" data-details-content>`,
-		`<script src="/assets/remember-details.js" defer></script>`,
 		"Add entry",
 	} {
-		if !strings.Contains(response.Body.String(), want) {
+		if !strings.Contains(body, want) {
 			t.Errorf("page does not contain %q", want)
 		}
 	}
-
-	body := response.Body.String()
-	addFormStart := strings.Index(body, `<remember-details data-storage-key="add-entry-form">`)
-	addFormEnd := strings.LastIndex(body, `</remember-details>`)
-	if addFormStart < 0 || addFormEnd <= addFormStart {
-		t.Fatalf("add-entry form is not inside the persistent details component: %s", body)
+	formStart := strings.Index(body, `<section class="add-entry`)
+	if formStart < 0 {
+		t.Fatalf("add-entry form not found: %s", body)
 	}
-	addFormMarkup := body[addFormStart:addFormEnd]
-	if !strings.Contains(addFormMarkup, "<div id=\"add-entry-form-content\" data-details-content>\n          <form action=\"/add\"") ||
-		!strings.Contains(addFormMarkup, "</form>\n        </div>") {
-		t.Fatalf("add-entry form is not inside its collapsible content: %s", addFormMarkup)
+	formEnd := strings.Index(body[formStart:], `</section>`)
+	if formEnd < 0 {
+		t.Fatalf("add-entry form is not closed: %s", body)
 	}
-	for _, want := range []string{`name="entry.0.field" value="Name"`, `name="entry.1.field" value="Email"`} {
-		if !strings.Contains(addFormMarkup, want) {
-			t.Errorf("add-entry details component does not contain %q: %s", want, addFormMarkup)
-		}
-	}
-
-	componentStart := strings.Index(body, `<remember-details data-storage-key="add-entry-optional">`)
-	if componentStart < 0 {
-		t.Fatalf("optional fields are not wrapped by the persistent details component: %s", body)
-	}
-	closingTag := `</remember-details>`
-	closingOffset := strings.Index(body[componentStart:], closingTag)
-	if closingOffset < 0 {
-		t.Fatalf("optional fields component is not closed: %s", body)
-	}
-	componentEnd := componentStart + closingOffset
-	optionalMarkup := body[componentStart:componentEnd]
-	for _, want := range []string{`name="entry.2.field" value="Notes"`, `name="entry.3.field" value="Password"`} {
-		if !strings.Contains(optionalMarkup, want) {
-			t.Errorf("persistent optional fields do not contain %q: %s", want, optionalMarkup)
-		}
-	}
-	for _, notWant := range []string{`name="entry.0.field" value="Name"`, `name="entry.1.field" value="Email"`} {
-		if strings.Contains(optionalMarkup, notWant) {
-			t.Errorf("required field %q is inside the optional fields component: %s", notWant, optionalMarkup)
-		}
+	form := body[formStart : formStart+formEnd]
+	if strings.Contains(form, "remember-details") || strings.Contains(form, "<details") {
+		t.Errorf("add-entry form still has disclosure wrappers: %s", form)
 	}
 }
 

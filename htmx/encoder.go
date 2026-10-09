@@ -7,7 +7,7 @@ import (
 )
 
 type Flasher interface {
-	GetFlashMessage() string
+	GetFlashMessage() (message string, continueEncoding bool)
 }
 
 type Redirecter interface {
@@ -26,8 +26,13 @@ func NewEncoder(
 
 func (e encoder) Encode(w http.ResponseWriter, r *http.Request, status int, response any) error {
 	if flasher, ok := response.(Flasher); ok {
-		if message := flasher.GetFlashMessage(); message != "" {
+		message, continueEncoding := flasher.GetFlashMessage()
+		if message != "" {
 			w.Header().Set("HX-Trigger", message)
+		}
+		if !continueEncoding {
+			w.WriteHeader(status)
+			return nil
 		}
 	}
 	if redirecter, ok := response.(Redirecter); ok {
@@ -36,7 +41,7 @@ func (e encoder) Encode(w http.ResponseWriter, r *http.Request, status int, resp
 			if !isHTMX(r) {
 				w.Header().Set("Location", location)
 				w.WriteHeader(http.StatusSeeOther)
-				return
+				return nil
 			}
 		}
 	}

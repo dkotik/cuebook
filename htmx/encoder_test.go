@@ -9,51 +9,82 @@ import (
 	"github.com/dkotik/htadaptor"
 )
 
-type flashResponse struct{ message string }
+type flashResponse struct {
+	message          string
+	continueEncoding bool
+}
 
-func (response flashResponse) GetFlashMessage() string { return response.message }
+func (response flashResponse) GetFlashMessage() (string, bool) {
+	return response.message, response.continueEncoding
+}
 
 type redirectResponse struct{ location string }
 
 func (response redirectResponse) GetRedirect() string { return response.location }
 
 type flashRedirectResponse struct {
-	message  string
-	location string
+	message          string
+	location         string
+	continueEncoding bool
 }
 
-func (response flashRedirectResponse) GetFlashMessage() string { return response.message }
-func (response flashRedirectResponse) GetRedirect() string     { return response.location }
+func (response flashRedirectResponse) GetFlashMessage() (string, bool) {
+	return response.message, response.continueEncoding
+}
+
+func (response flashRedirectResponse) GetRedirect() string { return response.location }
 
 func TestNewEncoder(t *testing.T) {
 	t.Parallel()
 
 	encodeErr := errors.New("encode failed")
 	tests := []struct {
-		name       string
-		response   any
-		wantFlash  string
-		wantTarget string
+		name          string
+		response      any
+		wantFlash     string
+		wantTarget    string
+		wantWrapped   bool
+		wantEncodeErr bool
 	}{
 		{
-			name:     "plain response",
-			response: struct{}{},
+			name:          "plain response",
+			response:      struct{}{},
+			wantWrapped:   true,
+			wantEncodeErr: true,
 		},
 		{
-			name:      "flash response",
-			response:  flashResponse{message: "Entry archived."},
-			wantFlash: "Entry archived.",
+			name:          "flash response continues encoding",
+			response:      flashResponse{message: "Entry archived.", continueEncoding: true},
+			wantFlash:     "Entry archived.",
+			wantWrapped:   true,
+			wantEncodeErr: true,
 		},
 		{
-			name:       "redirect response",
-			response:   redirectResponse{location: "/entries"},
-			wantTarget: "/entries",
+			name:          "redirect response",
+			response:      redirectResponse{location: "/entries"},
+			wantTarget:    "/entries",
+			wantWrapped:   true,
+			wantEncodeErr: true,
 		},
 		{
-			name:       "flash and redirect response",
-			response:   flashRedirectResponse{message: "Saved.", location: "/entries"},
-			wantFlash:  "Saved.",
-			wantTarget: "/entries",
+			name:          "flash and redirect response continues encoding",
+			response:      flashRedirectResponse{message: "Saved.", location: "/entries", continueEncoding: true},
+			wantFlash:     "Saved.",
+			wantTarget:    "/entries",
+			wantWrapped:   true,
+			wantEncodeErr: true,
+		},
+		{
+			name:        "flash-only response stops encoding",
+			response:    flashResponse{message: "Entry archived."},
+			wantFlash:   "Entry archived.",
+			wantWrapped: false,
+		},
+		{
+			name:        "flash-and-redirect response stops before redirecting",
+			response:    flashRedirectResponse{message: "Saved.", location: "/entries"},
+			wantFlash:   "Saved.",
+			wantWrapped: false,
 		},
 	}
 
@@ -79,12 +110,22 @@ func TestNewEncoder(t *testing.T) {
 				return encodeErr
 			})
 
-			gotErr := NewEncoder(wrap).Encode(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil), http.StatusAccepted, test.response)
-			if !errors.Is(gotErr, encodeErr) {
+			response := httptest.NewRecorder()
+			gotErr := NewEncoder(wrap).Encode(response, httptest.NewRequest(http.MethodGet, "/", nil), http.StatusAccepted, test.response)
+			if test.wantEncodeErr && !errors.Is(gotErr, encodeErr) {
 				t.Errorf("Encode() error = %v, want %v", gotErr, encodeErr)
 			}
-			if !called {
-				t.Error("wrapped encoder was not called")
+			if !test.wantEncodeErr && gotErr != nil {
+				t.Errorf("Encode() error = %v, want nil", gotErr)
+			}
+			if called != test.wantWrapped {
+				t.Errorf("wrapped encoder called = %t, want %t", called, test.wantWrapped)
+			}
+			if !test.wantWrapped && response.Code != http.StatusAccepted {
+				t.Errorf("response status = %d, want %d", response.Code, http.StatusAccepted)
+			}
+			if !test.wantWrapped && response.Header().Get("HX-Redirect") != "" {
+				t.Errorf("HX-Redirect = %q, want empty after short circuit", response.Header().Get("HX-Redirect"))
 			}
 		})
 	}

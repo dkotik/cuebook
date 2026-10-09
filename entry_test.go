@@ -3,10 +3,54 @@ package cuebook
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
 	"cuelang.org/go/cue/cuecontext"
 )
+
+func TestEntryGetDescriptionIncludesAllFieldsAndUsesPlaceholders(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   []string
+	}{
+		{
+			name:   "regular and detail fields including title",
+			source: `{ Name: "Ada" @cuebook(title), Email: "ada@example.test", Note: "Additional context" @cuebook(detail) }`,
+			want:   []string{"Ada", "ada@example.test", "Additional context"},
+		},
+		{
+			name:   "empty regular and detail fields use ellipsis",
+			source: `{ Name: "" @cuebook(title), Email: "  ", Note: "" @cuebook(detail), Null: null }`,
+			want:   []string{"...", "...", "...", "..."},
+		},
+		{
+			name: "absent optional regular and detail fields use ellipsis",
+			source: `#person: { Name: string, Nick?: string, Note?: string @cuebook(detail) }
+#person & {Name: "Ada"}`,
+			want: []string{"Ada", "...", "..."},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			value := cuecontext.New().CompileString(test.source)
+			if err := value.Err(); err != nil {
+				t.Fatal(err)
+			}
+			entry, err := NewEntry(value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := entry.GetDescription(); !reflect.DeepEqual(got, test.want) {
+				t.Errorf("GetDescription() = %#v, want %#v", got, test.want)
+			}
+		})
+	}
+}
 
 func TestRemainingFieldComposition(t *testing.T) {
 	value := cuecontext.New().CompileBytes([]byte(`

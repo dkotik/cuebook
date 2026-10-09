@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
@@ -94,8 +95,8 @@ type editErrorResponse struct {
 	pageData
 }
 
-func (response editErrorResponse) GetFlashMessage() string {
-	return response.Error
+func (response editErrorResponse) GetFlashMessage() (string, bool) {
+	return response.Error, true
 }
 
 func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, error) {
@@ -196,6 +197,7 @@ type fieldView struct {
 	Name         string
 	Description  string
 	Value        string
+	Empty        bool
 	EditURL      string
 	ViewURL      string
 	MultiLine    bool
@@ -219,12 +221,18 @@ func fieldEditURL(fileName string, entryIndex int, fieldName string, view bool) 
 
 func makeFieldView(field cuebook.Field, fileName string, index int, readOnly bool) fieldView {
 	_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
+	value := field.String()
+	empty := !field.Value.IsConcrete() || strings.TrimSpace(value) == ""
+	if !field.Value.IsConcrete() {
+		value = ""
+	}
 	return fieldView{
 		File:         fileName,
 		Index:        index,
 		Name:         field.Name,
 		Description:  field.Description,
-		Value:        field.String(),
+		Value:        value,
+		Empty:        empty,
 		EditURL:      fieldEditURL(fileName, index, field.Name, false),
 		ViewURL:      fieldEditURL(fileName, index, field.Name, true),
 		MultiLine:    metadata.IsMultiLine(field.Value),
