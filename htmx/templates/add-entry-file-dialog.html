@@ -1,0 +1,15 @@
+<dialog id="add-entry-file-dialog" class="file-selector-dialog" aria-labelledby="add-entry-file-title" data-file-picker-dialog data-value-input="add-entry-file" data-value-label="add-entry-file-value">
+  <div class="modal-card move-confirmation-card">
+    <header class="modal-card-head">
+      <h2 id="add-entry-file-title" class="modal-card-title">Choose a file</h2>
+      <button class="delete" type="button" aria-label="Cancel file selection" data-file-picker-dismiss></button>
+    </header>
+    <section class="modal-card-body">
+      {{template "file-selector.html" .AddFileSelector}}
+    </section>
+    <footer class="modal-card-foot is-justify-content-flex-end">
+      <button class="button is-light" type="button" data-file-picker-dismiss autofocus>Cancel</button>
+      <button class="button is-link" type="button" data-file-picker-confirm>Use this file</button>
+    </footer>
+  </div>
+</dialog>

@@ -43,28 +43,51 @@ type pageData struct {
 	AddFields         []addFieldView
 	RequiredAddFields []addFieldView
 	OptionalAddFields []addFieldView
+	AddFileSelector   fileSelectorView
 	ReadOnly          bool
 	Error             string
 	DocumentError     string
 }
 
 type entryView struct {
-	Index          int
-	File           string
-	EntryURL       string
-	CUESource      string
-	CutFingerprint string
-	Title          string
-	CanMove        bool
-	CanArchive     bool
-	MoveFiles      []moveFileView
-	Fields         []fieldView
-	Details        []fieldView
+	Index            int
+	File             string
+	EntryURL         string
+	CUESource        string
+	CutFingerprint   string
+	Title            string
+	CanMove          bool
+	CanArchive       bool
+	MoveFileSelector fileSelectorView
+	Fields           []fieldView
+	Details          []fieldView
 }
 
-type moveFileView struct {
-	Name    string
-	Current bool
+type fileSelectorView struct {
+	Legend           string
+	InputName        string
+	Options          []fileOptionView
+	Required         bool
+	DisableCurrent   bool
+	HighlightCurrent bool
+}
+
+type fileOptionView struct {
+	Name     string
+	Current  bool
+	Selected bool
+}
+
+func makeFileSelector(fileNames []string, current string, selector fileSelectorView, selected string) fileSelectorView {
+	selector.Options = make([]fileOptionView, 0, len(fileNames))
+	for _, name := range fileNames {
+		selector.Options = append(selector.Options, fileOptionView{
+			Name:     name,
+			Current:  name == current,
+			Selected: name == selected,
+		})
+	}
+	return selector
 }
 
 type listRequest struct {
@@ -118,6 +141,11 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 	if !data.ReadOnly {
 		data.AddFields = makeAddFieldViews(document)
 		data.RequiredAddFields, data.OptionalAddFields = splitAddFieldViews(data.AddFields)
+		data.AddFileSelector = makeFileSelector(fileNames, fileName, fileSelectorView{
+			Legend:    "File",
+			InputName: "add-entry-file-selection",
+			Required:  true,
+		}, fileName)
 	}
 	entries, err := makeEntryViews(document, fileName, data.ReadOnly)
 	if err != nil {

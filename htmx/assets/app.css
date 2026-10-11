@@ -170,12 +170,15 @@ file-tree-node {
 
 .add-entry-dock {
   position: fixed;
-  top: var(--bulma-navbar-height, 3.25rem);
+  top: 0;
   left: 0;
   z-index: 31;
-  width: min(24rem, calc(100vw - 3rem));
-  margin-top: 0;
-  border-top: 0;
+  width: min(22rem, calc(100vw - 6rem));
+  height: 100vh;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
   transition: transform 180ms ease;
 }
 
@@ -185,7 +188,7 @@ file-tree-node {
 
 .add-entry-dock > summary {
   position: absolute;
-  top: 0;
+  bottom: 1rem;
   left: 100%;
   display: flex;
   align-items: center;
@@ -197,7 +200,6 @@ file-tree-node {
   border-left: 0;
   border-radius: 0 0.5rem 0.5rem 0;
   background: var(--bulma-scheme-main);
-  box-shadow: 0 0.5rem 1.25rem rgb(0 0 0 / 20%);
   color: var(--bulma-link);
   cursor: pointer;
   font-weight: 700;
@@ -221,13 +223,11 @@ file-tree-node {
 }
 
 .add-entry-dock > .add-entry {
-  max-height: calc(100vh - var(--bulma-navbar-height, 3.25rem));
-  max-height: calc(100dvh - var(--bulma-navbar-height, 3.25rem));
+  height: 100%;
   margin: 0;
+  padding: 1.25rem;
   overflow-y: auto;
-  border-radius: 0 0.75rem 0.75rem 0;
   background: var(--bulma-scheme-main);
-  box-shadow: 0 1rem 3rem rgb(0 0 0 / 24%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -522,18 +522,33 @@ remember-details > [data-details-content][hidden] {
   opacity: 0.75;
 }
 
-.entry-move-dialog {
+.entry-move-dialog,
+.file-selector-dialog {
   padding: 0;
   border: 0;
   background: transparent;
 }
 
-.entry-move-dialog::backdrop {
+.entry-move-dialog::backdrop,
+.file-selector-dialog::backdrop {
   background: rgb(0 0 0 / 60%);
 }
 
-.entry-move-dialog > .modal-card {
+.entry-move-dialog > .modal-card,
+.file-selector-dialog > .modal-card {
   margin: 0;
+}
+
+.file-picker-trigger {
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.file-picker-trigger > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 #field-edit-modal > .modal-card {

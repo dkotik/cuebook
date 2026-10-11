@@ -1,14 +1,22 @@
 <remember-details class="add-entry-dock" data-storage-key="add-entry-dock">
-  <summary aria-controls="add-entry-dock-panel">Add entry</summary>
-  <section class="add-entry box" id="add-entry-dock-panel" aria-labelledby="add-entry-heading" data-details-content>
+  <summary aria-controls="add-entry-dock-panel">✚</summary>
+  <section class="add-entry" id="add-entry-dock-panel" aria-labelledby="add-entry-heading" data-details-content>
     <h2 id="add-entry-heading" class="title is-5">Add entry</h2>
-    <form action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="innerHTML">
-      <input type="hidden" name="file" value="{{.Selected}}">
+    <form id="add-entry-form" action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="innerHTML">
+      <div class="field">
+        <label class="label" for="add-entry-file-picker-open">File</label>
+        <button id="add-entry-file-picker-open" class="button is-fullwidth file-picker-trigger" type="button" aria-haspopup="dialog" aria-controls="add-entry-file-dialog" data-file-picker-open="add-entry-file-dialog">
+          <span id="add-entry-file-value">{{.Selected}}</span>
+          <span aria-hidden="true">▾</span>
+        </button>
+        <input id="add-entry-file" type="hidden" name="file" value="{{.Selected}}">
+      </div>
       {{range .RequiredAddFields}}{{template "entry-add-field.html" .}}{{end}}
       {{range .OptionalAddFields}}{{template "entry-add-field.html" .}}{{end}}
       <div id="add-entry-error" class="form-error" aria-live="assertive"></div>
 
       <button class="button is-link" type="submit">Add entry</button>
     </form>
+    {{template "add-entry-file-dialog.html" .}}
   </section>
 </remember-details>

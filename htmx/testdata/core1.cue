@@ -75,5 +75,11 @@
   {
 		Name:  "xcxcx" @cuebook(title)
 		Email: "cvxvxcv@ds1afsd.com"
+	},
+  {
+		Name:     "slkdjf"
+		Email:    "sdklfsjad@sdfsadf.com"
+		Notes:    "sdf"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$FyJ1ijloeHPnOzbUd+BKyA$VVG0+6ajCcBQ74S/7sMLBbWz1/P8HuvYr/l99r7FQqE"
 	}
 ]

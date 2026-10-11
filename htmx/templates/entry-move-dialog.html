@@ -8,15 +8,7 @@
     </header>
     <section class="modal-card-body">
       <p id="entry-move-description">Choose a file to move “{{.Title}}” to.</p>
-      <fieldset class="mt-4">
-        <legend class="label">Destination file</legend>
-        {{range .MoveFiles}}
-        <label class="radio is-block mb-3{{if .Current}} has-text-danger{{end}}">
-          <input type="radio" name="destination" value="{{.Name}}"{{if .Current}} disabled{{else}} required{{end}}>
-          {{.Name}}{{if .Current}} (current file){{end}}
-        </label>
-        {{end}}
-      </fieldset>
+      {{template "file-selector.html" .MoveFileSelector}}
     </section>
     <footer class="modal-card-foot is-justify-content-flex-end">
       <button class="button is-light" type="button" data-entry-move-dismiss autofocus>Cancel</button>

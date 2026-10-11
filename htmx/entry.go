@@ -101,9 +101,13 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 			view.CUESource = source
 			view.CutFingerprint = entrySourceFingerprint(source)
 			if view.CanMove {
-				for _, name := range fileNames {
-					view.MoveFiles = append(view.MoveFiles, moveFileView{Name: name, Current: name == filePath})
-				}
+				view.MoveFileSelector = makeFileSelector(fileNames, filePath, fileSelectorView{
+					Legend:           "Destination file",
+					InputName:        "destination",
+					Required:         true,
+					DisableCurrent:   true,
+					HighlightCurrent: true,
+				}, "")
 			}
 			selected = &view
 			break
@@ -121,6 +125,11 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 	if !page.ReadOnly {
 		page.AddFields = makeAddFieldViews(document)
 		page.RequiredAddFields, page.OptionalAddFields = splitAddFieldViews(page.AddFields)
+		page.AddFileSelector = makeFileSelector(fileNames, filePath, fileSelectorView{
+			Legend:    "File",
+			InputName: "add-entry-file-selection",
+			Required:  true,
+		}, filePath)
 	}
 
 	return entryResponse{pageData: page, entryView: *selected}, nil

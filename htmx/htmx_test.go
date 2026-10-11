@@ -56,10 +56,11 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 	for _, want := range []string{
 		`<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`,
 		`<summary aria-controls="add-entry-dock-panel">Add entry</summary>`,
-		`<section class="add-entry box" id="add-entry-dock-panel" aria-labelledby="add-entry-heading" data-details-content>`,
+		`<section class="add-entry" id="add-entry-dock-panel" aria-labelledby="add-entry-heading" data-details-content>`,
 		`action="/add"`,
 		`hx-post="/add"`,
 		`<h2 id="add-entry-heading" class="title is-5">Add entry</h2>`,
+
 		`name="entry.0.field" value="Name"`,
 		`name="entry.1.field" value="Email"`,
 		`name="entry.2.field" value="Notes"`,
@@ -82,6 +83,69 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 	}
 	if !strings.Contains(body[formStart+formEnd:], `</remember-details>`) {
 		t.Errorf("add-entry panel is not inside its dock: %s", body[formStart:])
+	}
+
+}
+
+func TestAddEntryFilePickerDisplaysCurrentFileAndListsChoices(t *testing.T) {
+	t.Parallel()
+
+	const source = `#entry: {Name: string}
+[...#entry] & [{Name: "Existing"}]
+`
+	files := fstest.MapFS{
+		"root.cue":         &fstest.MapFile{Data: []byte(source)},
+		"nested/other.cue": &fstest.MapFile{Data: []byte(source)},
+		"ignored.txt":      &fstest.MapFile{Data: []byte("not CUE")},
+	}
+	tests := []struct {
+		name string
+		file string
+	}{
+		{name: "root file", file: "root.cue"},
+		{name: "nested file", file: "nested/other.cue"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			handler, err := NewWithCommitter(files, &recordingCommitter{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			request := httptest.NewRequest(http.MethodGet, "http://example.test/?"+url.Values{"file": {tt.file}}.Encode(), nil)
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+
+			body := response.Body.String()
+			for _, want := range []string{
+				`<label class="label" for="add-entry-file-picker-open">File</label>`,
+				`data-file-picker-open="add-entry-file-dialog"`,
+				`<span id="add-entry-file-value">` + tt.file + `</span>`,
+				`<dialog id="add-entry-file-dialog" class="file-selector-dialog"`,
+				`<input id="add-entry-file" type="hidden" name="file" value="` + tt.file + `">`,
+				`name="add-entry-file-selection" value="` + tt.file + `" required checked`,
+				`name="add-entry-file-selection" value="root.cue" required`,
+				`name="add-entry-file-selection" value="nested/other.cue" required`,
+			} {
+				if !strings.Contains(body, want) {
+					t.Errorf("page does not contain %q", want)
+				}
+			}
+			if strings.Contains(body, "ignored.txt") {
+				t.Error("file picker lists a non-CUE file")
+			}
+			fileField := strings.Index(body, `<label class="label" for="add-entry-file-picker-open">File</label>`)
+			firstEntryField := strings.Index(body, `name="entry.0.field"`)
+			if fileField < 0 || firstEntryField < 0 || fileField > firstEntryField {
+				t.Errorf("file picker is not the first add-entry field")
+			}
+			if !strings.Contains(body, `src="/assets/file-picker.js"`) {
+				t.Error("file picker controller is not loaded")
+			}
+		})
 	}
 }
 
@@ -113,7 +177,7 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 	if !strings.Contains(body, `<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`) {
 		t.Fatalf("add-entry dock does not persist its disclosure state: %s", body)
 	}
-	formStart := strings.Index(body, `<form action="/add"`)
+	formStart := strings.Index(body, `<form id="add-entry-form" action="/add"`)
 	if formStart < 0 {
 		t.Fatalf("add-entry form not found: %s", body)
 	}
@@ -185,11 +249,12 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".entry-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 24rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".entry-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 24rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", ".file-selector-dialog", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
 		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},
 		{name: "custom search element", path: "/assets/search-control.js", contains: []string{`customElements.define("cuebook-search"`, `this.input.value = ""`, "updateButtons()", "this.form.insertBefore(this.clearControl, this.inputControl)", "this.clearControl.remove()", "this.input.focus()"}, wantStatus: http.StatusOK},
 		{name: "entry move controller", path: "/assets/entry-move.js", contains: []string{"data-entry-drag-handle", "await window.htmx.ajax(\"POST\", `${routePrefix}/move`, {", "drop-before", "drop-after", "destination", "is-drop-target", "cuebook:move-confirmation-request"}, wantStatus: http.StatusOK},
 		{name: "entry move dialog controller", path: "/assets/entry-move-dialog.js", contains: []string{"data-entry-move-form", "dialog.showModal()", "dialog.querySelector(\"form\").reset()", "data-entry-move-confirm"}, wantStatus: http.StatusOK},
+		{name: "file picker controller", path: "/assets/file-picker.js", contains: []string{"data-file-picker-open", "dialog.showModal()", "data-file-picker-confirm", "input.value = selected.value", "label.textContent = selected.value"}, wantStatus: http.StatusOK},
 		{name: "move confirmation controller", path: "/assets/move-confirm.js", contains: []string{`getElementById("move-confirmation")`, "data-move-confirmation-entry", "sourceCard.dataset.file === destinationLink.dataset.file", "event.preventDefault()", `event.key === "Escape"`}, wantStatus: http.StatusOK},
 		{name: "remember details component", path: "/assets/remember-details.js", contains: []string{`customElements.define("remember-details"`, "localStorage.getItem", "localStorage.setItem", "dataset.storageKey", "aria-expanded", "keydown"}, wantStatus: http.StatusOK},
 		{name: "archive confirmation controller", path: "/assets/archive-confirm.js", contains: []string{`form[action$="/archive"]`, `form[hx-post$="/archive"]`, `event.preventDefault()`, `event.stopImmediatePropagation()`, "textContent", `aria-hidden`, "requestSubmit", `event.key === "Escape"`}, wantStatus: http.StatusOK},
