@@ -55,9 +55,6 @@ body {
   margin: 0;
 }
 
-cuebook-search button[hidden] {
-  display: none;
-}
 
 @media (max-width: 1023px) {
   .topbar .navbar-end {

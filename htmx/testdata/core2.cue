@@ -20,18 +20,19 @@
 		Notes: "1212a" @cuebook(detail)
 	},
   {
+		Name:  "23424n33" @cuebook(title)
+		Email: "234234@31234a1.com"
+	},
+  {
 		Name:  "First11111aa1"
 		Email: "test1@testdomain.com"
 	},
   {
+		Name:  "23424n33" @cuebook(title)
+		Email: "234234@31234a1.com"
+		Notes: "sdf saf sdfsdf"
+	},
+  {
 		Name:  "xcxcx" @cuebook(title)
 		Email: "cvxvxcv@ds1afsd.com"
-	},
-  {
-		Name:  "23424n33" @cuebook(title)
-		Email: "234234@31234a1.com"
-	},
-  {
-		Name:  "23424n33" @cuebook(title)
-		Email: "234234@31234a1.com"
 	}]

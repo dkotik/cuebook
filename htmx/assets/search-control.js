@@ -1,9 +1,11 @@
 class CuebookSearch extends HTMLElement {
   connectedCallback() {
+    this.form = this.querySelector("form.topbar-search");
     this.input = this.querySelector('input[type="search"][name="q"]');
-    this.clearButton = this.querySelector("[data-clear-search]");
-    this.submitButton = this.querySelector('button[type="submit"]');
-    if (!this.input || !this.clearButton) {
+    this.inputControl = this.input?.closest(".control");
+    this.clearControl ||= this.querySelector("template[data-clear-search-template]")?.content.firstElementChild;
+    this.clearButton ||= this.clearControl?.querySelector("[data-clear-search]");
+    if (!this.form || !this.input || !this.inputControl || !this.clearControl || !this.clearButton) {
       return;
     }
 
@@ -24,9 +26,17 @@ class CuebookSearch extends HTMLElement {
   }
 
   updateButtons() {
-    if (this.input && this.clearButton) {
-      const hasQuery = this.input.value.trim() !== "";
-      this.clearButton.hidden = !hasQuery;
+    if (!this.input || !this.inputControl || !this.form || !this.clearControl) {
+      return;
+    }
+
+    const hasQuery = this.input.value.trim() !== "";
+    if (hasQuery) {
+      if (this.clearControl.parentElement !== this.form || this.inputControl.previousElementSibling !== this.clearControl) {
+        this.form.insertBefore(this.clearControl, this.inputControl);
+      }
+    } else {
+      this.clearControl.remove();
     }
   }
 }

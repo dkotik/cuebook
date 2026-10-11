@@ -55,17 +55,27 @@ func TestSearchFormIsInHeaderAndTargetsMainContent(t *testing.T) {
 		`<form class="topbar-search`,
 		`hx-get="/search"`,
 		`<input class="input" type="search" name="q"`,
-		`data-clear-search hidden`,
+		`<template data-clear-search-template>`,
+		`data-clear-search aria-label="Clear search"`,
 		`aria-label="Search">🔍</button>`,
 	} {
 		if !strings.Contains(component, want) {
 			t.Errorf("custom search element does not contain %q", want)
 		}
 	}
-	clearButton := strings.Index(component, `data-clear-search hidden`)
+	templateStart := strings.Index(component, `<template data-clear-search-template>`)
+	templateEnd := strings.Index(component, `</template>`)
+	formStart = strings.Index(component, `<form class="topbar-search`)
+	if templateStart < 0 || templateEnd < templateStart || formStart < templateEnd {
+		t.Errorf("clear search control is not inert and outside the search form: %s", component)
+	}
+	clearButton := strings.Index(component, `data-clear-search aria-label="Clear search"`)
 	input := strings.Index(component, `<input class="input" type="search" name="q"`)
 	if clearButton < 0 || input < 0 || clearButton > input {
-		t.Errorf("clear search button is not before the search input: %s", component)
+		t.Errorf("clear search button template is not before the search input: %s", component)
+	}
+	if formStart >= 0 && strings.Contains(component[formStart:], `data-clear-search`) {
+		t.Errorf("clear search control is still present in the empty search form: %s", component)
 	}
 	if !strings.Contains(body, `src="/assets/search-control.js"`) {
 		t.Error("custom search element controller is not loaded")
