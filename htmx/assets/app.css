@@ -20,18 +20,34 @@ body {
 }
 
 .topbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(15rem, 32rem) minmax(0, 1fr);
-  align-items: center;
-  gap: 1rem;
-  padding: 0.8rem 1.25rem;
   border-bottom: 1px solid GrayText;
 }
 
-.topbar a {
-  justify-self: start;
+.topbar-brand {
   font-weight: 700;
   text-decoration: none;
+}
+
+.topbar .navbar-menu {
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+.topbar-search-item,
+.topbar-search-item cuebook-search {
+  display: block;
+  width: 100%;
+}
+
+.topbar-search-item {
+  max-width: 32rem;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.topbar-search .control.is-expanded,
+.topbar-search .input {
+  min-width: 0;
 }
 
 .topbar-search {
@@ -43,14 +59,24 @@ cuebook-search button[hidden] {
   display: none;
 }
 
-.topbar > button {
-  justify-self: end;
+@media (max-width: 1023px) {
+  .topbar .navbar-end {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+@media (min-width: 1024px) {
+  .topbar .navbar-brand {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .layout {
   display: grid;
   grid-template-columns: minmax(13rem, 20rem) minmax(0, 1fr);
-  min-height: calc(100vh - 3.5rem);
+  min-height: calc(100vh - var(--bulma-navbar-height));
 }
 
 .file-nav {
@@ -156,7 +182,7 @@ file-tree-node {
 }
 
 .grid.entries-grid {
-  --bulma-grid-column-min: min(100%, 24rem);
+  --bulma-grid-column-min: min(100%, 12rem);
   align-items: start;
 }
 
@@ -578,15 +604,6 @@ remember-details > [data-details-content][hidden] {
 
 
 @media (max-width: 42rem) {
-  .topbar {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .topbar-search {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-
   .layout {
     grid-template-columns: 1fr;
   }

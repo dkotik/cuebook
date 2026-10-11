@@ -172,6 +172,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "remember details component", path: "/assets/remember-details.js", contains: []string{`customElements.define("remember-details"`, "localStorage.getItem", "localStorage.setItem", "dataset.storageKey", "aria-expanded", "keydown"}, wantStatus: http.StatusOK},
 		{name: "archive confirmation controller", path: "/assets/archive-confirm.js", contains: []string{`form[action$="/archive"]`, `form[hx-post$="/archive"]`, `event.preventDefault()`, `event.stopImmediatePropagation()`, "textContent", `aria-hidden`, "requestSubmit", `event.key === "Escape"`}, wantStatus: http.StatusOK},
 		{name: "theme controller", path: "/assets/theme.js", contains: []string{"localStorage.setItem", `querySelectorAll("[data-theme-icon]")`, `? "moon" : "sun"`, `icon.style.display`, `? "inline-block" : "none"`}, wantStatus: http.StatusOK},
+		{name: "navbar controller", path: "/assets/navbar.js", contains: []string{`classList.toggle("is-active", expanded)`, `setAttribute("aria-expanded", String(expanded))`, `document.querySelector(".topbar-search")?.addEventListener("submit"`}, wantStatus: http.StatusOK},
 		{name: "entry copy controller", path: "/assets/entry-copy.js", contains: []string{`addEventListener("click"`, `navigator.clipboard.writeText(source.textContent)`, `"cuebook:flash"`}, wantStatus: http.StatusOK},
 		{name: "entry paste controller", path: "/assets/entry-paste.js", contains: []string{`addEventListener("paste"`, `getData("text/plain")`, `window.htmx.ajax("POST"`, "isContentEditable"}, wantStatus: http.StatusOK},
 		{name: "flash message controller", path: "/assets/flash.js", contains: []string{`"cuebook:flash"`, "textContent", "flash.hidden = false"}, wantStatus: http.StatusOK},
@@ -195,7 +196,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 	}
 }
 
-func TestPageIncludesLiveReloadComponent(t *testing.T) {
+func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 	handler, err := New(fstest.MapFS{})
 	if err != nil {
 		t.Fatal(err)
@@ -207,13 +208,32 @@ func TestPageIncludesLiveReloadComponent(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
+	page := response.Body.String()
 	for _, want := range []string{
+		`<body class="has-navbar-fixed-top" data-route-prefix="">`,
+		`<nav class="topbar navbar is-fixed-top" role="navigation" aria-label="main navigation">`,
+		`aria-expanded="false" aria-controls="cuebook-navbar-menu" data-target="cuebook-navbar-menu"`,
+		`<script src="/assets/navbar.js" defer></script>`,
 		`<script src="/assets/live-reload.js" defer></script>`,
 		`<live-reload data-events-url="/events"></live-reload>`,
 	} {
-		if !strings.Contains(response.Body.String(), want) {
+		if !strings.Contains(page, want) {
 			t.Errorf("page does not contain %q", want)
 		}
+	}
+
+	brandStart := strings.Index(page, `<div class="navbar-brand">`)
+	searchStart := strings.Index(page, `<div class="navbar-item topbar-search-item is-expanded">`)
+	burgerStart := strings.Index(page, `<button class="navbar-burger"`)
+	menuStart := strings.Index(page, `<div id="cuebook-navbar-menu"`)
+	brandEnd := -1
+	if burgerStart >= 0 {
+		if offset := strings.Index(page[burgerStart:], `</div>`); offset >= 0 {
+			brandEnd = burgerStart + offset
+		}
+	}
+	if !(brandStart >= 0 && brandStart < searchStart && searchStart < burgerStart && burgerStart < brandEnd && brandEnd < menuStart) {
+		t.Errorf("search should remain in the visible navbar brand row outside the collapsible menu")
 	}
 }
 

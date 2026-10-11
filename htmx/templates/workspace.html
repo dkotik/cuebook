@@ -14,7 +14,7 @@
     {{else if .SelectedEntry}}
       {{template "entry.html" .SelectedEntry}}
     {{else if .Entries}}
-      <div class="grid is-col-min-16 is-gap-2 entries-grid">
+      <div class="grid is-gap-2 entries-grid">
         {{range .Entries}}{{template "entry-list.html" .}}{{end}}
       </div>
     {{else}}
