@@ -110,7 +110,7 @@ func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 	if !strings.Contains(entryBody, `<div class="buttons entry-actions">`) || !strings.Contains(entryBody, `>Archive Entry</button>`) {
 		t.Errorf("entry view does not render the Archive Entry button group: %s", entryBody)
 	}
-	if !strings.Contains(entryBody, `<details class="add-entry-dock">`) || !strings.Contains(entryBody, `action="/add"`) {
+	if !strings.Contains(entryBody, `<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`) || !strings.Contains(entryBody, `action="/add"`) {
 		t.Errorf("full entry view does not include the add-entry dock: %s", entryBody)
 	}
 
@@ -122,7 +122,7 @@ func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 		t.Fatalf("entry fragment status = %d, want %d; body: %s", fragmentResponse.Code, http.StatusOK, fragmentResponse.Body.String())
 	}
 	fragmentBody := fragmentResponse.Body.String()
-	if strings.Contains(fragmentBody, "<!doctype html>") || !strings.Contains(fragmentBody, `<details class="add-entry-dock">`) || !strings.Contains(fragmentBody, `action="/add"`) {
+	if strings.Contains(fragmentBody, "<!doctype html>") || !strings.Contains(fragmentBody, `<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`) || !strings.Contains(fragmentBody, `action="/add"`) {
 		t.Errorf("entry fragment does not include the add-entry dock as a workspace fragment: %s", fragmentBody)
 	}
 }

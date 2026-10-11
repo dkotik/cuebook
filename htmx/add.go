@@ -97,29 +97,39 @@ func (a *handler) add(_ context.Context, request *addRequest) (addResponse, erro
 	if err := entry.Err(); err != nil {
 		return addResponse{}, errors.New("The submitted entry is invalid.")
 	}
-	data, err := a.appendEntry(fileName, raw, entry)
-	return addResponse{pageData: data}, err
+	entryIndex, err := document.Len()
+	if err != nil {
+		return addResponse{}, errors.New("Unable to determine where to add the entry.")
+	}
+	if err := a.appendEntry(fileName, raw, entry); err != nil {
+		return addResponse{}, err
+	}
+	addedEntry, err := a.loadEntryPage(fileName, cuebook.ByteRange{}, entryIndex)
+	if err != nil {
+		return addResponse{}, errors.New("The entry was saved, but the updated document could not be displayed.")
+	}
+	return addResponse{pageData: addedEntry.pageData}, nil
 }
 
-func (a *handler) appendEntry(fileName string, raw []byte, entry cue.Value) (pageData, error) {
+func (a *handler) appendEntry(fileName string, raw []byte, entry cue.Value) error {
 	change, err := patch.AppendToStructList(raw, entry)
 	if err != nil {
-		return pageData{}, errors.New("The entry could not be added to this CUE document.")
+		return errors.New("The entry could not be added to this CUE document.")
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		return pageData{}, errors.New("The document changed before the entry could be added. Reload and try again.")
+		return errors.New("The document changed before the entry could be added. Reload and try again.")
 	}
 	if _, err := cuebook.New(candidate); err != nil {
-		return pageData{}, errors.New("The submitted entry does not satisfy the CUE constraints: " + err.Error())
+		return errors.New("The submitted entry does not satisfy the CUE constraints: " + err.Error())
 	}
 	if err := a.commitFile(fileName, change); err != nil {
 		if errors.Is(err, patch.ErrByteRangeNotFound) {
-			return pageData{}, errors.New("The document changed before the entry could be added. Reload and try again.")
+			return errors.New("The document changed before the entry could be added. Reload and try again.")
 		}
-		return pageData{}, errors.New("The entry could not be saved.")
+		return errors.New("The entry could not be saved.")
 	}
-	return a.renderEditedFile(fileName)
+	return nil
 }
 
 func addFieldDeclaration(field cuebook.Field, input string) (ast.Decl, error) {

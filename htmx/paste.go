@@ -54,7 +54,10 @@ func (a *handler) paste(_ context.Context, request *pasteRequest) (listResponse,
 			return a.pasteCut(request, fileNames)
 		}
 	}
-	data, err := a.appendEntry(request.File, raw, entry)
+	if err := a.appendEntry(request.File, raw, entry); err != nil {
+		return listResponse{}, err
+	}
+	data, err := a.renderEditedFile(request.File)
 	return listResponse{pageData: data}, err
 }
 

@@ -233,6 +233,18 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	}
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "edit"), sameOriginMiddleware(NewHTMXSwitch(editPageHandler, editWorkspaceHandler)))
 
+	formErrorEncoder := NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("error.html")))
+	formErrorHandler := func(target string) htadaptor.ErrorHandlerFunc {
+		return htadaptor.ErrorHandlerFunc(func(w http.ResponseWriter, r *http.Request, cause error) {
+			w.Header().Set("HX-Retarget", target)
+			w.Header().Set("HX-Reswap", "innerHTML")
+			response := pageData{Error: cause.Error()}
+			if encodeErr := formErrorEncoder.Encode(w, r, htadaptor.GetHyperTextStatusCode(cause), response); encodeErr != nil {
+				panic(encodeErr)
+			}
+		})
+	}
+
 	addPageHandler, err := config.Adaptor.AdaptFunc(app.add,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page.html")),
@@ -241,8 +253,8 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		return nil, fmt.Errorf("htmx: adapt add route: %w", err)
 	}
 	addWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.add,
-		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
+		htadaptor.WithErrorHandler(formErrorHandler("#add-entry-error")),
+		htadaptor.WithTemplate(templates.Lookup("entry-workspace.html")),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt add HTMX route: %w", err)

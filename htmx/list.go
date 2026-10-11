@@ -43,7 +43,6 @@ type pageData struct {
 	AddFields         []addFieldView
 	RequiredAddFields []addFieldView
 	OptionalAddFields []addFieldView
-	AddError          string
 	ReadOnly          bool
 	Error             string
 	DocumentError     string

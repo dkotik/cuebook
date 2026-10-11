@@ -54,9 +54,9 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 
 	body := response.Body.String()
 	for _, want := range []string{
-		`<details class="add-entry-dock">`,
+		`<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`,
 		`<summary aria-controls="add-entry-dock-panel">Add entry</summary>`,
-		`<section class="add-entry box" id="add-entry-dock-panel" aria-labelledby="add-entry-heading">`,
+		`<section class="add-entry box" id="add-entry-dock-panel" aria-labelledby="add-entry-heading" data-details-content>`,
 		`action="/add"`,
 		`hx-post="/add"`,
 		`<h2 id="add-entry-heading" class="title is-5">Add entry</h2>`,
@@ -80,7 +80,7 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 	if formEnd < 0 {
 		t.Fatalf("add-entry form is not closed: %s", body)
 	}
-	if !strings.Contains(body[formStart+formEnd:], `</details>`) {
+	if !strings.Contains(body[formStart+formEnd:], `</remember-details>`) {
 		t.Errorf("add-entry panel is not inside its dock: %s", body[formStart:])
 	}
 }
@@ -110,11 +110,21 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
 	body := response.Body.String()
-	start, end := strings.Index(body, `<section class="add-entry`), strings.Index(body, `</section>`)
-	if start < 0 || end < start {
+	if !strings.Contains(body, `<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`) {
+		t.Fatalf("add-entry dock does not persist its disclosure state: %s", body)
+	}
+	formStart := strings.Index(body, `<form action="/add"`)
+	if formStart < 0 {
 		t.Fatalf("add-entry form not found: %s", body)
 	}
-	form := body[start:end]
+	formEnd := strings.Index(body[formStart:], `</form>`)
+	if formEnd < 0 {
+		t.Fatalf("add-entry form is not closed: %s", body[formStart:])
+	}
+	form := body[formStart : formStart+formEnd]
+	if !strings.Contains(form, `<div id="add-entry-error" class="form-error" aria-live="assertive"></div>`) {
+		t.Errorf("add-entry error target is not inside the form: %s", form)
+	}
 	for _, want := range []string{
 		`name="entry.0.field" value="Name"`,
 		`name="entry.0.value" value="" required`,
@@ -140,8 +150,18 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 	if failure.Code != http.StatusInternalServerError {
 		t.Fatalf("failure status = %d, want %d; body: %s", failure.Code, http.StatusInternalServerError, failure.Body.String())
 	}
-	if !strings.Contains(failure.Body.String(), "does not satisfy the CUE constraints") {
-		t.Fatalf("validation error missing from response: %s", failure.Body.String())
+	if failure.Header().Get("HX-Retarget") != "#add-entry-error" {
+		t.Errorf("HX-Retarget = %q, want #add-entry-error", failure.Header().Get("HX-Retarget"))
+	}
+	if failure.Header().Get("HX-Reswap") != "innerHTML" {
+		t.Errorf("HX-Reswap = %q, want innerHTML", failure.Header().Get("HX-Reswap"))
+	}
+	failureBody := failure.Body.String()
+	if !strings.Contains(failureBody, "does not satisfy the CUE constraints") {
+		t.Fatalf("validation error missing from response: %s", failureBody)
+	}
+	if !strings.Contains(failureBody, `<p class="notice notification is-danger" role="alert">`) || strings.Contains(failureBody, `add-entry-error`) || strings.Contains(failureBody, `<form`) || strings.Contains(failureBody, `<main id="workspace"`) {
+		t.Fatalf("HTMX validation response should be a generic error fragment, not replace the form or workspace: %s", failureBody)
 	}
 	if committer.calls != 0 {
 		t.Fatalf("committer calls = %d, want 0 for rejected entry", committer.calls)
@@ -165,7 +185,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".entry-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 24rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".entry-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 24rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
 		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},
 		{name: "custom search element", path: "/assets/search-control.js", contains: []string{`customElements.define("cuebook-search"`, `this.input.value = ""`, "updateButtons()", "this.form.insertBefore(this.clearControl, this.inputControl)", "this.clearControl.remove()", "this.input.focus()"}, wantStatus: http.StatusOK},
 		{name: "entry move controller", path: "/assets/entry-move.js", contains: []string{"data-entry-drag-handle", "await window.htmx.ajax(\"POST\", `${routePrefix}/move`, {", "drop-before", "drop-after", "destination", "is-drop-target", "cuebook:move-confirmation-request"}, wantStatus: http.StatusOK},
@@ -307,8 +327,12 @@ func TestWritableDirectoryAppendsEntries(t *testing.T) {
 				if response.Code != http.StatusOK {
 					t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 				}
-				if !strings.Contains(response.Body.String(), `<main id="workspace"`) || !strings.Contains(response.Body.String(), "Added Contact") {
-					t.Fatalf("expected updated HTMX workspace, got: %s", response.Body.String())
+				body := response.Body.String()
+				wantEntryID := `id="entry-` + strconv.Itoa(beforeLength) + `"`
+				if strings.Contains(body, `<main id="workspace"`) || strings.Contains(body, `entries-grid`) ||
+					!strings.Contains(body, `<article class="card" `+wantEntryID) ||
+					!strings.Contains(body, `class="buttons entry-actions"`) || !strings.Contains(body, "Added Contact") {
+					t.Fatalf("expected the newly-added entry view fragment, got: %s", body)
 				}
 			} else {
 				if response.Code != http.StatusOK {

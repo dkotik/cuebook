@@ -59,5 +59,20 @@
   {
 		Name:  "Super Rambo 123" @cuebook(title)
 		Email: "test1@testdom1ain.com"
+	},
+  {
+		Name:     "sf"
+		Email:    "dsdf@sdf.com"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$cGeXjMyixX+xY8EygAgeOA$dx6GkcrszSRQCO7TA/jhoBzpuj4hdDOWrEWh/w9Rtig"
+	},
+  {
+		Name:     "sdf"
+		Email:    "sdf@sdf.com"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$lFPpEgVBiY1UicU755JcKg$j+KEEZIwJPJafycCnfAS035HiGsiuaMns5npt2wZGlI"
+	},
+  {
+		Name:     "ksjdhf"
+		Email:    "sjdkfh@sdfsdf.com"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$medTMHpZfMcS6rdxNaMa+w$dnueH6PynLQroKz/4jXR9YuxoQtMu7VVjk0fUt+j3iM"
 	}
 ]
