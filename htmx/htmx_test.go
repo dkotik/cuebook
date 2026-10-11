@@ -54,6 +54,9 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 
 	body := response.Body.String()
 	for _, want := range []string{
+		`<details class="add-entry-dock">`,
+		`<summary aria-controls="add-entry-dock-panel">Add entry</summary>`,
+		`<section class="add-entry box" id="add-entry-dock-panel" aria-labelledby="add-entry-heading">`,
 		`action="/add"`,
 		`hx-post="/add"`,
 		`<h2 id="add-entry-heading" class="title is-5">Add entry</h2>`,
@@ -77,9 +80,8 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 	if formEnd < 0 {
 		t.Fatalf("add-entry form is not closed: %s", body)
 	}
-	form := body[formStart : formStart+formEnd]
-	if strings.Contains(form, "remember-details") || strings.Contains(form, "<details") {
-		t.Errorf("add-entry form still has disclosure wrappers: %s", form)
+	if !strings.Contains(body[formStart+formEnd:], `</details>`) {
+		t.Errorf("add-entry panel is not inside its dock: %s", body[formStart:])
 	}
 }
 

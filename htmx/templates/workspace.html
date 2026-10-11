@@ -20,18 +20,7 @@
     {{else}}
       <p class="muted">This document has no entries.</p>
     {{end}}
-    {{if and (not .SelectedEntry) .AddFields}}
-    <section class="add-entry box" aria-labelledby="add-entry-heading">
-      {{if .AddError}}<p class="notice notification is-danger add-entry-error" role="alert">{{.AddError}}</p>{{end}}
-      <h2 id="add-entry-heading" class="title is-5">Add entry</h2>
-      <form action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="outerHTML">
-        <input type="hidden" name="file" value="{{.Selected}}">
-        {{range .RequiredAddFields}}{{template "entry-add-field.html" .}}{{end}}
-        {{range .OptionalAddFields}}{{template "entry-add-field.html" .}}{{end}}
-        <button class="button is-link" type="submit">Add entry</button>
-      </form>
-    </section>
-    {{end}}
+    {{if .AddFields}}{{template "add-entry-dock.html" .}}{{end}}
   {{else}}
     <h1 class="title is-4">Select a CUE file</h1>
     <p class="muted">Choose a file from the tree to view its entries.</p>

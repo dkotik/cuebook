@@ -118,6 +118,10 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 	page.Selected = filePath
 	setFileFrontmatter(&page, filePath, raw)
 	page.SelectedEntry = selected
+	if !page.ReadOnly {
+		page.AddFields = makeAddFieldViews(document)
+		page.RequiredAddFields, page.OptionalAddFields = splitAddFieldViews(page.AddFields)
+	}
 
 	return entryResponse{pageData: page, entryView: *selected}, nil
 }

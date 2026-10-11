@@ -152,7 +152,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	}
 	entryFragmentHandler, err := config.Adaptor.AdaptFunc(app.entry,
 		htadaptor.WithErrorHandler(errorHandler),
-		htadaptor.WithTemplate(templates.Lookup("entry.html")),
+		htadaptor.WithTemplate(templates.Lookup("entry-workspace.html")),
 		htadaptor.WithQueryValues("path", "file", "head", "tail"),
 	)
 	if err != nil {
