@@ -39,6 +39,10 @@ body {
   margin: 0;
 }
 
+cuebook-search button[hidden] {
+  display: none;
+}
+
 .topbar > button {
   justify-self: end;
 }

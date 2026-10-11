@@ -2,19 +2,20 @@ class CuebookSearch extends HTMLElement {
   connectedCallback() {
     this.input = this.querySelector('input[type="search"][name="q"]');
     this.clearButton = this.querySelector("[data-clear-search]");
+    this.submitButton = this.querySelector('button[type="submit"]');
     if (!this.input || !this.clearButton) {
       return;
     }
 
-    this.handleInput = () => this.updateClearButton();
+    this.handleInput = () => this.updateButtons();
     this.handleClear = () => {
       this.input.value = "";
-      this.updateClearButton();
+      this.updateButtons();
       this.input.focus();
     };
     this.input.addEventListener("input", this.handleInput);
     this.clearButton.addEventListener("click", this.handleClear);
-    this.updateClearButton();
+    this.updateButtons();
   }
 
   disconnectedCallback() {
@@ -22,9 +23,10 @@ class CuebookSearch extends HTMLElement {
     this.clearButton?.removeEventListener("click", this.handleClear);
   }
 
-  updateClearButton() {
+  updateButtons() {
     if (this.input && this.clearButton) {
-      this.clearButton.hidden = this.input.value.trim() === "";
+      const hasQuery = this.input.value.trim() !== "";
+      this.clearButton.hidden = !hasQuery;
     }
   }
 }

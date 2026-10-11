@@ -62,6 +62,11 @@ func TestSearchFormIsInHeaderAndTargetsMainContent(t *testing.T) {
 			t.Errorf("custom search element does not contain %q", want)
 		}
 	}
+	clearButton := strings.Index(component, `data-clear-search hidden`)
+	input := strings.Index(component, `<input class="input" type="search" name="q"`)
+	if clearButton < 0 || input < 0 || clearButton > input {
+		t.Errorf("clear search button is not before the search input: %s", component)
+	}
 	if !strings.Contains(body, `src="/assets/search-control.js"`) {
 		t.Error("custom search element controller is not loaded")
 	}
