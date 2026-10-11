@@ -176,6 +176,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "entry copy controller", path: "/assets/entry-copy.js", contains: []string{`addEventListener("click"`, `navigator.clipboard.writeText(source.textContent)`, `"cuebook:flash"`}, wantStatus: http.StatusOK},
 		{name: "entry paste controller", path: "/assets/entry-paste.js", contains: []string{`addEventListener("paste"`, `getData("text/plain")`, `window.htmx.ajax("POST"`, "isContentEditable"}, wantStatus: http.StatusOK},
 		{name: "flash message controller", path: "/assets/flash.js", contains: []string{`"cuebook:flash"`, "textContent", "flash.hidden = false"}, wantStatus: http.StatusOK},
+		{name: "field edit dialog controller", path: "/assets/field-edit-dialog.js", contains: []string{"htmx:afterSwap", `classList.add("is-active")`, `event.key === "Escape"`, `source.closest("#field-edit-modal form")`, `modalSavePending`, `last.focus()`}, wantStatus: http.StatusOK},
 		{name: "live reload component", path: "/assets/live-reload.js", contains: []string{"class LiveReload extends HTMLElement", `new EventSource(eventsURL)`, "window.location.reload()"}, wantStatus: http.StatusOK},
 		{name: "unknown asset", path: "/assets/secret.txt", wantStatus: http.StatusNotFound},
 	}

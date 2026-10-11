@@ -75,7 +75,7 @@ func TestEditFormRendersFieldDocumentationBelowInput(t *testing.T) {
 	}
 }
 
-func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
+func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 	t.Parallel()
 
 	handler, err := NewWithCommitter(testSource(), &recordingCommitter{})
@@ -94,7 +94,10 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 		`<output>`,
 		`field-value-edit`,
 		`aria-label="Edit Email value"`,
+		`aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger`,
 		`hx-get="/edit?entry=0&amp;field=Email&amp;file=core1.cue"`,
+		`hx-target="#field-edit-modal" hx-swap="innerHTML"`,
+		`<div id="field-edit-modal" class="modal" aria-hidden="true">`,
 	} {
 		if !strings.Contains(pageResponse.Body.String(), want) {
 			t.Errorf("writable page does not contain %q; body: %s", want, pageResponse.Body.String())
@@ -123,8 +126,15 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	if entryResponse.Code != http.StatusOK {
 		t.Fatalf("entry status = %d, want %d; body: %s", entryResponse.Code, http.StatusOK, entryResponse.Body.String())
 	}
-	if !strings.Contains(entryResponse.Body.String(), `field-edit-button`) {
-		t.Fatal("entry view should retain pencil edit icons")
+	for _, want := range []string{
+		`field-edit-button`,
+		`aria-label="Edit Name value" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger`,
+		`hx-target="#field-edit-modal" hx-swap="innerHTML"`,
+		`<div id="field-edit-modal" class="modal" aria-hidden="true">`,
+	} {
+		if !strings.Contains(entryResponse.Body.String(), want) {
+			t.Errorf("entry view does not contain %q", want)
+		}
 	}
 	if !strings.Contains(entryResponse.Body.String(), `<span class="field-name label">Name:</span>`) {
 		t.Fatal("entry view should show the title field")
@@ -146,21 +156,47 @@ func TestEditableFieldsUseInlineHTMXEditor(t *testing.T) {
 	}
 	for _, want := range []string{
 		`<span class="field-name label">Name:</span>`,
-		`<form action="/edit" method="post"`,
+		`<form id="field-edit-modal-card" class="modal-card field-edit-modal-form"`,
 		`hx-post="/edit"`,
 		`hx-target="#workspace"`,
+		`class="modal-card field-edit-modal-form" role="dialog" aria-modal="true"`,
+		`<section class="modal-card-body">`,
 		`name="value" value="`,
-		`hx-get="/edit?entry=0&amp;field=Name&amp;file=core1.cue&amp;mode=view"`,
-		"Cancel",
+		`data-field-edit-dismiss>Cancel</button>`,
 	} {
 		if !strings.Contains(formResponse.Body.String(), want) {
 			t.Errorf("edit form does not contain %q", want)
 		}
 	}
 	if strings.Contains(formResponse.Body.String(), "<!doctype html>") || strings.Contains(formResponse.Body.String(), `<main id="workspace"`) {
-		t.Fatal("expected a field-level fragment, not a full page")
+		t.Fatal("expected a modal field fragment, not a full page")
 	}
 
+	formQuery.Set("view", "entry")
+	entryFormRequest := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+formQuery.Encode(), nil)
+	entryFormRequest.Header.Set("HX-Request", "true")
+	entryFormResponse := httptest.NewRecorder()
+	handler.ServeHTTP(entryFormResponse, entryFormRequest)
+	if entryFormResponse.Code != http.StatusOK {
+		t.Fatalf("entry form status = %d, want %d; body: %s", entryFormResponse.Code, http.StatusOK, entryFormResponse.Body.String())
+	}
+	for _, want := range []string{
+		`<div class="modal-background" data-field-edit-dismiss></div>`,
+		`<form id="field-edit-modal-card" class="modal-card field-edit-modal-form"`,
+		`role="dialog" aria-modal="true"`,
+		`hx-target="#workspace"`,
+		`name="view" value="entry"`,
+		`data-field-edit-dismiss>Cancel</button>`,
+	} {
+		if !strings.Contains(entryFormResponse.Body.String(), want) {
+			t.Errorf("entry edit form does not contain %q: %s", want, entryFormResponse.Body.String())
+		}
+	}
+	if strings.Contains(entryFormResponse.Body.String(), `hx-target="closest .field-item"`) {
+		t.Fatal("standalone entry editor should target the modal, not the inline field")
+	}
+
+	formQuery.Del("view")
 	formQuery.Set("mode", "view")
 	viewRequest := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+formQuery.Encode(), nil)
 	viewResponse := httptest.NewRecorder()

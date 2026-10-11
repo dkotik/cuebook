@@ -91,17 +91,18 @@ func TestEntryFieldSaveRefreshesCurrentEntry(t *testing.T) {
 				t.Fatal("edit link loses the entry-view context")
 			}
 			form := get(formURL.String())
-			if !strings.Contains(form.Body.String(), `name="view" value="entry"`) {
-				t.Fatal("edit form loses the entry-view context")
+			for _, want := range []string{
+				`<div class="modal-background" data-field-edit-dismiss></div>`,
+				`<form id="field-edit-modal-card" class="modal-card field-edit-modal-form"`,
+				`name="view" value="entry"`,
+				`data-field-edit-dismiss>Cancel</button>`,
+			} {
+				if !strings.Contains(form.Body.String(), want) {
+					t.Errorf("entry edit dialog does not contain %q: %s", want, form.Body.String())
+				}
 			}
-			cancelQuery := formURL.Query()
-			cancelQuery.Set("mode", "view")
-			cancelURL := formURL.Path + "?" + cancelQuery.Encode()
-			if !strings.Contains(form.Body.String(), html.EscapeString(cancelURL)) {
-				t.Fatal("cancel link loses the entry-view context")
-			}
-			if !strings.Contains(get(cancelURL).Body.String(), "view=entry") {
-				t.Fatal("cancelled field loses the entry-view context")
+			if strings.Contains(form.Body.String(), `hx-target="closest .field-item"`) {
+				t.Fatal("entry edit form unexpectedly targets the inline field")
 			}
 
 			values := editValues("people.cue", "1", tt.field, tt.value)

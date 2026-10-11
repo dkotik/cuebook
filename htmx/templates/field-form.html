@@ -1,9 +1,28 @@
-<div class="field field-item">
-  <form action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-target="#workspace" hx-swap="outerHTML">
-    <input type="hidden" name="file" value="{{.File}}">
-    <input type="hidden" name="entry" value="{{.Index}}">
-    <input type="hidden" name="field" value="{{.Name}}">
-    {{if .EntryView}}<input type="hidden" name="view" value="entry">{{end}}
+<div class="modal-background" data-field-edit-dismiss></div>
+<form id="field-edit-modal-card" class="modal-card field-edit-modal-form" role="dialog" aria-modal="true" aria-labelledby="field-edit-modal-title" action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-target="#workspace" hx-swap="outerHTML">
+  {{template "field-form-controls.html" .}}
+  <header class="modal-card-head">
+    <p id="field-edit-modal-title" class="modal-card-title">Edit {{.Name}}</p>
+    <button class="delete" type="button" aria-label="Close edit dialog" data-field-edit-dismiss></button>
+  </header>
+  <section class="modal-card-body">
+    {{template "field-form-input.html" .}}
+  </section>
+  <footer class="modal-card-foot is-justify-content-flex-end">
+    <button class="button is-light" type="button" data-field-edit-dismiss>Cancel</button>
+    <button class="button is-link" type="submit">Save</button>
+  </footer>
+</form>
+
+{{define "field-form-controls.html"}}
+  <input type="hidden" name="file" value="{{.File}}">
+  <input type="hidden" name="entry" value="{{.Index}}">
+  <input type="hidden" name="field" value="{{.Name}}">
+  {{if .EntryView}}<input type="hidden" name="view" value="entry">{{end}}
+{{end}}
+
+{{define "field-form-input.html"}}
+  <div class="field">
     <label>
       <span class="field-name label">{{.Name}}:</span>
       {{if .Secret}}
@@ -15,9 +34,5 @@
       {{end}}
     </label>
     {{if .Description}}<p class="help">{{.Description}}</p>{{end}}
-    <div class="field-edit-actions">
-      <button class="button is-link" type="submit">Save</button>
-      <button class="button is-light" type="button" hx-get="{{route .ViewURL}}" hx-target="closest .field-item" hx-swap="outerHTML">Cancel</button>
-    </div>
-  </form>
-</div>
+  </div>
+{{end}}

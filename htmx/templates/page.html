@@ -23,6 +23,7 @@
   <script src="{{route "/assets/entry-paste.js"}}" defer></script>
   <script src="{{route "/assets/entry-copy.js"}}" defer></script>
   <script src="{{route "/assets/flash.js"}}" defer></script>
+  <script src="{{route "/assets/field-edit-dialog.js"}}" defer></script>
   <script src="{{route "/assets/navbar.js"}}" defer></script>
 
   <script src="{{route "/assets/live-reload.js"}}" defer></script>
@@ -102,6 +103,7 @@
     </nav>
     {{template "workspace.html" .}}
   </div>
+  <div id="field-edit-modal" class="modal" aria-hidden="true"></div>
   <div id="archive-confirmation" class="modal" aria-hidden="true">
     <div class="modal-background" data-confirmation-dismiss></div>
     <div class="modal-card archive-confirmation-card" role="dialog" aria-modal="true" aria-labelledby="archive-confirmation-title" aria-describedby="archive-confirmation-description">

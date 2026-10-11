@@ -472,6 +472,14 @@ remember-details > [data-details-content][hidden] {
   margin: 0;
 }
 
+#field-edit-modal > .modal-card {
+  margin: 0;
+}
+
+.field-edit-modal-form .modal-card-title {
+  overflow-wrap: anywhere;
+}
+
 .archive-confirmation-card,
 .move-confirmation-card {
   overflow: hidden;
