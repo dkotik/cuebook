@@ -123,7 +123,7 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 	if !page.ReadOnly {
 		page.AddFields = makeAddFieldViews(document)
 		page.RequiredAddFields, page.OptionalAddFields = splitAddFieldViews(page.AddFields)
-		page.AddFilePicker = makeAddFilePicker(fileNames, filePath)
+
 	}
 
 	return entryResponse{pageData: page, entryView: *selected}, nil

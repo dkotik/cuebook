@@ -35,14 +35,6 @@ type filePickerOption struct {
 	Disabled  bool
 }
 
-func makeAddFilePicker(fileNames []string, current string) filePickerView {
-	return makeFilePicker(fileNames, current, filePickerOptions{
-		Legend:    "File",
-		InputName: "add-entry-file-selection",
-		Selected:  current,
-	})
-}
-
 func makeFilePicker(fileNames []string, current string, options filePickerOptions) filePickerView {
 	files := makeFileTree(fileNames, options.Selected)
 	setFilePickerOptions(files, current, options)

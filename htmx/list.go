@@ -43,10 +43,10 @@ type pageData struct {
 	AddFields         []addFieldView
 	RequiredAddFields []addFieldView
 	OptionalAddFields []addFieldView
-	AddFilePicker     filePickerView
-	ReadOnly          bool
-	Error             string
-	DocumentError     string
+
+	ReadOnly      bool
+	Error         string
+	DocumentError string
 }
 
 type entryView struct {
@@ -114,7 +114,7 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 	if !data.ReadOnly {
 		data.AddFields = makeAddFieldViews(document)
 		data.RequiredAddFields, data.OptionalAddFields = splitAddFieldViews(data.AddFields)
-		data.AddFilePicker = makeAddFilePicker(fileNames, fileName)
+
 	}
 	entries, err := makeEntryViews(document, fileName, data.ReadOnly)
 	if err != nil {

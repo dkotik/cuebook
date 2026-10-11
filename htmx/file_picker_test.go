@@ -14,15 +14,15 @@ func TestFilePickerRendering(t *testing.T) {
 	const nestedFile = "nested/deep/target & friends.cue"
 	fileNames := []string{"root.cue", nestedFile, "archive/old.cue"}
 	tests := []struct {
-		name           string
-		current        string
-		selected       string
-		add            bool
+		name     string
+		current  string
+		selected string
+
 		disableCurrent bool
 		empty          bool
 	}{
-		{name: "add root file", current: "root.cue", selected: "root.cue", add: true},
-		{name: "add nested file with escaped path", current: nestedFile, selected: nestedFile, add: true},
+		{name: "preselected root file", current: "root.cue", selected: "root.cue"},
+		{name: "preselected nested file with escaped path", current: nestedFile, selected: nestedFile},
 		{name: "move requires an explicit destination", current: "root.cue", disableCurrent: true},
 		{name: "move may preselect a different file", current: "root.cue", selected: nestedFile, disableCurrent: true},
 		{name: "disabled current file cannot be preselected", current: nestedFile, selected: nestedFile, disableCurrent: true},
@@ -51,10 +51,7 @@ func TestFilePickerRendering(t *testing.T) {
 			}
 
 			picker := makeFilePicker(files, tt.current, options)
-			if tt.add {
-				picker = makeAddFilePicker(files, tt.current)
-				options.InputName = "add-entry-file-selection"
-			}
+
 			var rendered bytes.Buffer
 			if err := templates.ExecuteTemplate(&rendered, "file-selector.html", picker); err != nil {
 				t.Fatal(err)

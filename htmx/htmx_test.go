@@ -87,7 +87,7 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 
 }
 
-func TestAddEntryFilePickerDisplaysCurrentFileAndListsChoices(t *testing.T) {
+func TestAddEntryFormUsesCurrentFile(t *testing.T) {
 	t.Parallel()
 
 	const source = `#entry: {Name: string}
@@ -99,11 +99,16 @@ func TestAddEntryFilePickerDisplaysCurrentFileAndListsChoices(t *testing.T) {
 		"ignored.txt":      &fstest.MapFile{Data: []byte("not CUE")},
 	}
 	tests := []struct {
-		name string
-		file string
+		name     string
+		file     string
+		entry    bool
+		fragment bool
 	}{
-		{name: "root file", file: "root.cue"},
-		{name: "nested file", file: "nested/other.cue"},
+		{name: "root list", file: "root.cue"},
+		{name: "nested list", file: "nested/other.cue"},
+		{name: "root entry", file: "root.cue", entry: true},
+		{name: "nested entry", file: "nested/other.cue", entry: true},
+		{name: "HTMX entry", file: "nested/other.cue", entry: true, fragment: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -112,7 +117,26 @@ func TestAddEntryFilePickerDisplaysCurrentFileAndListsChoices(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			request := httptest.NewRequest(http.MethodGet, "http://example.test/?"+url.Values{"file": {tt.file}}.Encode(), nil)
+			target := "/?" + url.Values{"file": {tt.file}}.Encode()
+			if tt.entry {
+				book, err := cuebook.New([]byte(source))
+				if err != nil {
+					t.Fatal(err)
+				}
+				value, err := book.GetValue(0)
+				if err != nil {
+					t.Fatal(err)
+				}
+				entryRange, err := cuebook.NewByteRange(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				target = entryURL(tt.file, entryRange)
+			}
+			request := httptest.NewRequest(http.MethodGet, "http://example.test"+target, nil)
+			if tt.fragment {
+				request.Header.Set("HX-Request", "true")
+			}
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, request)
 			if response.Code != http.StatusOK {
@@ -120,30 +144,26 @@ func TestAddEntryFilePickerDisplaysCurrentFileAndListsChoices(t *testing.T) {
 			}
 
 			body := response.Body.String()
+			formStart := strings.Index(body, `<form id="add-entry-form"`)
+			if formStart < 0 {
+				t.Fatal("add-entry form is missing")
+			}
+			formEnd := strings.Index(body[formStart:], `</form>`)
+			if formEnd < 0 {
+				t.Fatal("add-entry form is not closed")
+			}
+			form := body[formStart : formStart+formEnd]
 			for _, want := range []string{
-				`<label class="label" for="add-entry-file-picker-open">File</label>`,
-				`data-file-picker-open="add-entry-file-dialog"`,
-				`<span id="add-entry-file-value">` + tt.file + `</span>`,
-				`<dialog id="add-entry-file-dialog" class="file-selector-dialog"`,
-				`<input id="add-entry-file" type="hidden" name="file" value="` + tt.file + `">`,
-				`name="add-entry-file-selection" value="` + tt.file + `" required checked`,
-				`name="add-entry-file-selection" value="root.cue" required`,
-				`name="add-entry-file-selection" value="nested/other.cue" required`,
+				`<input type="hidden" name="file" value="` + tt.file + `">`,
+				`name="entry.0.field"`,
+				`hx-post="/add"`,
 			} {
-				if !strings.Contains(body, want) {
-					t.Errorf("page does not contain %q", want)
+				if !strings.Contains(form, want) {
+					t.Errorf("add-entry form missing %q", want)
 				}
 			}
-			if strings.Contains(body, "ignored.txt") {
-				t.Error("file picker lists a non-CUE file")
-			}
-			fileField := strings.Index(body, `<label class="label" for="add-entry-file-picker-open">File</label>`)
-			firstEntryField := strings.Index(body, `name="entry.0.field"`)
-			if fileField < 0 || firstEntryField < 0 || fileField > firstEntryField {
-				t.Errorf("file picker is not the first add-entry field")
-			}
-			if !strings.Contains(body, `src="/assets/file-picker.js"`) {
-				t.Error("file picker controller is not loaded")
+			if strings.Contains(body, "add-entry-file") || strings.Contains(form, "data-file-picker-open") {
+				t.Error("add-entry form still exposes a file picker")
 			}
 		})
 	}
