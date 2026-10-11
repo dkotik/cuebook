@@ -160,7 +160,7 @@ func TestEntryFieldSaveRefreshesCurrentEntry(t *testing.T) {
 				}
 			}
 			body := response.Body.String()
-			for _, want := range []string{`<main id="workspace"`, `id="entry-1"`, "data-entry-copy=", "data-entry-move="} {
+			for _, want := range []string{`<main id="workspace"`, `id="entry-1"`, "data-entry-copy=", "data-file-picker-open="} {
 				if !strings.Contains(body, want) {
 					t.Errorf("refreshed entry missing %q", want)
 				}

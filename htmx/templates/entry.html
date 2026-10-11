@@ -10,7 +10,7 @@
   <span class="muted" data-entry-copy-status role="status"></span>
   {{if .CanMove}}
   <button class="button is-ghost" type="button" data-entry-cut="entry-cue-{{.Index}}" data-file="{{.File}}" data-entry-index="{{.Index}}" data-cut-fingerprint="{{.CutFingerprint}}" title="Cut entry as CUE">Cut CUE</button>
-  <button class="button is-ghost" type="button" data-entry-move="entry-move-dialog" aria-haspopup="dialog" aria-controls="entry-move-dialog">Move Entry</button>
+  <button class="button is-ghost" type="button" data-file-picker-open="entry-move-dialog" aria-haspopup="dialog" aria-controls="entry-move-dialog">Move Entry</button>
   {{end}}
   {{if .CanArchive}}
   <form class="entry-archive-form" action="{{route "/archive"}}" method="post" hx-post="{{route "/archive"}}" hx-target="#workspace" hx-swap="outerHTML">

@@ -1,18 +1,18 @@
-<dialog id="entry-move-dialog" class="entry-move-dialog" aria-labelledby="entry-move-title" aria-describedby="entry-move-description">
-  <form class="modal-card move-confirmation-card" action="{{route "/move"}}" method="post" hx-post="{{route "/move"}}" hx-target="#workspace" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" data-entry-move-form>
+<dialog id="entry-move-dialog" class="file-selector-dialog" aria-labelledby="entry-move-title" aria-describedby="entry-move-description" data-file-picker-dialog>
+  <form class="modal-card file-picker-card" action="{{route "/move"}}" method="post" hx-post="{{route "/move"}}" hx-target="#workspace" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']">
     <input type="hidden" name="file" value="{{.File}}">
     <input type="hidden" name="from" value="{{.Index}}">
     <header class="modal-card-head">
       <h2 id="entry-move-title" class="modal-card-title">Move entry</h2>
-      <button class="delete" type="button" aria-label="Cancel move" data-entry-move-dismiss></button>
+      <button class="delete" type="button" aria-label="Cancel move" data-file-picker-dismiss></button>
     </header>
     <section class="modal-card-body">
       <p id="entry-move-description">Choose a file to move “{{.Title}}” to.</p>
-      {{template "file-selector.html" .MoveFileSelector}}
+      {{template "file-selector.html" .MoveFilePicker}}
     </section>
     <footer class="modal-card-foot is-justify-content-flex-end">
-      <button class="button is-light" type="button" data-entry-move-dismiss autofocus>Cancel</button>
-      <button class="button is-link" type="submit" data-entry-move-confirm disabled>Confirm move</button>
+      <button class="button is-light" type="button" data-file-picker-dismiss autofocus>Cancel</button>
+      <button class="button is-link" type="submit" data-file-picker-confirm disabled>Confirm move</button>
     </footer>
   </form>
 </dialog>

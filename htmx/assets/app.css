@@ -148,7 +148,8 @@ file-tree-node {
   height: 1.1rem;
 }
 
-.tree-file-link[aria-current="page"] {
+.tree-file-link[aria-current="page"],
+.file-picker-option:has(input:checked) {
   font-weight: 700;
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
@@ -163,9 +164,37 @@ file-tree-node {
   display: none;
 }
 
+.file-picker-tree {
+  max-height: min(60vh, 30rem);
+  overflow-y: auto;
+}
+
+.file-picker-option {
+  cursor: pointer;
+}
+
+.file-picker-option:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.file-picker-option:has(input:focus-visible) {
+  outline: 2px solid var(--bulma-link);
+  outline-offset: -2px;
+}
+
+.file-picker-option > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.file-picker-option input[type="radio"] {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
 #workspace {
   min-width: 0;
-  padding: 1rem clamp(1rem, 4vw, 3rem);
+  padding: 2rem clamp(1rem, 4vw, 3rem);
 }
 
 .add-entry-dock {
@@ -522,19 +551,16 @@ remember-details > [data-details-content][hidden] {
   opacity: 0.75;
 }
 
-.entry-move-dialog,
 .file-selector-dialog {
   padding: 0;
   border: 0;
   background: transparent;
 }
 
-.entry-move-dialog::backdrop,
 .file-selector-dialog::backdrop {
   background: rgb(0 0 0 / 60%);
 }
 
-.entry-move-dialog > .modal-card,
 .file-selector-dialog > .modal-card {
   margin: 0;
 }
@@ -560,7 +586,8 @@ remember-details > [data-details-content][hidden] {
 }
 
 .archive-confirmation-card,
-.move-confirmation-card {
+.move-confirmation-card,
+.file-picker-card {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
   border-radius: 1rem;
@@ -684,7 +711,8 @@ remember-details > [data-details-content][hidden] {
 
 @media (prefers-reduced-motion: reduce) {
   .archive-confirmation-card,
-  .move-confirmation-card {
+  .move-confirmation-card,
+  .file-picker-card {
     animation: none;
   }
 }

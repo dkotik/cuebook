@@ -54,7 +54,7 @@
 
   function syncCurrentFile() {
     const currentFile = new URL(window.location.href).searchParams.get("file");
-    for (const link of document.querySelectorAll(".tree-file-link")) {
+    for (const link of document.querySelectorAll("a.tree-file-link")) {
       const linkedFile = new URL(link.href, window.location.href).searchParams.get("file");
       if (currentFile && linkedFile === currentFile) {
         link.setAttribute("aria-current", "page");

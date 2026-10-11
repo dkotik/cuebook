@@ -1,10 +1,6 @@
-{{ $selector := . }}
-<fieldset class="mt-4" data-file-selector>
+<fieldset class="mt-4">
   <legend class="label">{{.Legend}}</legend>
-  {{range .Options}}
-  <label class="radio is-block mb-3{{if and $selector.HighlightCurrent .Current}} has-text-danger{{end}}">
-    <input type="radio" name="{{$selector.InputName}}" value="{{.Name}}"{{if and $selector.Required (not (and $selector.DisableCurrent .Current))}} required{{end}}{{if .Selected}} checked{{end}}{{if and $selector.DisableCurrent .Current}} disabled{{end}}>
-    {{.Name}}{{if .Current}} (current file){{end}}
-  </label>
-  {{end}}
+  <ul class="file-tree file-picker-tree">
+    {{range .Files}}{{template "file-tree-node.html" .}}{{end}}
+  </ul>
 </fieldset>

@@ -13,7 +13,56 @@ type fileTreeNode struct {
 	URL         string
 	IsDir       bool
 	Selected    bool
+	Picker      *filePickerOption
 	Children    []fileTreeNode
+}
+
+type filePickerView struct {
+	Legend string
+	Files  []fileTreeNode
+}
+
+type filePickerOptions struct {
+	Legend         string
+	InputName      string
+	DisableCurrent bool
+	Selected       string
+}
+
+type filePickerOption struct {
+	InputName string
+	Current   bool
+	Disabled  bool
+}
+
+func makeAddFilePicker(fileNames []string, current string) filePickerView {
+	return makeFilePicker(fileNames, current, filePickerOptions{
+		Legend:    "File",
+		InputName: "add-entry-file-selection",
+		Selected:  current,
+	})
+}
+
+func makeFilePicker(fileNames []string, current string, options filePickerOptions) filePickerView {
+	files := makeFileTree(fileNames, options.Selected)
+	setFilePickerOptions(files, current, options)
+	return filePickerView{Legend: options.Legend, Files: files}
+}
+
+func setFilePickerOptions(nodes []fileTreeNode, current string, options filePickerOptions) {
+	for index := range nodes {
+		if nodes[index].IsDir {
+			setFilePickerOptions(nodes[index].Children, current, options)
+			continue
+		}
+		isCurrent := nodes[index].Path == current
+		nodes[index].Picker = &filePickerOption{
+			InputName: options.InputName,
+			Current:   isCurrent,
+			Disabled:  options.DisableCurrent && isCurrent,
+		}
+		nodes[index].Selected = nodes[index].Selected && !nodes[index].Picker.Disabled
+	}
 }
 
 func fileURL(name string) string {

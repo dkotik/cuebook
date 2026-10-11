@@ -74,5 +74,16 @@
 		Name:     "ksjdhf"
 		Email:    "sjdkfh@sdfsdf.com"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$medTMHpZfMcS6rdxNaMa+w$dnueH6PynLQroKz/4jXR9YuxoQtMu7VVjk0fUt+j3iM"
+	},
+  {
+		Name:     "23424n33df"
+		Email:    "2342sd34@31234a1.com"
+		Notes:    "sfs sdf sdfsdf ahem"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$ALV0iRjKqI7BMvHq8Cw46w$2aMZuz76olfzIsIb8/s+9EFTxIXE0tEWBYuqSL70EHU"
+	},
+  {
+		Name:  "new entry"
+		Email: "test1@testdomain.com"
+		Notes: "sdfsdf"
 	}
 ]

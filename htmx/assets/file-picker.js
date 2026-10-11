@@ -1,21 +1,34 @@
 (() => {
+  const optionSelector = '.file-picker-option input[type="radio"]';
+
   function getSelectedFile(dialog) {
-    return dialog.querySelector('input[type="radio"]:checked:not(:disabled)');
+    return dialog.querySelector(`${optionSelector}:checked:not(:disabled)`);
   }
 
-  function syncPicker(dialog) {
-    const input = document.getElementById(dialog.dataset.valueInput);
-    if (input) {
-      let matched = false;
-      for (const option of dialog.querySelectorAll('input[type="radio"]')) {
-        const selected = !matched && !option.disabled && option.value === input.value;
-        option.checked = selected;
-        matched ||= selected;
-      }
-    }
+  function updateConfirm(dialog) {
     const confirm = dialog.querySelector("[data-file-picker-confirm]");
     if (confirm) {
       confirm.disabled = !getSelectedFile(dialog);
+    }
+  }
+
+  function restorePicker(dialog) {
+    const input = dialog.dataset.valueInput
+      ? document.getElementById(dialog.dataset.valueInput)
+      : null;
+    let matched = false;
+    for (const option of dialog.querySelectorAll(optionSelector)) {
+      option.checked = Boolean(input && !matched && !option.disabled && option.value === input.value);
+      matched ||= option.checked;
+    }
+    updateConfirm(dialog);
+
+    // Reveal the committed file without changing the user's saved folder state.
+    let children = getSelectedFile(dialog)?.closest(".tree-children");
+    while (children) {
+      children.hidden = false;
+      children.parentElement.querySelector(":scope > .tree-node-toggle")?.setAttribute("aria-expanded", "true");
+      children = children.parentElement.closest(".tree-children");
     }
   }
 
@@ -28,27 +41,27 @@
     const opener = target.closest("[data-file-picker-open]");
     if (opener) {
       const dialog = document.getElementById(opener.dataset.filePickerOpen);
-      if (!(dialog instanceof HTMLDialogElement) || dialog.open) {
+      if (!(dialog instanceof HTMLDialogElement) || !dialog.matches("dialog[data-file-picker-dialog]") || dialog.open) {
         return;
       }
-      syncPicker(dialog);
+      restorePicker(dialog);
       dialog.showModal();
       return;
     }
 
     const dismiss = target.closest("[data-file-picker-dismiss]");
     if (dismiss) {
-      dismiss.closest("dialog")?.close();
+      dismiss.closest("dialog[data-file-picker-dialog]")?.close();
       return;
     }
 
     const confirm = target.closest("[data-file-picker-confirm]");
-    if (!confirm) {
+    if (!confirm || confirm.disabled) {
       return;
     }
     const dialog = confirm.closest("dialog[data-file-picker-dialog]");
     const selected = dialog && getSelectedFile(dialog);
-    if (!dialog || !selected) {
+    if (!dialog || !selected || !dialog.dataset.valueInput) {
       return;
     }
     const input = document.getElementById(dialog.dataset.valueInput);
@@ -63,9 +76,19 @@
 
   document.addEventListener("change", (event) => {
     const target = event.target;
-    const dialog = target instanceof Element ? target.closest("dialog[data-file-picker-dialog]") : null;
-    if (dialog && target.matches('input[type="radio"]')) {
-      syncPicker(dialog);
+    if (!(target instanceof Element) || !target.matches(optionSelector)) {
+      return;
+    }
+    const dialog = target.closest("dialog[data-file-picker-dialog]");
+    if (dialog) {
+      updateConfirm(dialog);
     }
   });
+
+  document.addEventListener("submit", (event) => {
+    const form = event.target;
+    if (form instanceof HTMLFormElement) {
+      form.closest("dialog[data-file-picker-dialog]")?.close();
+    }
+  }, true);
 })();

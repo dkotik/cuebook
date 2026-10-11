@@ -30,7 +30,7 @@ func TestEntryMoveDialog(t *testing.T) {
 		{name: "current file is the only file", onlyFile: true},
 		{name: "read only has no move action", readOnly: true},
 	}
-	optionPattern := regexp.MustCompile(`<label class="radio is-block mb-3([^"]*)">\s*<input type="radio" name="destination" value="([^"]+)"([^>]*)>`)
+	optionPattern := regexp.MustCompile(`<label class="tree-file-link file-picker-option([^"]*)">\s*<input type="radio" name="destination" value="([^"]+)"([^>]*)>`)
 	dialogPattern := regexp.MustCompile(`(?s)<dialog id="entry-move-dialog".*?</dialog>`)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestEntryMoveDialog(t *testing.T) {
 			}
 			body := response.Body.String()
 			if tt.readOnly {
-				if strings.Contains(body, "data-entry-move=") || dialogPattern.MatchString(body) {
+				if strings.Contains(body, "data-file-picker-open=") || dialogPattern.MatchString(body) {
 					t.Fatal("read-only entry exposes the move action")
 				}
 				return
@@ -91,7 +91,7 @@ func TestEntryMoveDialog(t *testing.T) {
 				t.Fatal("bottom action row is missing")
 			}
 			actionEnd := strings.Index(body[actionStart:], "</div>")
-			if actionEnd < 0 || !strings.Contains(body[actionStart:actionStart+actionEnd], `data-entry-move="entry-move-dialog"`) {
+			if actionEnd < 0 || !strings.Contains(body[actionStart:actionStart+actionEnd], `data-file-picker-open="entry-move-dialog"`) {
 				t.Fatal("move button is not in the bottom action row")
 			}
 			dialog := dialogPattern.FindString(body)
@@ -101,8 +101,8 @@ func TestEntryMoveDialog(t *testing.T) {
 				`hx-target="#workspace" hx-swap="outerHTML"`,
 				`name="file" value="` + html.EscapeString(file) + `"`,
 				`name="from" value="1"`,
-				`data-entry-move-dismiss autofocus>Cancel`,
-				`type="submit" data-entry-move-confirm disabled>Confirm move`,
+				`data-file-picker-dismiss autofocus>Cancel`,
+				`type="submit" data-file-picker-confirm disabled>Confirm move`,
 			} {
 				if !strings.Contains(dialog, want) {
 					t.Errorf("dialog missing %q", want)
@@ -134,8 +134,8 @@ func TestEntryMoveDialog(t *testing.T) {
 			if !currentFound {
 				t.Fatal("current file is not listed")
 			}
-			if !tt.htmx && !strings.Contains(body, `src="`+tt.prefix+`/assets/entry-move-dialog.js"`) {
-				t.Error("move dialog controller is not loaded")
+			if !tt.htmx && !strings.Contains(body, `src="`+tt.prefix+`/assets/file-picker.js"`) {
+				t.Error("shared file picker controller is not loaded")
 			}
 			if tt.onlyFile {
 				return
@@ -153,7 +153,7 @@ func TestEntryMoveDialog(t *testing.T) {
 			}
 			assertEntryTitles(t, files[file].Data, []string{"Keep me"})
 			assertEntryTitles(t, files[destination].Data, []string{"Existing", "Move me"})
-			if !strings.Contains(moved.Body.String(), `<main id="workspace"`) || strings.Contains(moved.Body.String(), "data-entry-move=") {
+			if !strings.Contains(moved.Body.String(), `<main id="workspace"`) || strings.Contains(moved.Body.String(), `data-file-picker-open="entry-move-dialog"`) {
 				t.Error("move did not return the destination list workspace")
 			}
 		})

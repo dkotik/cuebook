@@ -21,17 +21,6 @@
 
 [...#contact] & [
   {
-		Name:     "23424n33df" @cuebook(title)
-		Email:    "2342sd34@31234a1.com"
-		Notes:    "sfs sdf sdfsdf ahem"                                                                               @cuebook(detail, multiline)
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$ALV0iRjKqI7BMvHq8Cw46w$2aMZuz76olfzIsIb8/s+9EFTxIXE0tEWBYuqSL70EHU" @cuebook(detail,trim,argon2id)
-	},
-  {
-		Name:  "new entry" @cuebook(title)
-		Email: "test1@testdomain.com"
-		Notes: "sdfsdf"
-	},
-  {
 		Name:  "First11111aa1"
 		Email: "test1@testdomain.com"
 	},
