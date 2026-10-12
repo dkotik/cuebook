@@ -283,6 +283,8 @@ file-tree-node {
 .entry.card {
   position: relative;
   margin: 1rem 0;
+  background-color: var(--entry-card-background);
+  color: var(--entry-card-color);
   overflow: hidden;
 }
 
@@ -291,10 +293,12 @@ file-tree-node {
   max-width: 40rem;
   justify-self: center;
   margin: 0;
+  border: 1px solid var(--entry-card-border-color);
 }
 
 .entry .card-header-title {
-  background-color: #313244;
+  background-color: var(--entry-card-header-background);
+  color: var(--entry-card-header-color);
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -302,6 +306,7 @@ file-tree-node {
 .entry-drag-handle {
   cursor: grab;
   touch-action: none;
+  background: var(--entry-card-header-background);
 }
 
 .entry-drag-handle:active {
@@ -338,6 +343,11 @@ file-tree-node {
 #workspace[aria-busy="true"] .entry-drag-handle {
   cursor: wait;
   pointer-events: none;
+}
+
+.card-content {
+  padding: 0.1rem 0.9rem;
+  font-size: 90%;
 }
 
 .card-content.entry-content {

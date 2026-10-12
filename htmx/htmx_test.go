@@ -266,6 +266,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 	}{
 		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", contains: []string{"htmx"}, wantStatus: http.StatusOK},
 		{name: "version-pinned Bulma", path: "/assets/bulma.css", contains: []string{"bulma.io v1.0.4", ".grid.is-col-min-16", ".is-gap-2{gap:1rem!important}"}, wantStatus: http.StatusOK},
+		{name: "entry color themes", path: "/assets/theme.css", contains: []string{`:root[data-theme="dark"]`, "--entry-card-background: #1e1e2e", `:root[data-theme="light"]`, "--entry-card-header-background: var(--bulma-scheme-main-bis)"}, wantStatus: http.StatusOK},
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
