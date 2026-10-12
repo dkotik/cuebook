@@ -10,8 +10,8 @@
 
 [...#contact] & [
   {
-		Name:     "aFirst11111aaDDD" @cuebook(title)
-		Email:    "test1@testdo1main.com"
+		Name:     "aFirst11111aaDD222Dzxa" @cuebook(title)
+		Email:    "tes44t1@testdo1m1zzzzain.com"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg" @cuebook(detail,trim,argon2id)
 	},
   {
@@ -25,8 +25,8 @@
 		Email: "sdf@sdf.com1"
 	},
   {
-		Name:  "1 really great21"
-		Email: "1dfjd@kekeke.kekeke"
+		Name:  "1 really great21" @cuebook(title)
+		Email: "1dfjd@kekeke.kekeke1"
 	},
   {
 		Name:  "Maria"

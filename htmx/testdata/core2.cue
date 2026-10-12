@@ -11,8 +11,8 @@
 [...#contact] & [
 
   {
-		Name:  "sdkjfhsdkjfh12"
-		Email: "12312312@2324.2343"
+		Name:  "sdkjfhsdkjfh12!!as12" @cuebook(title)
+		Email: "123aa12312aa@2324.2343"
 	},
   {
 		Name:  "third and finaleee" @cuebook(title)

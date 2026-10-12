@@ -11,10 +11,6 @@ type Flasher interface {
 	GetFlashMessage() (message string, continueEncoding bool)
 }
 
-type Redirecter interface {
-	GetRedirect() string
-}
-
 type URLReplacer interface {
 	GetURLReplacement() string
 }
@@ -48,23 +44,7 @@ func (e encoder) Encode(w http.ResponseWriter, r *http.Request, status int, resp
 	}
 	if replacer, ok := response.(URLReplacer); ok {
 		if location := replacer.GetURLReplacement(); location != "" {
-			if isHTMX(r) {
-				w.Header().Set("HX-Replace-Url", location)
-			} else {
-				w.Header().Set("Location", location)
-				w.WriteHeader(http.StatusSeeOther)
-				return nil
-			}
-		}
-	}
-	if redirecter, ok := response.(Redirecter); ok {
-		if location := redirecter.GetRedirect(); location != "" {
-			w.Header().Set("HX-Redirect", location)
-			if !isHTMX(r) {
-				w.Header().Set("Location", location)
-				w.WriteHeader(http.StatusSeeOther)
-				return nil
-			}
+			w.Header().Set("HX-Replace-Url", location)
 		}
 	}
 	return e.Encoder.Encode(w, r, status, response)

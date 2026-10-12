@@ -34,7 +34,7 @@ func TestEncoderReplacesURLWithoutHTMXRedirect(t *testing.T) {
 		wantWrapped     bool
 	}{
 		{name: "HTMX updates history and encodes fragment", htmx: true, response: replacementResponse{location: "/entry?head=1&path=people.cue&tail=30"}, wantStatus: http.StatusAccepted, wantReplacement: "/entry?head=1&path=people.cue&tail=30", wantWrapped: true},
-		{name: "browser uses POST redirect GET to same entry", response: replacementResponse{location: "/entry?head=1&path=people.cue&tail=30"}, wantStatus: http.StatusSeeOther, wantLocation: "/entry?head=1&path=people.cue&tail=30"},
+		{name: "non-HTMX response replaces URL without redirect", response: replacementResponse{location: "/entry?head=1&path=people.cue&tail=30"}, wantStatus: http.StatusAccepted, wantReplacement: "/entry?head=1&path=people.cue&tail=30", wantWrapped: true},
 		{name: "empty location encodes normally", htmx: true, wantStatus: http.StatusAccepted, wantWrapped: true},
 		{name: "flash only stops before replacing URL", htmx: true, response: replacementResponse{location: "/entry", flashOnly: true}, wantStatus: http.StatusNoContent},
 	}

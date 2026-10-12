@@ -86,16 +86,11 @@ func (*editRequest) Validate(context.Context) error { return nil }
 
 type editResponse struct {
 	pageData
-	redirect    string
-	replacement string
-}
-
-func (response editResponse) GetRedirect() string {
-	return response.redirect
+	destination string
 }
 
 func (response editResponse) GetURLReplacement() string {
-	return response.replacement
+	return response.destination
 }
 
 type editErrorResponse struct {
@@ -177,22 +172,11 @@ func (a *handler) renderEditResponse(request *editRequest, entryIndex int) (edit
 		}
 		return editResponse{
 			pageData:    entry.pageData,
-			replacement: routeWithPrefix(a.routePrefix, entry.EntryURL),
+			destination: routeWithPrefix(a.routePrefix, entry.EntryURL),
 		}, nil
 	}
 	data, err := a.renderEditedFile(request.File)
-	return editResponse{pageData: data, redirect: a.fileListURL(request.File)}, err
-}
-
-func (a *handler) fileListURL(fileName string) string {
-	path := routeWithPrefix(a.routePrefix, "")
-	if path == "" {
-		path = "/"
-	} else if path != "/" {
-		path += "/"
-	}
-	query := url.Values{"file": {fileName}}
-	return path + "?" + query.Encode()
+	return editResponse{pageData: data}, err
 }
 
 func (a *handler) renderEditedFile(fileName string) (pageData, error) {

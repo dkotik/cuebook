@@ -273,14 +273,11 @@ func TestReadOnlyPageShowsStaticFieldsWithoutEditControls(t *testing.T) {
 
 func TestWritableDirectoryCommitsEdits(t *testing.T) {
 	tests := []struct {
-		name         string
-		htmx         bool
-		wantStatus   int
-		wantRedirect string
-		fragment     bool
+		name string
+		htmx bool
 	}{
-		{name: "browser form redirects to updated file list", wantStatus: http.StatusSeeOther, wantRedirect: "/?file=contacts.cue"},
-		{name: "htmx form redirects to updated file list", htmx: true, wantStatus: http.StatusOK, wantRedirect: "/?file=contacts.cue", fragment: true},
+		{name: "browser list edit returns updated list"},
+		{name: "HTMX list edit swaps updated list", htmx: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -303,26 +300,13 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 				"field": {"Name"},
 				"value": {"Saved Contact"},
 			})
-			if response.Code != tt.wantStatus {
-				t.Fatalf("status = %d, want %d; body: %s", response.Code, tt.wantStatus, response.Body.String())
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 			}
-			if got := response.Header().Get("HX-Redirect"); got != tt.wantRedirect {
-				t.Errorf("HX-Redirect = %q, want %q", got, tt.wantRedirect)
-			}
-			if !tt.htmx {
-				if got := response.Header().Get("Location"); got != tt.wantRedirect {
-					t.Errorf("Location = %q, want %q", got, tt.wantRedirect)
+			for _, header := range []string{"HX-Replace-Url", "HX-Location", "HX-Redirect", "Location"} {
+				if got := response.Header().Get(header); got != "" {
+					t.Errorf("list edit unexpectedly sets %s: %q", header, got)
 				}
-			}
-			if tt.fragment {
-				if !strings.Contains(response.Body.String(), `<main id="workspace"`) || strings.Contains(response.Body.String(), "<!doctype html>") {
-					t.Fatalf("expected HTMX workspace fragment, got: %s", response.Body.String())
-				}
-			} else if !strings.Contains(response.Body.String(), "<!doctype html>") {
-				t.Fatalf("expected full page response, got: %s", response.Body.String())
-			}
-			if !strings.Contains(response.Body.String(), "Saved Contact") {
-				t.Errorf("updated value missing from response: %s", response.Body.String())
 			}
 
 			updated, err := os.ReadFile(filepath.Join(directory, "contacts.cue"))
@@ -344,6 +328,18 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 			field, ok := entry.GetFieldByName("Name")
 			if !ok || field.String() != "Saved Contact" {
 				t.Fatalf("saved Name = %q, found = %t", field.String(), ok)
+			}
+
+			body := response.Body.String()
+			if !strings.Contains(body, "Saved Contact") || !strings.Contains(body, `id="entry-0"`) || !strings.Contains(body, `id="entry-1"`) {
+				t.Errorf("response does not contain the updated list: %s", body)
+			}
+			if tt.htmx {
+				if !strings.Contains(body, `<main id="workspace"`) || strings.Contains(body, "<!doctype html>") {
+					t.Errorf("expected updated HTMX workspace fragment, got: %s", body)
+				}
+			} else if !strings.Contains(body, "<!doctype html>") {
+				t.Errorf("expected full page response, got: %s", body)
 			}
 		})
 	}
@@ -371,8 +367,8 @@ func TestEditCanUpdateDetailFieldsWithoutRemovingTheirMetadata(t *testing.T) {
 	}
 
 	response := submitEdit(t, handler, false, editValues("people.cue", "0", "Note", "after"))
-	if response.Code != http.StatusSeeOther {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusSeeOther, response.Body.String())
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
 
 	updated, err := os.ReadFile(filePath)
@@ -414,8 +410,8 @@ func TestEditCanPopulateAbsentOptionalDetailFields(t *testing.T) {
 	}
 
 	response := submitEdit(t, handler, false, editValues("people.cue", "0", "Note", "added"))
-	if response.Code != http.StatusSeeOther {
-		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusSeeOther, response.Body.String())
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
 
 	updated, err := os.ReadFile(filePath)
@@ -443,13 +439,14 @@ func TestEditCanPopulateAbsentOptionalDetailFields(t *testing.T) {
 	}
 }
 
-func TestEditRedirectUsesMountedRoutePrefix(t *testing.T) {
+func TestEditURLReplacementUsesMountedRoutePrefix(t *testing.T) {
 	handler, err := NewWithCommitter(testSource(), &recordingCommitter{}, WithServeMuxPrefix("/catalog"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	values := editValues("core1.cue", "0", "Name", "Updated")
+	values.Set("view", "entry")
 	request := httptest.NewRequest(http.MethodPost, "http://example.test/catalog/edit", strings.NewReader(values.Encode()))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("Origin", "http://example.test")
@@ -460,8 +457,13 @@ func TestEditRedirectUsesMountedRoutePrefix(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
-	if got, want := response.Header().Get("HX-Redirect"), "/catalog/?file=core1.cue"; got != want {
-		t.Errorf("HX-Redirect = %q, want %q", got, want)
+	if got := response.Header().Get("HX-Replace-Url"); !strings.HasPrefix(got, "/catalog/entry?") {
+		t.Errorf("HX-Replace-Url = %q; want mounted entry URL", got)
+	}
+	for _, header := range []string{"HX-Location", "HX-Redirect", "Location"} {
+		if got := response.Header().Get(header); got != "" {
+			t.Errorf("HTMX response unexpectedly sets %s: %q", header, got)
+		}
 	}
 }
 
@@ -504,7 +506,7 @@ func TestEditFailures(t *testing.T) {
 		},
 		{
 			name:       "out of range entry is not found",
-			values:     editValues("core1.cue", "9", "Name", "value"),
+			values:     editValues("core1.cue", "99", "Name", "value"),
 			origin:     "http://example.test",
 			wantStatus: http.StatusNoContent,
 			wantNotice: "entry not found: path=core1.cue",

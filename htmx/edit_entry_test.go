@@ -16,7 +16,7 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
-func TestEntryFieldSaveRefreshesCurrentEntry(t *testing.T) {
+func TestEntryFieldSaveReplacesCurrentEntryURL(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name      string
@@ -31,7 +31,7 @@ func TestEntryFieldSaveRefreshesCurrentEntry(t *testing.T) {
 		{name: "populating an optional detail", field: "Note", value: "New detail"},
 		{name: "blank secret preserves entry view", field: "Password", unchanged: true},
 		{name: "mounted entry view", field: "Name", value: "Updated mounted entry", prefix: "/catalog"},
-		{name: "browser form returns to same entry", field: "Name", value: "Updated browser entry", browser: true},
+		{name: "non-HTMX form renders updated entry", field: "Name", value: "Updated browser entry", browser: true},
 	}
 	const source = `#person: {
 	Name: string @cuebook(title)
@@ -145,18 +145,25 @@ func TestEntryFieldSaveRefreshesCurrentEntry(t *testing.T) {
 				}
 			}
 			if tt.browser {
-				if response.Code != http.StatusSeeOther || response.Header().Get("Location") != wantURL {
-					t.Fatalf("browser response: status %d, location %q; want %s", response.Code, response.Header().Get("Location"), wantURL)
+				if response.Code != http.StatusOK || response.Header().Get("HX-Replace-Url") != wantURL {
+					t.Fatalf("non-HTMX response: status %d, replacement %q; want %s", response.Code, response.Header().Get("HX-Replace-Url"), wantURL)
 				}
-				follow := httptest.NewRequest(http.MethodGet, "http://example.test"+wantURL, nil)
-				response = httptest.NewRecorder()
-				handler.ServeHTTP(response, follow)
-				if response.Code != http.StatusOK {
-					t.Fatalf("entry reload status = %d", response.Code)
+				for _, header := range []string{"HX-Location", "HX-Redirect", "Location"} {
+					if got := response.Header().Get(header); got != "" {
+						t.Errorf("non-HTMX response unexpectedly sets %s: %q", header, got)
+					}
 				}
 			} else {
-				if response.Code != http.StatusOK || response.Header().Get("HX-Replace-Url") != wantURL {
-					t.Fatalf("HTMX response: status %d, replacement %q; want %s", response.Code, response.Header().Get("HX-Replace-Url"), wantURL)
+				if response.Code != http.StatusOK {
+					t.Fatalf("HTMX response status = %d; body: %s", response.Code, response.Body.String())
+				}
+				if got := response.Header().Get("HX-Replace-Url"); got != wantURL {
+					t.Fatalf("HX-Replace-Url = %q; want %q", got, wantURL)
+				}
+				for _, header := range []string{"HX-Location", "HX-Redirect", "Location"} {
+					if got := response.Header().Get(header); got != "" {
+						t.Errorf("HTMX response unexpectedly sets %s: %q", header, got)
+					}
 				}
 			}
 			body := response.Body.String()
@@ -165,15 +172,12 @@ func TestEntryFieldSaveRefreshesCurrentEntry(t *testing.T) {
 					t.Errorf("refreshed entry missing %q", want)
 				}
 			}
-			for _, unwanted := range []string{"Unrelated entry", `id="add-entry-heading"`} {
-				if strings.Contains(body, unwanted) {
-					t.Errorf("response contains list/full-page content %q", unwanted)
-				}
+			if strings.Contains(body, "Unrelated entry") {
+				t.Error("response contains another entry from the file list")
 			}
 			if !tt.browser && strings.Contains(body, "<!doctype html>") {
 				t.Error("HTMX save returned a full page instead of a workspace fragment")
 			}
-			get(wantURL)
 		})
 	}
 }
