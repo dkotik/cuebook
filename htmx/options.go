@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	gitview "github.com/dkotik/cuebook/htmx/git"
 	"github.com/dkotik/htadaptor"
 )
 
@@ -15,6 +16,7 @@ type options struct {
 	ServeMux       *http.ServeMux
 	ServeMuxPrefix string
 	Agent          AgentHandler
+	GitFileLinker  gitview.FileLinker
 }
 
 // AgentHandler is implemented by the independent htmx/agent package. Mount
@@ -38,6 +40,22 @@ func WithAgent(agent AgentHandler) Option {
 			return errors.New("htmx: agent handler is already set")
 		}
 		options.Agent = agent
+		return nil
+	}
+}
+
+// WithGitChanges enables a Changes view for the source filesystem. The linker
+// supplies application URLs for changed paths. source must contain a Git
+// repository with a .git directory; status is refreshed whenever the view opens.
+func WithGitChanges(linker gitview.FileLinker) Option {
+	return func(options *options) error {
+		if linker == nil {
+			return errors.New("htmx: Git file linker is nil")
+		}
+		if options.GitFileLinker != nil {
+			return errors.New("htmx: Git changes view is already configured")
+		}
+		options.GitFileLinker = linker
 		return nil
 	}
 }

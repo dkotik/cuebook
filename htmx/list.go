@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/dkotik/cuebook"
+	gitview "github.com/dkotik/cuebook/htmx/git"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/yuin/goldmark/v2/ast"
 	"github.com/yuin/goldmark/v2/parser"
@@ -43,6 +44,9 @@ type pageData struct {
 	AddFields         []addFieldView
 	RequiredAddFields []addFieldView
 	OptionalAddFields []addFieldView
+	GitEnabled        bool
+	GitSelected       bool
+	GitChanges        []gitview.FileChange
 
 	ReadOnly      bool
 	Error         string
@@ -91,6 +95,7 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 		Error:        notice,
 		AgentEnabled: a.agentEnabled,
 		AgentBaseURL: a.agentBaseURL,
+		GitEnabled:   a.gitFileLinker != nil,
 	}
 	fileNames, err := a.fileNames()
 	if err != nil {
@@ -288,6 +293,7 @@ func (a *handler) basePage(fileNames []string, selected, notice string) pageData
 	return pageData{
 		AgentEnabled: a.agentEnabled,
 		AgentBaseURL: a.agentBaseURL,
+		GitEnabled:   a.gitFileLinker != nil,
 		ReadOnly:     a.committer == nil,
 		Error:        notice,
 		Files:        files,

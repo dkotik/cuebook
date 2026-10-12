@@ -293,6 +293,7 @@ file-tree-node {
 }
 
 .entry .card-header-title {
+  /*background-color: #45475a;*/
   min-width: 0;
   overflow-wrap: anywhere;
 }

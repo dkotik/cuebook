@@ -53,16 +53,20 @@
   }
 
   function syncCurrentFile() {
-    const currentFile = new URL(window.location.href).searchParams.get("file");
+    const currentLocation = new URL(window.location.href);
+    const currentFile = currentLocation.searchParams.get("file");
     for (const link of document.querySelectorAll("a.tree-file-link")) {
-      const linkedFile = new URL(link.href, window.location.href).searchParams.get("file");
-      if (currentFile && linkedFile === currentFile) {
+      const linkLocation = new URL(link.href, currentLocation.href);
+      const linkedFile = linkLocation.searchParams.get("file");
+      const selected = linkedFile === null
+        ? linkLocation.pathname === currentLocation.pathname
+        : linkedFile === currentFile;
+      if (selected) {
         link.setAttribute("aria-current", "page");
       } else {
         link.removeAttribute("aria-current");
       }
     }
-
   }
 
   if (!customElements.get("file-tree-node")) {

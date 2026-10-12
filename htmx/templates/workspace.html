@@ -3,7 +3,16 @@
   <div hidden data-paste-file="{{.Selected}}" data-paste-url="{{route "/paste"}}"></div>
   {{end}}
   {{if .Error}}<p class="notice notification is-danger" role="alert">{{.Error}}</p>{{end}}
-  {{if .Selected}}
+  {{if .GitSelected}}
+    <h1 class="document-title title is-4">Changes</h1>
+    <ul class="git-changes" aria-label="Git changes">
+      {{range .GitChanges}}
+      <li class="git-change"><span class="git-change-status">{{.Status}}</span> <a href="{{.Link}}">{{.Path}}</a></li>
+      {{else}}
+      <li class="git-changes-empty">No changes.</li>
+      {{end}}
+    </ul>
+  {{else if .Selected}}
     <h1 class="document-title title is-4">{{.FileTitle}}</h1>
     {{- with .FileDescription -}}
       {{ . }}

@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	gitview "github.com/dkotik/cuebook/htmx/git"
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/search"
 	"github.com/dkotik/htadaptor"
@@ -41,13 +42,15 @@ type Committer interface {
 }
 
 type handler struct {
-	source       fs.FS
-	committer    Committer
-	templates    *template.Template
-	searchFS     search.SearchFS
-	agentEnabled bool
-	agentBaseURL string
-	routePrefix  string
+	source        fs.FS
+	gitSource     fs.FS
+	committer     Committer
+	templates     *template.Template
+	searchFS      search.SearchFS
+	gitFileLinker gitview.FileLinker
+	agentEnabled  bool
+	agentBaseURL  string
+	routePrefix   string
 }
 
 // New returns a read-only HTTP handler for CUE files in source. The filesystem
@@ -90,12 +93,14 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	}
 	mux := config.ServeMux
 	app := &handler{
-		source:       searchableSource,
-		committer:    committer,
-		templates:    templates,
-		searchFS:     searchableSource,
-		agentEnabled: config.Agent != nil,
-		routePrefix:  config.ServeMuxPrefix,
+		source:        searchableSource,
+		gitSource:     source,
+		committer:     committer,
+		templates:     templates,
+		searchFS:      searchableSource,
+		gitFileLinker: config.GitFileLinker,
+		agentEnabled:  config.Agent != nil,
+		routePrefix:   config.ServeMuxPrefix,
 	}
 	if config.Agent != nil {
 		app.agentBaseURL = routeWithPrefix(config.ServeMuxPrefix, "agent")
@@ -120,6 +125,24 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 		return nil, fmt.Errorf("htmx: adapt list HTMX route: %w", err)
 	}
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "{$}"), NewHTMXSwitch(listPageHandler, listWorkspaceHandler))
+
+	if app.gitFileLinker != nil {
+		changesPageHandler, err := config.Adaptor.AdaptFunc(app.changes,
+			htadaptor.WithErrorHandler(errorHandler),
+			htadaptor.WithTemplate(templates.Lookup("page.html")),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("htmx: adapt Git changes route: %w", err)
+		}
+		changesWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.changes,
+			htadaptor.WithErrorHandler(errorHandler),
+			htadaptor.WithTemplate(templates.Lookup("workspace.html")),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("htmx: adapt Git changes HTMX route: %w", err)
+		}
+		mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "changes"), NewHTMXSwitch(changesPageHandler, changesWorkspaceHandler))
+	}
 
 	editFormHandler, err := config.Adaptor.AdaptFunc(app.editForm,
 		htadaptor.WithErrorHandler(errorHandler),
