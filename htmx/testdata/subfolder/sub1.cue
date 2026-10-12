@@ -27,6 +27,7 @@
   {
 		Name:  "1 really great21" @cuebook(title)
 		Email: "1dfjd@kekeke.kekeke1"
+		Notes: "dfgdf"
 	},
   {
 		Name:  "Maria"

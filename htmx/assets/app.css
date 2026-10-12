@@ -307,6 +307,19 @@ file-tree-node {
   cursor: grab;
   touch-action: none;
   background: var(--entry-card-header-background);
+
+  > svg {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.entry .card-header:hover .entry-drag-handle,
+.entry .card-header:focus-within .entry-drag-handle {
+  > svg {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .entry-drag-handle:active {
@@ -348,6 +361,14 @@ file-tree-node {
 .card-content {
   padding: 0.1rem 0.9rem;
   font-size: 90%;
+}
+
+:root[data-theme="dark"] .entry .card-content {
+  background-image: linear-gradient(180deg, rgb(0 0 0 / 20%), transparent);
+}
+
+:root[data-theme="light"] .entry .card-content {
+  background-image: linear-gradient(180deg, rgb(0 0 0 / 6%), transparent);
 }
 
 .card-content.entry-content {
@@ -610,6 +631,7 @@ remember-details > [data-details-content][hidden] {
   align-items: center;
   gap: 1rem;
   min-width: 0;
+  width: 100%;
 }
 
 .archive-confirmation-icon,

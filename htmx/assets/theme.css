@@ -1,8 +1,8 @@
 :root[data-theme="dark"] {
-  --entry-card-background: #1e1e2e;
+  --entry-card-background: #181825;
   --entry-card-color: var(--bulma-text);
-  --entry-card-border-color: #b4befe;
-  --entry-card-header-background: #313244;
+  --entry-card-border-color: #313244;
+  --entry-card-header-background: #1e1e2e;
   --entry-card-header-color: var(--bulma-text-strong);
 }
 
@@ -10,6 +10,6 @@
   --entry-card-background: var(--bulma-scheme-main);
   --entry-card-color: var(--bulma-text);
   --entry-card-border-color: #b4befe;
-  --entry-card-header-background: var(--bulma-scheme-main-bis);
+  --entry-card-header-background: #cdd6f4;
   --entry-card-header-color: var(--bulma-text-strong);
 }
