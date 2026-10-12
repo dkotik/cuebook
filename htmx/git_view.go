@@ -34,6 +34,7 @@ func (a *handler) changes(_ context.Context, _ *gitChangesRequest) (gitChangesRe
 		return gitChangesResponse{}, errors.New("Unable to load the Git changes view.")
 	}
 	data.GitSelected = true
+	data.GitLostLines = changes.LostLines()
 	data.GitChanges = changes.Changes()
 	return gitChangesResponse{pageData: data}, nil
 }

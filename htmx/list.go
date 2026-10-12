@@ -46,6 +46,7 @@ type pageData struct {
 	OptionalAddFields []addFieldView
 	GitEnabled        bool
 	GitSelected       bool
+	GitLostLines      []string
 	GitChanges        []gitview.FileChange
 
 	ReadOnly      bool

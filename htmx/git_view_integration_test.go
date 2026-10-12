@@ -49,6 +49,8 @@ func TestGitChangesViewUsesSourceAndFileLinker(t *testing.T) {
 				`aria-current="page"`,
 				`<main id="workspace"`,
 				"Changes",
+				"Lost lines",
+				"before",
 				"Modified",
 				`<a href="/review?file=nested%2Fchanged.txt">nested/changed.txt</a>`,
 			},
@@ -59,6 +61,8 @@ func TestGitChangesViewUsesSourceAndFileLinker(t *testing.T) {
 			contains: []string{
 				`<main id="workspace"`,
 				"Changes",
+				"Lost lines",
+				"before",
 				"Modified",
 				`<a href="/review?file=nested%2Fchanged.txt">nested/changed.txt</a>`,
 			},
@@ -86,6 +90,11 @@ func TestGitChangesViewUsesSourceAndFileLinker(t *testing.T) {
 				if strings.Contains(body, absent) {
 					t.Errorf("body unexpectedly contains %q: %s", absent, body)
 				}
+			}
+			lostLinePosition := strings.Index(body, "<pre>before</pre>")
+			changedFilesPosition := strings.Index(body, `<ul class="git-changes"`)
+			if lostLinePosition < 0 || changedFilesPosition <= lostLinePosition {
+				t.Errorf("lost lines should render above changed files: %s", body)
 			}
 		})
 	}

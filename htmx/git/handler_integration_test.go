@@ -43,7 +43,7 @@ func TestNewListsGitChanges(t *testing.T) {
 	}
 	writeRepositoryFile(t, repository, "added.txt", "staged addition\n")
 	runGit(t, repository, "add", "--", "added.txt")
-	writeRepositoryFile(t, repository, "new file <script>.txt", "untracked\n")
+	writeRepositoryFile(t, repository, "new file <script>.txt", "remove me\nuntracked\n")
 	runGit(t, repository, "mv", "--", "old-name.txt", "renamed.txt")
 
 	linker := &recordingFileLinker{}
@@ -53,6 +53,10 @@ func TestNewListsGitChanges(t *testing.T) {
 	}
 
 	changes := handler.Changes()
+	wantLostLines := []string{"initial edit"}
+	if got := handler.LostLines(); !reflect.DeepEqual(got, wantLostLines) {
+		t.Errorf("lost lines = %#v, want %#v", got, wantLostLines)
+	}
 	want := map[string]string{
 		"added.txt":             "Added",
 		"deleted.txt":           "Deleted",
@@ -107,6 +111,9 @@ func TestNewListsCleanTree(t *testing.T) {
 	}
 	if changes := handler.Changes(); len(changes) != 0 {
 		t.Fatalf("Changes() = %#v, want an empty list", changes)
+	}
+	if lostLines := handler.LostLines(); len(lostLines) != 0 {
+		t.Fatalf("LostLines() = %#v, want no lost lines", lostLines)
 	}
 
 	response := httptest.NewRecorder()

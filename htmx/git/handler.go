@@ -23,14 +23,22 @@ type FileChange struct {
 	Link   string
 }
 
-// Handler serves an HTML fragment containing a snapshot of changed files.
-// Handler serves a snapshot of changed files as an HTML fragment.
+// Handler serves a snapshot of lost lines and changed files as an HTML fragment.
 type Handler struct {
-	changes []FileChange
+	changes   []FileChange
+	lostLines []string
 }
 
-var changeListTemplate = template.Must(template.New("git-changes").Parse(`<ul class="git-changes" aria-label="Git changes">
-{{range .}}
+var changeListTemplate = template.Must(template.New("git-changes").Parse(`{{if .LostLines}}
+<section class="git-lost-lines" aria-labelledby="git-lost-lines-title">
+  <h2 id="git-lost-lines-title">Lost lines</h2>
+  <ul aria-label="Lost lines">
+    {{range .LostLines}}<li><pre>{{.}}</pre></li>{{end}}
+  </ul>
+</section>
+{{end}}
+<ul class="git-changes" aria-label="Git changes">
+{{range .Changes}}
   <li class="git-change"><span class="git-change-status">{{.Status}}</span> <a href="{{.Link}}">{{.Path}}</a></li>
 {{else}}
   <li class="git-changes-empty">No changes.</li>
@@ -38,9 +46,9 @@ var changeListTemplate = template.Must(template.New("git-changes").Parse(`<ul cl
 </ul>
 `))
 
-// New snapshots source into a temporary working tree, reads its Git status, and
-// creates a handler for the changed-file list. source must contain a standard
-// .git directory. The resulting list does not change after New returns.
+// New snapshots source into a temporary working tree, reads its Git status and
+// diffs, and creates a handler for the lost lines and changed-file list. source
+// must contain a standard .git directory. The snapshot does not change after New returns.
 func New(source fs.FS, opts ...Option) (*Handler, error) {
 	if isNil(source) {
 		return nil, errors.New("git: source filesystem is nil")
@@ -49,7 +57,7 @@ func New(source fs.FS, opts ...Option) (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	paths, err := changedPaths(source)
+	paths, lostLines, err := changedPaths(source)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +74,7 @@ func New(source fs.FS, opts ...Option) (*Handler, error) {
 		}
 		changes = append(changes, FileChange{Path: path.path, Status: path.status, Link: link})
 	}
-	return &Handler{changes: changes}, nil
+	return &Handler{changes: changes, lostLines: lostLines}, nil
 }
 
 // Changes returns a copy of the changed-file snapshot.
@@ -74,7 +82,12 @@ func (handler *Handler) Changes() []FileChange {
 	return append([]FileChange(nil), handler.changes...)
 }
 
-// ServeHTTP writes the changed-file list as an HTML fragment.
+// LostLines returns a copy of removed lines without identical added lines.
+func (handler *Handler) LostLines() []string {
+	return append([]string(nil), handler.lostLines...)
+}
+
+// ServeHTTP writes the lost lines followed by the changed-file list as an HTML fragment.
 func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
@@ -83,7 +96,14 @@ func (handler *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	if err := changeListTemplate.Execute(w, handler.changes); err != nil {
+	view := struct {
+		LostLines []string
+		Changes   []FileChange
+	}{
+		LostLines: handler.lostLines,
+		Changes:   handler.changes,
+	}
+	if err := changeListTemplate.Execute(w, view); err != nil {
 		http.Error(w, "Unable to render Git changes.", http.StatusInternalServerError)
 	}
 }
@@ -93,28 +113,28 @@ type changedPath struct {
 	status string
 }
 
-func changedPaths(source fs.FS) ([]changedPath, error) {
+func changedPaths(source fs.FS) ([]changedPath, []string, error) {
 	gitDirectory, err := fs.Stat(source, ".git")
 	if err != nil {
-		return nil, fmt.Errorf("git: inspect .git directory: %w", err)
+		return nil, nil, fmt.Errorf("git: inspect .git directory: %w", err)
 	}
 	if !gitDirectory.IsDir() {
-		return nil, errors.New("git: source must contain a .git directory; linked worktrees are not supported")
+		return nil, nil, errors.New("git: source must contain a .git directory; linked worktrees are not supported")
 	}
 
 	workingTree, err := os.MkdirTemp("", "cuebook-git-")
 	if err != nil {
-		return nil, fmt.Errorf("git: create temporary working tree: %w", err)
+		return nil, nil, fmt.Errorf("git: create temporary working tree: %w", err)
 	}
 	defer os.RemoveAll(workingTree)
 
 	if err := copyFilesystem(source, workingTree); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	workingTree, err = filepath.Abs(workingTree)
 	if err != nil {
-		return nil, fmt.Errorf("git: resolve temporary working tree: %w", err)
+		return nil, nil, fmt.Errorf("git: resolve temporary working tree: %w", err)
 	}
 	command := exec.Command(
 		"git",
@@ -131,11 +151,19 @@ func changedPaths(source fs.FS) ([]changedPath, error) {
 	if err != nil {
 		detail := strings.TrimSpace(stderr.String())
 		if detail != "" {
-			return nil, fmt.Errorf("git: read working-tree status: %w: %s", err, detail)
+			return nil, nil, fmt.Errorf("git: read working-tree status: %w: %s", err, detail)
 		}
-		return nil, fmt.Errorf("git: read working-tree status: %w", err)
+		return nil, nil, fmt.Errorf("git: read working-tree status: %w", err)
 	}
-	return parseStatus(output)
+	paths, err := parseStatus(output)
+	if err != nil {
+		return nil, nil, err
+	}
+	lostLines, err := lostLinesForWorkingTree(workingTree, paths)
+	if err != nil {
+		return nil, nil, err
+	}
+	return paths, lostLines, nil
 }
 
 func copyFilesystem(source fs.FS, destination string) error {

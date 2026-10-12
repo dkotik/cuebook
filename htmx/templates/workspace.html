@@ -5,6 +5,14 @@
   {{if .Error}}<p class="notice notification is-danger" role="alert">{{.Error}}</p>{{end}}
   {{if .GitSelected}}
     <h1 class="document-title title is-4">Changes</h1>
+    {{if .GitLostLines}}
+    <section class="git-lost-lines" aria-labelledby="git-lost-lines-heading">
+      <h2 id="git-lost-lines-heading" class="title is-5">Lost lines</h2>
+      <ul aria-label="Lost lines">
+        {{range .GitLostLines}}<li><pre>{{.}}</pre></li>{{end}}
+      </ul>
+    </section>
+    {{end}}
     <ul class="git-changes" aria-label="Git changes">
       {{range .GitChanges}}
       <li class="git-change"><span class="git-change-status">{{.Status}}</span> <a href="{{.Link}}">{{.Path}}</a></li>

@@ -283,6 +283,7 @@ file-tree-node {
 .entry.card {
   position: relative;
   margin: 1rem 0;
+  overflow: hidden;
 }
 
 .entries-grid .entry.card {
@@ -293,7 +294,7 @@ file-tree-node {
 }
 
 .entry .card-header-title {
-  /*background-color: #45475a;*/
+  background-color: #313244;
   min-width: 0;
   overflow-wrap: anywhere;
 }

@@ -165,11 +165,14 @@ func TestServeHTTP(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			handler := &Handler{changes: []FileChange{{
-				Path:   "<script>.txt",
-				Status: "Modified",
-				Link:   "/files?path=a&other=b",
-			}}}
+			handler := &Handler{
+				changes: []FileChange{{
+					Path:   "<script>.txt",
+					Status: "Modified",
+					Link:   "/files?path=a&other=b",
+				}},
+				lostLines: []string{"<removed line>"},
+			}
 			response := httptest.NewRecorder()
 			request := httptest.NewRequest(test.method, "/changes", nil)
 			handler.ServeHTTP(response, request)
@@ -179,6 +182,14 @@ func TestServeHTTP(t *testing.T) {
 			}
 			if !strings.Contains(response.Body.String(), test.wantBody) {
 				t.Fatalf("body %q does not contain %q", response.Body.String(), test.wantBody)
+			}
+			if test.method == http.MethodGet {
+				body := response.Body.String()
+				lostPosition := strings.Index(body, `&lt;removed line&gt;`)
+				changesPosition := strings.Index(body, `<ul class="git-changes"`)
+				if lostPosition < 0 || changesPosition <= lostPosition {
+					t.Fatalf("lost lines should render before changed files: %s", body)
+				}
 			}
 			if test.wantNotInBody != "" && strings.Contains(response.Body.String(), test.wantNotInBody) {
 				t.Fatalf("body %q unexpectedly contains raw HTML", response.Body.String())
