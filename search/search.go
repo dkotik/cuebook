@@ -75,7 +75,7 @@ func (i *bleveIndex) Remove(filePath string) error {
 		}
 		id, ok := key.(string)
 		if !ok {
-			removeErr = fmt.Errorf("search index entry key has type %T", key)
+			removeErr = IndexEntryKeyError{KeyType: fmt.Sprintf("%T", key)}
 			return false
 		}
 		if err := i.Index.Delete(id); err != nil {

@@ -133,6 +133,106 @@ func TestSearchFSUpdateFileReplacesIndexedEntries(t *testing.T) {
 	}
 }
 
+func TestSearchFSRepeatedSavesReplaceIndexedEntries(t *testing.T) {
+	t.Parallel()
+
+	const filePath = "people.cue"
+	files := fstest.MapFS{
+		filePath: {
+			Data: []byte(`[{Name: "First", Text: "sharedtoken"}, {Name: "Second", Text: "sharedtoken", Marker: "retiredmarker"}]`),
+		},
+	}
+	indexed, err := NewFS(files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitForIndex(t, indexed)
+
+	tests := []struct {
+		name          string
+		source        string
+		wantResultCnt int
+	}{
+		{
+			name:          "save with fewer entries removes old entries",
+			source:        `[{Name: "Current", Text: "sharedtoken"}]`,
+			wantResultCnt: 1,
+		},
+		{
+			name:          "next save indexes current entries once",
+			source:        `[{Name: "Current one", Text: "sharedtoken"}, {Name: "Current two", Text: "sharedtoken"}]`,
+			wantResultCnt: 2,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := indexed.ApplyFileChange(filePath, func() error {
+				files[filePath].Data = []byte(test.source)
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+
+			results, err := indexed.Query("sharedtoken")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(results) != test.wantResultCnt {
+				t.Errorf("result count = %d, want %d", len(results), test.wantResultCnt)
+			}
+			staleResults, err := indexed.Query("retiredmarker")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(staleResults) != 0 {
+				t.Errorf("stale result count = %d, want 0", len(staleResults))
+			}
+		})
+	}
+}
+
+func TestSearchFSUpdateFilePurgesEntriesBeforeReadingSource(t *testing.T) {
+	t.Parallel()
+
+	const filePath = "people.cue"
+	files := fstest.MapFS{
+		filePath: {
+			Data: []byte(`[{Name: "Current", Text: "staletoken"}]`),
+		},
+	}
+	source := &failingSearchSource{FS: files, failPath: filePath}
+	indexed, err := NewFS(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitForIndex(t, indexed)
+
+	source.fail = true
+	if err := indexed.UpdateFile(filePath); err == nil {
+		t.Fatal("UpdateFile() error = nil, want source read error")
+	}
+	results, err := indexed.Query("staletoken")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 0 {
+		t.Errorf("stale result count after source read error = %d, want 0", len(results))
+	}
+}
+
+type failingSearchSource struct {
+	fs.FS
+	failPath string
+	fail     bool
+}
+
+func (source *failingSearchSource) Open(name string) (fs.File, error) {
+	if source.fail && name == source.failPath {
+		return nil, fs.ErrPermission
+	}
+	return source.FS.Open(name)
+}
+
 func TestSearchFSRemoveFileRemovesOnlyThatFile(t *testing.T) {
 	t.Parallel()
 

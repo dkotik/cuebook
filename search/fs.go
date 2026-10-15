@@ -2,7 +2,6 @@ package search
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"log/slog"
 	"path"
@@ -32,7 +31,7 @@ type searchFS struct {
 
 func NewFS(source fs.FS) (SearchFS, error) {
 	if source == nil {
-		return nil, errors.New("search: source filesystem is nil")
+		return nil, ErrSourceFilesystemIsNil
 	}
 	wrapped := &searchFS{
 		source: source,
@@ -59,7 +58,7 @@ func (s *searchFS) IndexError() error {
 
 func (s *searchFS) Query(query string) ([]Result, error) {
 	if !s.indexReady.Load() {
-		return nil, errors.New("search: index is still being built")
+		return nil, ErrSearchIndexIsBuilding
 	}
 	if err := s.IndexError(); err != nil {
 		return nil, err
@@ -81,7 +80,7 @@ func (s *searchFS) ApplyFileChange(name string, change func() error) error {
 		return fs.ErrInvalid
 	}
 	if change == nil {
-		return errors.New("search: file change is nil")
+		return ErrFileChangeIsNil
 	}
 	s.updateMu.Lock()
 	defer s.updateMu.Unlock()
@@ -92,30 +91,30 @@ func (s *searchFS) ApplyFileChange(name string, change func() error) error {
 }
 
 func (s *searchFS) updateFile(name string) error {
+	if err := s.index.Remove(name); err != nil {
+		return err
+	}
 	if path.Ext(name) != ".cue" {
-		return s.index.Remove(name)
+		return nil
 	}
 	source, err := fs.ReadFile(s.source, name)
 	if errors.Is(err, fs.ErrNotExist) {
-		return s.index.Remove(name)
+		return nil
 	}
 	if err != nil {
-		return err
-	}
-	if err := s.index.Remove(name); err != nil {
 		return err
 	}
 	document, err := cuebook.New(source)
 	if err != nil {
-		return fmt.Errorf("parse CUE file %q for search index: %w", name, err)
+		return ParseError{Path: name, Cause: err}
 	}
 	index := 0
 	for entry, err := range document.EachEntry() {
 		if err != nil {
-			return fmt.Errorf("read entry %d from %q for search index: %w", index, name, err)
+			return ReadEntryForIndexError{Index: index, Path: name, Err: err}
 		}
 		if err := s.index.Include(name, entry); err != nil {
-			return fmt.Errorf("index entry %d from %q: %w", index, name, err)
+			return IndexEntryError{Index: index, Path: name, Err: err}
 		}
 		index++
 	}
@@ -150,7 +149,7 @@ func (s *searchFS) indexFiles() {
 		return nil
 	})
 	if err != nil {
-		s.indexErr = fmt.Errorf("walk source filesystem for search index: %w", err)
+		s.indexErr = WalkSourceFilesystemError{Err: err}
 	}
 }
 
