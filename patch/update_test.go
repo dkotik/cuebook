@@ -2,6 +2,7 @@ package patch
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"cuelang.org/go/cue"
@@ -45,6 +46,71 @@ func TestUpdateStructInList(t *testing.T) {
 			t.Fatal("wrong replacement count:", count)
 		}
 		t.Run("reverse", ensureInversible(source, patch))
+	}
+}
+
+func TestUpdateReturnsEntryNotStructError(t *testing.T) {
+	entry := cuecontext.New().CompileBytes([]byte(`"not a struct"`))
+	tests := []struct {
+		name string
+		call func() error
+	}{
+		{
+			name: "update field",
+			call: func() error {
+				_, err := UpdateFieldValue(nil, entry, cue.Value{}, "value")
+				return err
+			},
+		},
+		{
+			name: "merge field values",
+			call: func() error {
+				_, err := MergeFieldValues(nil, entry, nil)
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.call(); !errors.Is(err, ErrEntryNotStruct) {
+				t.Fatalf("error = %v, want %v", err, ErrEntryNotStruct)
+			}
+		})
+	}
+}
+
+func TestUpdateReturnsTargetFieldNotStructFieldError(t *testing.T) {
+	ctx := cuecontext.New()
+	entry := ctx.CompileBytes([]byte(`{name: "entry"}`))
+	field := ctx.CompileBytes([]byte(`"value"`))
+
+	_, err := UpdateFieldValue(nil, entry, field, "updated")
+	if !errors.Is(err, ErrTargetFieldNotStructField) {
+		t.Fatalf("error = %v, want %v", err, ErrTargetFieldNotStructField)
+	}
+}
+
+func TestMergeFieldValuesWrapsFormattingError(t *testing.T) {
+	entry := cuecontext.New().CompileString(`{Name: "" @cuebook(default=missingTestDefault)}`)
+	if err := entry.Err(); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := MergeFieldValues(nil, entry, map[string]string{"Name": ""})
+	if err == nil {
+		t.Fatal("MergeFieldValues() error = nil, want a formatting error")
+	}
+	if !errors.Is(err, ErrUnableToFormatFieldValue) {
+		t.Fatalf("error = %v, want to include %v", err, ErrUnableToFormatFieldValue)
+	}
+	if got, want := err.Error(), "failed to format field value: no such default function: missingTestDefault"; got != want {
+		t.Fatalf("error = %q, want %q", got, want)
+	}
+
+	var code Error
+	if !errors.As(err, &code) || code != ErrUnableToFormatFieldValue {
+		t.Fatalf("error code = %v, want %v", code, ErrUnableToFormatFieldValue)
 	}
 }
 

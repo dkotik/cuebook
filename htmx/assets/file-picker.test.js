@@ -79,7 +79,7 @@ function browser({ move = false, missingInput = false, disabled = false, folded 
     },
   };
   const context = vm.createContext({ document, Element, HTMLDialogElement, HTMLFormElement });
-  vm.runInContext(fs.readFileSync(path.join(__dirname, "assets/file-picker.js"), "utf8"), context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "file-picker.js"), "utf8"), context);
   function dispatch(name, target) {
     for (const listener of handlers.get(name) || []) listener({ target });
   }

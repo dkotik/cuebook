@@ -1,6 +1,7 @@
 package patch
 
 import (
+	"errors"
 	"testing"
 
 	"cuelang.org/go/cue/ast"
@@ -53,6 +54,39 @@ func TestAppendToEmptyStructList(t *testing.T) {
 			}
 			if length, err := document.Len(); err != nil || length != 1 {
 				t.Fatalf("document length = %d, err = %v; want 1", length, err)
+			}
+		})
+	}
+}
+
+func TestLocateRootListEndErrors(t *testing.T) {
+	tests := []struct {
+		name   string
+		source []byte
+		want   error
+	}{
+		{
+			name:   "double comma at list end",
+			source: []byte("[],,"),
+			want:   ErrDoubleCommaAtListEnd,
+		},
+		{
+			name:   "not a list of structs",
+			source: []byte("[[]]"),
+			want:   ErrNotListOfStructs,
+		},
+		{
+			name:   "root list end not found",
+			source: []byte("[]x"),
+			want:   ErrRootListEndNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, _, err := locateRootListEnd(tt.source)
+			if !errors.Is(err, tt.want) {
+				t.Fatalf("error = %v, want %v", err, tt.want)
 			}
 		})
 	}

@@ -2,7 +2,6 @@ package patch
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 
@@ -71,11 +70,11 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	tree := entry.Syntax(cue.Concrete(true)) // TODO: concrete OPTION is CRITICAL
 	fields, ok := tree.(*ast.StructLit)
 	if !ok {
-		return nil, errors.New("entry not a struct") // TODO: model error
+		return nil, ErrEntryNotStruct
 	}
 	search, ok := field.Label()
 	if !ok {
-		return nil, errors.New("target field not a struct field") // TODO: model error
+		return nil, ErrTargetFieldNotStructField
 	}
 	replacement, err := cuebook.Field{
 		Name:  search,
@@ -122,7 +121,7 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 	tree := entry.Syntax(cue.Concrete(true)) // TODO: concrete OPTION is CRITICAL
 	fields, ok := tree.(*ast.StructLit)
 	if !ok {
-		return nil, errors.New("entry not a struct") // TODO: model error
+		return nil, ErrEntryNotStruct
 	}
 
 	all := make(map[string]cue.Value)
@@ -144,7 +143,7 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 		if known, ok := all[label]; ok {
 			value, err = metadata.FormatAccordingToAttributes(known, value)
 			if err != nil {
-				return nil, fmt.Errorf("failed to format field value: %w", err)
+				return nil, fmt.Errorf("%w: %w", ErrUnableToFormatFieldValue, err)
 			}
 			// if value == "" {
 			// 	value, _ = metadata.GetDefaultValue(field)

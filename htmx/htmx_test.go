@@ -55,7 +55,7 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 	body := response.Body.String()
 	for _, want := range []string{
 		`<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`,
-		`<summary aria-controls="add-entry-dock-panel">Add entry</summary>`,
+		`<summary aria-controls="add-entry-dock-panel">✚</summary>`,
 		`<section class="add-entry" id="add-entry-dock-panel" aria-labelledby="add-entry-heading" data-details-content>`,
 		`action="/add"`,
 		`hx-post="/add"`,
@@ -266,11 +266,11 @@ func TestAssetsAreServedLocally(t *testing.T) {
 	}{
 		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", contains: []string{"htmx"}, wantStatus: http.StatusOK},
 		{name: "version-pinned Bulma", path: "/assets/bulma.css", contains: []string{"bulma.io v1.0.4", ".grid.is-col-min-16", ".is-gap-2{gap:1rem!important}"}, wantStatus: http.StatusOK},
-		{name: "entry color themes", path: "/assets/theme.css", contains: []string{`:root[data-theme="dark"]`, "--entry-card-background: #1e1e2e", `:root[data-theme="light"]`, "--entry-card-header-background: var(--bulma-scheme-main-bis)"}, wantStatus: http.StatusOK},
+		{name: "entry color themes", path: "/assets/theme.css", contains: []string{`:root[data-theme="dark"]`, "--entry-card-background: #181825", `:root[data-theme="light"]`, "--entry-card-header-background: #cdd6f4"}, wantStatus: http.StatusOK},
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".entry-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 24rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", ".file-selector-dialog", ".file-picker-tree", ".file-picker-card", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".entry-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 12rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", ".file-selector-dialog", ".file-picker-tree", ".file-picker-card", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
 		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `document.querySelectorAll("a.tree-file-link")`, `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},
 		{name: "custom search element", path: "/assets/search-control.js", contains: []string{`customElements.define("cuebook-search"`, `this.input.value = ""`, "updateButtons()", "this.form.insertBefore(this.clearControl, this.inputControl)", "this.clearControl.remove()", "this.input.focus()"}, wantStatus: http.StatusOK},
 		{name: "entry move controller", path: "/assets/entry-move.js", contains: []string{"data-entry-drag-handle", "await window.htmx.ajax(\"POST\", `${routePrefix}/move`, {", "drop-before", "drop-after", "destination", "is-drop-target", "cuebook:move-confirmation-request"}, wantStatus: http.StatusOK},

@@ -84,7 +84,7 @@ function browser(options = {}) {
   };
   const context = vm.createContext({ Element, document, localStorage, navigator, window: { htmx } });
   for (const name of ["entry-copy.js", "entry-paste.js"]) {
-    vm.runInContext(fs.readFileSync(path.join(__dirname, "assets", name), "utf8"), context);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, name), "utf8"), context);
   }
   return {
     key, stored, record, storage, source, writes, requests, flashes, status, copy, cut, handlers,

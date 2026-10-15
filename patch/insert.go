@@ -2,7 +2,6 @@ package patch
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"unicode"
 
@@ -86,12 +85,12 @@ loop:
 			return i + 1, commaFound, false, nil
 		case ',':
 			if commaFound {
-				return 0, commaFound, false, errors.New("double comma at list end") // TODO: model
+				return 0, commaFound, false, ErrDoubleCommaAtListEnd
 			}
 			commaFound = true
 		case ']':
 			if listEndFound {
-				return 0, commaFound, false, errors.New("not a list of structs") // TODO: model error
+				return 0, commaFound, false, ErrNotListOfStructs
 			}
 			listEndFound = true
 		default:
@@ -101,7 +100,7 @@ loop:
 			break loop
 		}
 	}
-	return 0, commaFound, false, errors.New("root list end not found") // TODO: model error
+	return 0, commaFound, false, ErrRootListEndNotFound
 }
 
 func emptyTrailingListEnd(source []byte) (int, bool) {

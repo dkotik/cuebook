@@ -19,21 +19,21 @@ func (response flashResponse) GetFlashMessage() (string, bool) {
 	return response.message, response.continueEncoding
 }
 
-type redirectResponse struct{ location string }
+type urlReplacementResponse struct{ location string }
 
-func (response redirectResponse) GetRedirect() string { return response.location }
+func (response urlReplacementResponse) GetURLReplacement() string { return response.location }
 
-type flashRedirectResponse struct {
+type flashURLReplacementResponse struct {
 	message          string
 	location         string
 	continueEncoding bool
 }
 
-func (response flashRedirectResponse) GetFlashMessage() (string, bool) {
+func (response flashURLReplacementResponse) GetFlashMessage() (string, bool) {
 	return response.message, response.continueEncoding
 }
 
-func (response flashRedirectResponse) GetRedirect() string { return response.location }
+func (response flashURLReplacementResponse) GetURLReplacement() string { return response.location }
 
 func TestNewEncoder(t *testing.T) {
 	t.Parallel()
@@ -61,15 +61,15 @@ func TestNewEncoder(t *testing.T) {
 			wantEncodeErr: true,
 		},
 		{
-			name:          "redirect response",
-			response:      redirectResponse{location: "/entries"},
+			name:          "URL replacement response",
+			response:      urlReplacementResponse{location: "/entries"},
 			wantTarget:    "/entries",
 			wantWrapped:   true,
 			wantEncodeErr: true,
 		},
 		{
-			name:          "flash and redirect response continues encoding",
-			response:      flashRedirectResponse{message: "Saved.", location: "/entries", continueEncoding: true},
+			name:          "flash and URL replacement response continues encoding",
+			response:      flashURLReplacementResponse{message: "Saved.", location: "/entries", continueEncoding: true},
 			wantFlash:     "Saved.",
 			wantTarget:    "/entries",
 			wantWrapped:   true,
@@ -88,8 +88,8 @@ func TestNewEncoder(t *testing.T) {
 			wantWrapped: false,
 		},
 		{
-			name:        "flash-and-redirect response stops before redirecting",
-			response:    flashRedirectResponse{message: "Saved.", location: "/entries"},
+			name:        "flash and URL replacement response stops before replacing URL",
+			response:    flashURLReplacementResponse{message: "Saved.", location: "/entries"},
 			wantFlash:   "Saved.",
 			wantWrapped: false,
 		},
@@ -103,8 +103,8 @@ func TestNewEncoder(t *testing.T) {
 			wrap := htadaptor.EncoderFunc(func(w http.ResponseWriter, r *http.Request, status int, response any) error {
 				called = true
 
-				if got := w.Header().Get("HX-Redirect"); got != test.wantTarget {
-					t.Errorf("HX-Redirect = %q, want %q", got, test.wantTarget)
+				if got := w.Header().Get("HX-Replace-Url"); got != test.wantTarget {
+					t.Errorf("HX-Replace-Url = %q, want %q", got, test.wantTarget)
 				}
 				if status != http.StatusAccepted {
 					t.Errorf("status = %d, want %d", status, http.StatusAccepted)
@@ -147,8 +147,13 @@ func TestNewEncoder(t *testing.T) {
 			if !test.wantWrapped && response.Body.Len() != 0 {
 				t.Errorf("flash-only response has a body: %s", response.Body.String())
 			}
-			if !test.wantWrapped && response.Header().Get("HX-Redirect") != "" {
-				t.Errorf("HX-Redirect = %q, want empty after short circuit", response.Header().Get("HX-Redirect"))
+			if got := response.Header().Get("HX-Replace-Url"); got != test.wantTarget {
+				t.Errorf("HX-Replace-Url = %q, want %q", got, test.wantTarget)
+			}
+			for _, header := range []string{"HX-Redirect", "HX-Location", "Location"} {
+				if got := response.Header().Get(header); got != "" {
+					t.Errorf("unexpected %s = %q", header, got)
+				}
 			}
 		})
 	}

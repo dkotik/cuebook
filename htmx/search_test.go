@@ -334,7 +334,7 @@ func TestSearchResultsLinkToMatchingEntry(t *testing.T) {
 	}
 	for _, want := range []string{
 		`<article class="entry card cell"`,
-		`class="card-content search-result-description"`,
+		`class="search-result-description"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("search results do not contain %q: %s", want, body)
@@ -355,8 +355,12 @@ func TestSearchResultsLinkToMatchingEntry(t *testing.T) {
 	if !strings.Contains(pathContent, html.EscapeString(filePath)) {
 		t.Errorf("source path is missing beneath result header: %s", pathContent)
 	}
-	if got := strings.Count(body, html.EscapeString("Needle entry")); got != 1 {
-		t.Errorf("result title appears %d times, want once", got)
+	header := body[cardStart : cardStart+headerEnd]
+	if got := strings.Count(header, html.EscapeString("Needle entry")); got != 1 {
+		t.Errorf("result title appears %d times in the header, want once", got)
+	}
+	if !strings.Contains(pathContent, `<p>Needle entry</p><p>needle@example.test</p>`) {
+		t.Errorf("result description does not include all field values: %s", pathContent)
 	}
 	hrefAttributeStart := strings.Index(body, `href="`)
 	if hrefAttributeStart < 0 {

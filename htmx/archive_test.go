@@ -261,6 +261,8 @@ func TestArchiveDoesNotFollowArchiveDirectorySymlink(t *testing.T) {
 
 func submitArchive(t *testing.T, handler http.Handler, file string, entry int, origin string) *httptest.ResponseRecorder {
 	t.Helper()
+	// MapFS cannot add archive files while the initial search walk reads its map.
+	waitForSearchResponse(t, handler, "archive")
 	values := url.Values{
 		"file":  {file},
 		"entry": {strconv.Itoa(entry)},

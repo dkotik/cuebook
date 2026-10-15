@@ -68,7 +68,7 @@ func TestIndexEntryLinksOpenMatchingEntry(t *testing.T) {
 			}
 
 			body := indexResponse.Body.String()
-			if !strings.Contains(body, `<div class="grid is-col-min-16 is-gap-2 entries-grid">`) {
+			if !strings.Contains(body, `<div class="grid is-gap-2 entries-grid">`) {
 				t.Fatalf("entry list is not wrapped in the Bulma grid: %s", body)
 			}
 			if !strings.Contains(body, `<article class="entry card cell"`) {
@@ -181,7 +181,7 @@ func TestEntryTitleFieldIsOmittedFromEntryContent(t *testing.T) {
 			if !strings.Contains(body, test.title) {
 				t.Fatalf("entry title %q is missing: %s", test.title, body)
 			}
-			contentStart := strings.Index(body, `<div class="card-content entry-content">`)
+			contentStart := strings.Index(body, `<div class="card-content">`)
 			if contentStart < 0 {
 				t.Fatalf("entry content is missing: %s", body)
 			}
@@ -278,7 +278,7 @@ func TestFileFrontmatterView(t *testing.T) {
 			}
 			componentEnd := componentStart + componentEndOffset
 			component := body[componentStart:componentEnd]
-			if !strings.Contains(component, "<summary>Description</summary>") ||
+			if !strings.Contains(component, "<summary>More...</summary>") ||
 				!strings.Contains(component, `data-details-content`) ||
 				!strings.Contains(component, test.wantCollapsed) {
 				t.Errorf("description component missing expected content: %s", component)
@@ -321,7 +321,7 @@ func TestReadOnlyHandler(t *testing.T) {
 			method:     http.MethodGet,
 			path:       "/?file=subfolder%2Fsub1.cue",
 			wantStatus: http.StatusOK,
-			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source", `aria-current="page"`, `<article class="entry card cell" id="entry-0" data-entry-index="0"`, `<header class="card-header">`, `<div class="card-content entry-content">`, `<h2 class="card-header-title">`},
+			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source", `aria-current="page"`, `<article class="entry card cell" id="entry-0" data-entry-index="0"`, `<header class="card-header">`, `<div class="card-content">`, `<h2 class="card-header-title">`},
 			omits:      []string{`hx-post="/add"`, `data-entry-drag-handle`, `entry-drag-handle`},
 		},
 		{
