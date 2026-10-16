@@ -20,5 +20,5 @@
 {{- end}}
 
 {{define "boolean-button.html"}}
-  <button class="button boolean-toggle{{if eq .Value "true"}} is-link{{end}}" type="button" aria-label="{{.Name}}" aria-pressed="{{template "boolean-pressed.html" .}}" title="{{.Name}}: {{.Value}}">{{template "boolean-symbol.html" .}}</button>
+  <button class="button boolean-toggle{{if eq .Value "true"}} has-text-info{{ else if eq .Value "false"}} has-text-danger{{end}}" type="button" aria-label="{{.Name}}" aria-pressed="{{template "boolean-pressed.html" .}}" title="{{.Name}}: {{.Value}}">{{template "boolean-symbol.html" .}}</button>
 {{end}}

@@ -110,7 +110,9 @@ func TestBooleanFormRendering(t *testing.T) {
 			class, pressed, symbol := "button boolean-toggle", tt.selected, "✖"
 			switch tt.selected {
 			case "true":
-				class, symbol = class+" is-link", "✔"
+				class, symbol = class+" has-text-info", "✔"
+			case "false":
+				class += " has-text-danger"
 			case "not_set":
 				pressed, symbol = "mixed", "☐"
 			}

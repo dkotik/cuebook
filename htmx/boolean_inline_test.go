@@ -82,11 +82,17 @@ func TestInlineBooleanRendering(t *testing.T) {
 					t.Errorf("unexpected inline boolean controls: %s", article)
 				}
 				if tt.readOnly {
-					symbol := map[string]string{"true": "✔", "false": "✖", "not_set": "☐"}[tt.selected]
-					if tt.secret {
-						symbol = "••••••••"
+					output := `<output><span class="has-text-grey">☐</span></output>`
+					switch tt.selected {
+					case "true":
+						output = `<output><span class="has-text-info">✔</span></output>`
+					case "false":
+						output = `<output><span class="has-text-danger">✖</span></output>`
 					}
-					if !strings.Contains(article, "<output>"+symbol+"</output>") || strings.Contains(article, "data-field-edit-trigger") {
+					if tt.secret {
+						output = "<output>••••••••</output>"
+					}
+					if !strings.Contains(article, output) || strings.Contains(article, "data-field-edit-trigger") {
 						t.Errorf("read-only field must remain static output: %s", article)
 					}
 				} else {
@@ -138,16 +144,16 @@ func TestListBooleanLabels(t *testing.T) {
 		readOnly    bool
 		want        string
 	}{
-		{name: "writable true", declaration: "bool", value: "true", want: "✔\u00a0Enabled"},
-		{name: "writable false", declaration: "bool", value: "false", want: "✖\u00a0Enabled"},
-		{name: "read only true", declaration: "bool", value: "true", readOnly: true, want: "✔\u00a0Enabled"},
-		{name: "read only false", declaration: "bool", value: "false", readOnly: true, want: "✖\u00a0Enabled"},
-		{name: "unset optional", declaration: "bool", want: "☐\u00a0Enabled"},
-		{name: "unset read only", declaration: "bool", readOnly: true, want: "☐\u00a0Enabled"},
-		{name: "unset optional ignores true default", declaration: "*true | bool", want: "☐\u00a0Enabled"},
-		{name: "unset read only ignores true default", declaration: "*true | bool", readOnly: true, want: "☐\u00a0Enabled"},
+		{name: "writable true", declaration: "bool", value: "true", want: `<span class="has-text-info">✔</span>&nbsp;Enabled`},
+		{name: "writable false", declaration: "bool", value: "false", want: `<span class="has-text-danger">✖</span>&nbsp;Enabled`},
+		{name: "read only true", declaration: "bool", value: "true", readOnly: true, want: `<span class="has-text-info">✔</span>&nbsp;Enabled`},
+		{name: "read only false", declaration: "bool", value: "false", readOnly: true, want: `<span class="has-text-danger">✖</span>&nbsp;Enabled`},
+		{name: "unset optional", declaration: "bool", want: `<span class="has-text-grey">☐</span>&nbsp;Enabled`},
+		{name: "unset read only", declaration: "bool", readOnly: true, want: `<span class="has-text-grey">☐</span>&nbsp;Enabled`},
+		{name: "unset optional ignores true default", declaration: "*true | bool", want: `<span class="has-text-grey">☐</span>&nbsp;Enabled`},
+		{name: "unset read only ignores true default", declaration: "*true | bool", readOnly: true, want: `<span class="has-text-grey">☐</span>&nbsp;Enabled`},
 
-		{name: "label is escaped", declaration: "bool", value: "false", label: "<Enabled & ready>", want: "✖\u00a0&lt;Enabled &amp; ready&gt;"},
+		{name: "label is escaped", declaration: "bool", value: "false", label: "<Enabled & ready>", want: `<span class="has-text-danger">✖</span>&nbsp;&lt;Enabled &amp; ready&gt;`},
 		{name: "secret remains masked", declaration: "bool @cuebook(argon2id)", value: "true", want: "••••••••"},
 		{name: "read only secret remains masked", declaration: "bool @cuebook(argon2id)", value: "false", readOnly: true, want: "••••••••"},
 		{name: "string false is not a boolean", declaration: "string", value: `"false"`, want: "false"},
@@ -306,7 +312,7 @@ func assertInlineBooleanToggle(t *testing.T, markup, state string, optional bool
 	class, pressed, next, symbol := "button boolean-toggle", state, "true", "✖"
 	switch state {
 	case "true":
-		class, next, symbol = class+" is-link", "false", "✔"
+		class, next, symbol = class+" has-text-info", "false", "✔"
 	case "false":
 		if optional {
 			next = "not_set"

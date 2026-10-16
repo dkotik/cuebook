@@ -9,7 +9,7 @@
     {{else if and .EntryView .Boolean (not .Secret)}}
       <form class="boolean-field-form" action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-target="#workspace" hx-swap="outerHTML">
         {{template "field-form-controls.html" .}}
-        <button class="button boolean-toggle{{if eq .Value "true"}} is-link{{end}}" type="submit" name="value" value="{{template "boolean-next.html" .}}" aria-pressed="{{template "boolean-pressed.html" .}}" aria-label="{{.Name}}" title="{{.Name}}: {{.Value}}; set to {{template "boolean-next.html" .}}">{{template "boolean-symbol.html" .}}</button>
+        <button class="button boolean-toggle{{if eq .Value "true"}} has-text-info{{end}}" type="submit" name="value" value="{{template "boolean-next.html" .}}" aria-pressed="{{template "boolean-pressed.html" .}}" aria-label="{{.Name}}" title="{{.Name}}: {{.Value}}; set to {{template "boolean-next.html" .}}">{{template "boolean-symbol.html" .}}</button>
       </form>
     {{else}}
       <button class="field-value-edit" type="button" aria-label="Edit {{.Name}} value" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger hx-get="{{route .EditURL}}" hx-target="#field-edit-modal" hx-swap="innerHTML">
@@ -30,7 +30,10 @@
 
 {{define "field-output.html" -}}
   {{- if and .Boolean (not .Secret) -}}
-    {{template "boolean-symbol.html" .}}{{if not .EntryView}} {{.Name}}{{end}}
+    {{- if eq .Value "true" -}}<span class="has-text-info">✔</span>
+    {{- else if eq .Value "false" -}}<span class="has-text-danger">✖</span>
+    {{- else -}}<span class="has-text-grey">☐</span>
+    {{- end -}}{{if not .EntryView}}&nbsp;{{.Name}}{{end}}
   {{- else if .Empty -}}...
   {{- else if .Secret -}}••••••••
   {{- else -}}{{.Value}}

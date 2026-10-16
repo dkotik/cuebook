@@ -217,7 +217,7 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 		`name="entry.2.field" value="Enabled"`,
 		`<boolean-toggle data-optional="false" data-allow-unset="true">`,
 		`<input type="hidden" name="entry.2.value" value="false">`,
-		`<button class="button boolean-toggle" type="button" aria-label="Enabled" aria-pressed="false" title="Enabled: false">✖</button>`,
+		`<button class="button boolean-toggle has-text-danger" type="button" aria-label="Enabled" aria-pressed="false" title="Enabled: false">✖</button>`,
 	} {
 		if !strings.Contains(form, want) {
 			t.Errorf("add-entry form does not contain %q: %s", want, form)
@@ -332,9 +332,8 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 	for _, want := range []string{
 		`<body class="has-navbar-fixed-top" data-route-prefix="">`,
 		`<nav class="topbar navbar is-fixed-top" role="navigation" aria-label="main navigation">`,
-		`<button id="theme-toggle" class="button" type="button" aria-label="Toggle color theme" aria-pressed="true">`,
-		`<svg data-theme-icon="moon"`,
-		`<svg data-theme-icon="sun"`,
+		`<button id="theme-toggle" class="button has-text-info" type="button" aria-label="Toggle color theme" aria-pressed="true">`,
+		`☼`,
 		`<script src="/assets/theme.js"></script>`,
 		`<script src="/assets/live-reload.js" defer></script>`,
 		`<live-reload data-events-url="/events"></live-reload>`,
@@ -355,8 +354,8 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 			formEnd = formStart + offset
 		}
 	}
-	if !(brandStart >= 0 && brandStart < searchStart && searchStart < formStart && formStart < searchButtonStart && searchButtonStart < themeToggleStart && themeToggleStart < formEnd) {
-		t.Errorf("theme toggle should follow search inside the visible navbar form")
+	if !(brandStart >= 0 && brandStart < searchStart && searchStart < formStart && formStart < themeToggleStart && themeToggleStart < searchButtonStart && searchButtonStart < formEnd) {
+		t.Errorf("theme toggle should precede search inside the visible navbar form")
 	}
 	if got := strings.Count(page, `id="theme-toggle"`); got != 1 {
 		t.Errorf("theme toggle count = %d, want 1", got)

@@ -45,8 +45,19 @@ class BooleanToggle extends HTMLElement {
   updateButton() {
     const state = this.input.value === "true" || this.input.value === "false" ? this.input.value : "not_set";
     this.input.value = state;
-    this.button.textContent = state === "true" ? "✔" : state === "false" ? "✖" : "☐";
     this.button.classList.toggle("is-link", state === "true");
+    this.button.classList.toggle("has-text-info", state === "true");
+    this.button.classList.toggle("has-text-danger", state === "false");
+    switch (state) {
+      case "true":
+        this.button.textContent = "✔";
+        break;
+      case "false":
+        this.button.textContent = "✖";
+        break;
+      default:
+        this.button.textContent = "☐";
+    }
     this.button.setAttribute("aria-pressed", state === "not_set" ? "mixed" : state);
     this.button.title = `${this.button.getAttribute("aria-label")}: ${state}`;
   }

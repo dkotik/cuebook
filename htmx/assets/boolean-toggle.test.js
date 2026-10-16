@@ -109,6 +109,8 @@ function assertState(app, state) {
   assert.equal(app.input.value, state);
   assert.equal(app.button.textContent, symbols[state]);
   assert.equal(app.button.classList.contains("is-link"), state === "true");
+  assert.equal(app.button.classList.contains("has-text-info"), state === "true");
+  assert.equal(app.button.classList.contains("has-text-danger"), state === "false");
   assert.equal(app.button.classList.contains("button"), true);
   assert.equal(app.button.classList.contains("boolean-toggle"), true);
   assert.equal(app.button.getAttribute("aria-pressed"), state === "not_set" ? "mixed" : state);
