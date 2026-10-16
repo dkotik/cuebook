@@ -26,7 +26,6 @@
   <script src="{{route "/assets/flash.js"}}" defer></script>
   <script src="{{route "/assets/field-edit-dialog.js"}}" defer></script>
   <script src="{{route "/assets/boolean-toggle.js"}}" defer></script>
-  <script src="{{route "/assets/navbar.js"}}" defer></script>
 
   <script src="{{route "/assets/live-reload.js"}}" defer></script>
   {{if .AgentEnabled}}
@@ -44,37 +43,25 @@
             </div>
           </template>
           <form class="topbar-search field has-addons" action="{{route "/search"}}" method="get" hx-get="{{route "/search"}}" hx-target="#workspace" hx-swap="innerHTML">
+            <div class="control">
+              <button id="theme-toggle" class="button" type="button" aria-label="Toggle color theme" aria-pressed="true">
+                <svg data-theme-icon="moon" style="display: inline-block" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                <svg data-theme-icon="sun" style="display: none" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="4"/>
+                  <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l-1.42-1.42m11.3-11.3 1.42-1.42"/>
+                </svg>
+              </button>
+            </div>
             <div class="control is-expanded">
               <input class="input" type="search" name="q" placeholder="Search entries" aria-label="Search entries">
             </div>
             <div class="control">
               <button class="button" type="submit" aria-label="Search">🔍</button>
             </div>
-            <div class="control">
-              <button class="navbar-burger button" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="cuebook-navbar-menu" data-target="cuebook-navbar-menu">
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-                <span aria-hidden="true"></span>
-              </button>
-            </div>
           </form>
         </cuebook-search>
-      </div>
-    </div>
-    <div id="cuebook-navbar-menu" class="navbar-menu">
-      <div class="navbar-end">
-        <div class="navbar-item">
-          <button id="theme-toggle" class="button is-small is-ghost" type="button" aria-label="Toggle color theme" aria-pressed="true">
-            <svg data-theme-icon="moon" style="display: inline-block" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-            <svg data-theme-icon="sun" style="display: none" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="4"/>
-              <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l-1.42-1.42m11.3-11.3 1.42-1.42"/>
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
   </nav>

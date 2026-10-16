@@ -289,7 +289,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "remember details component", path: "/assets/remember-details.js", contains: []string{`customElements.define("remember-details"`, "localStorage.getItem", "localStorage.setItem", "dataset.storageKey", "aria-expanded", "keydown"}, wantStatus: http.StatusOK},
 		{name: "archive confirmation controller", path: "/assets/archive-confirm.js", contains: []string{`form[action$="/archive"]`, `form[hx-post$="/archive"]`, `event.preventDefault()`, `event.stopImmediatePropagation()`, "textContent", `aria-hidden`, "requestSubmit", `event.key === "Escape"`}, wantStatus: http.StatusOK},
 		{name: "theme controller", path: "/assets/theme.js", contains: []string{"localStorage.setItem", `querySelectorAll("[data-theme-icon]")`, `? "moon" : "sun"`, `icon.style.display`, `? "inline-block" : "none"`}, wantStatus: http.StatusOK},
-		{name: "navbar controller", path: "/assets/navbar.js", contains: []string{`classList.toggle("is-active", expanded)`, `setAttribute("aria-expanded", String(expanded))`, `document.querySelector(".topbar-search")?.addEventListener("submit"`}, wantStatus: http.StatusOK},
+		{name: "obsolete navbar controller", path: "/assets/navbar.js", wantStatus: http.StatusNotFound},
 		{name: "entry copy controller", path: "/assets/entry-copy.js", contains: []string{`addEventListener("click"`, `navigator.clipboard.writeText(source.textContent)`, `"cuebook:flash"`}, wantStatus: http.StatusOK},
 		{name: "entry paste controller", path: "/assets/entry-paste.js", contains: []string{`addEventListener("paste"`, `getData("text/plain")`, `window.htmx.ajax("POST"`, "isContentEditable"}, wantStatus: http.StatusOK},
 		{name: "flash message controller", path: "/assets/flash.js", contains: []string{`"cuebook:flash"`, "textContent", "flash.hidden = false"}, wantStatus: http.StatusOK},
@@ -332,8 +332,10 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 	for _, want := range []string{
 		`<body class="has-navbar-fixed-top" data-route-prefix="">`,
 		`<nav class="topbar navbar is-fixed-top" role="navigation" aria-label="main navigation">`,
-		`aria-expanded="false" aria-controls="cuebook-navbar-menu" data-target="cuebook-navbar-menu"`,
-		`<script src="/assets/navbar.js" defer></script>`,
+		`<button id="theme-toggle" class="button" type="button" aria-label="Toggle color theme" aria-pressed="true">`,
+		`<svg data-theme-icon="moon"`,
+		`<svg data-theme-icon="sun"`,
+		`<script src="/assets/theme.js"></script>`,
 		`<script src="/assets/live-reload.js" defer></script>`,
 		`<live-reload data-events-url="/events"></live-reload>`,
 	} {
@@ -346,16 +348,25 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 	searchStart := strings.Index(page, `<div class="navbar-item topbar-search-item is-expanded">`)
 	formStart := strings.Index(page, `<form class="topbar-search field has-addons"`)
 	searchButtonStart := strings.Index(page, `<button class="button" type="submit" aria-label="Search">`)
-	burgerStart := strings.Index(page, `<button class="navbar-burger button"`)
-	menuStart := strings.Index(page, `<div id="cuebook-navbar-menu"`)
+	themeToggleStart := strings.Index(page, `<button id="theme-toggle"`)
 	formEnd := -1
 	if formStart >= 0 {
 		if offset := strings.Index(page[formStart:], `</form>`); offset >= 0 {
 			formEnd = formStart + offset
 		}
 	}
-	if !(brandStart >= 0 && brandStart < searchStart && searchStart < formStart && formStart < searchButtonStart && searchButtonStart < burgerStart && burgerStart < formEnd && formEnd < menuStart) {
-		t.Errorf("search and navigation toggle should share the visible navbar brand row, with the toggle after search")
+	if !(brandStart >= 0 && brandStart < searchStart && searchStart < formStart && formStart < searchButtonStart && searchButtonStart < themeToggleStart && themeToggleStart < formEnd) {
+		t.Errorf("theme toggle should follow search inside the visible navbar form")
+	}
+	if got := strings.Count(page, `id="theme-toggle"`); got != 1 {
+		t.Errorf("theme toggle count = %d, want 1", got)
+	}
+	for _, obsolete := range []string{"navbar-burger", "cuebook-navbar-menu", "/assets/navbar.js"} {
+		t.Run("absent "+obsolete, func(t *testing.T) {
+			if strings.Contains(page, obsolete) {
+				t.Errorf("page should not include %q", obsolete)
+			}
+		})
 	}
 }
 

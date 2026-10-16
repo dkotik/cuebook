@@ -21,17 +21,11 @@ body {
 
 .topbar {
   background-color: var(--dock-background);
-
-  .navbar-burger {
-    background-color: var(--entry-card-background);
-  }
 }
 
-.topbar .navbar-menu {
-  flex-grow: 0;
-  flex-shrink: 0;
-  background-color: var(--entry-card-background);
-  border-bottom: 2px dashed var(--entry-card-border-color);
+#theme-toggle svg {
+  width: 20px;
+  height: 20px;
 }
 
 .topbar-search-item,
@@ -54,13 +48,6 @@ body {
   margin: 0;
 }
 
-
-@media (max-width: 1023px) {
-  .topbar .navbar-end {
-    display: flex;
-    justify-content: flex-end;
-  }
-}
 
 @media (min-width: 1024px) {
   .topbar .navbar-brand {
