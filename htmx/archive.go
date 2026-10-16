@@ -11,7 +11,10 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
-const archiveDirectory = ".archive/"
+const (
+	archiveDirectory = ".archive/"
+	archiveFolder    = ".archive"
+)
 
 type archiveRequest struct {
 	File  string `schema:"file"`

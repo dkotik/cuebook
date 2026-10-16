@@ -34,8 +34,10 @@ type pageData struct {
 	AgentEnabled      bool
 	AgentBaseURL      string
 	Files             []fileTreeNode
-	ArchiveFiles      []fileTreeNode
-	ArchiveOpen       bool
+	ArchiveSelected   bool
+	FolderView        bool
+	FolderBreadcrumb  []folderBreadcrumbItem
+	FolderItems       []fileTreeNode
 	Selected          string
 	FileTitle         string
 	FileBreadcrumb    []fileBreadcrumbItem
@@ -57,6 +59,7 @@ type pageData struct {
 
 type fileBreadcrumbItem struct {
 	Label   string
+	URL     string
 	Current bool
 }
 
@@ -75,7 +78,8 @@ type entryView struct {
 }
 
 type listRequest struct {
-	File string `schema:"file"`
+	File   string `schema:"file"`
+	Folder string `schema:"folder"`
 }
 
 func (*listRequest) Validate(context.Context) error { return nil }
@@ -85,15 +89,42 @@ type listResponse struct {
 }
 
 func (a *handler) list(_ context.Context, request *listRequest) (listResponse, error) {
-	data, status := a.loadPage(request.File, "")
+	var data pageData
+	var status int
+	fileOrFolder := request.File
+	if request.File == "" {
+		fileOrFolder = request.Folder
+		data, status = a.loadFolderPage(request.Folder, "")
+	} else {
+		data, status = a.loadPage(request.File, "")
+	}
 	if status != http.StatusOK {
 		message := data.Error
 		if message == "" {
 			message = data.DocumentError
 		}
-		return listResponse{}, documentReadError(request.File, status, message)
+		return listResponse{}, documentReadError(fileOrFolder, status, message)
 	}
 	return listResponse{pageData: data}, nil
+}
+
+func (a *handler) loadFolderPage(folder, notice string) (pageData, int) {
+	fileNames, err := a.fileNames()
+	if err != nil {
+		data := a.basePage(nil, folder, notice)
+		data.Error = "Unable to list CUE files."
+		return data, http.StatusInternalServerError
+	}
+	data := a.basePage(fileNames, folder, notice)
+	items, ok := folderContents(makeFileTree(fileNames, ""), folder)
+	if !ok {
+		data.DocumentError = "Folder not found."
+		return data, http.StatusNotFound
+	}
+	data.FolderView = true
+	data.FolderBreadcrumb = makeFolderBreadcrumb(folder)
+	data.FolderItems = items
+	return data, http.StatusOK
 }
 
 func (a *handler) loadPage(fileName, notice string) (pageData, int) {
@@ -109,8 +140,8 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 		data.Error = "Unable to list CUE files."
 		return data, http.StatusInternalServerError
 	}
-	data.Files, data.ArchiveFiles = makeSidebarTrees(fileNames, fileName)
-	data.ArchiveOpen = strings.HasPrefix(fileName, archiveDirectory)
+	data.Files = makeSidebarTree(fileNames, fileName)
+	data.ArchiveSelected = fileName == archiveFolder || strings.HasPrefix(fileName, archiveDirectory)
 
 	if fileName == "" {
 		return data, http.StatusOK
@@ -119,6 +150,7 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 	data.FileTitle = fileName
 	raw, document, status, message := a.readDocument(fileName, fileNames)
 	setFileFrontmatter(&data, fileName, raw)
+	data.FileBreadcrumb = makeFileBreadcrumb(fileName)
 	if status != http.StatusOK {
 		data.DocumentError = message
 		return data, status
@@ -268,14 +300,23 @@ const (
 	fileFrontmatterDetailsTail = `</div></remember-details>`
 )
 
-func makeFileBreadcrumb(fileName, fileTitle string) []fileBreadcrumbItem {
+func makeFileBreadcrumb(fileName string) []fileBreadcrumbItem {
 	parts := strings.Split(fileName, "/")
 	breadcrumb := make([]fileBreadcrumbItem, 0, len(parts))
 	for index, part := range parts {
 		item := fileBreadcrumbItem{Label: part, Current: index == len(parts)-1}
-		if item.Current && strings.TrimSpace(fileTitle) != "" {
-			item.Label = fileTitle
+		folder := strings.Join(parts[:index+1], "/")
+		if item.Current {
+			item.Label = strings.TrimSuffix(part, path.Ext(part))
+			if item.Label == "" {
+				item.Label = part
+			}
+			folder = path.Dir(fileName)
+			if folder == "." {
+				folder = ""
+			}
 		}
+		item.URL = folderURL(folder)
 		breadcrumb = append(breadcrumb, item)
 	}
 	return breadcrumb
@@ -313,15 +354,13 @@ func renderFrontmatterDescription(frontmatter metadata.Frontmatter) template.HTM
 }
 
 func (a *handler) basePage(fileNames []string, selected, notice string) pageData {
-	files, archiveFiles := makeSidebarTrees(fileNames, selected)
 	return pageData{
-		AgentEnabled: a.agentEnabled,
-		AgentBaseURL: a.agentBaseURL,
-		GitEnabled:   a.gitFileLinker != nil,
-		ReadOnly:     a.committer == nil,
-		Error:        notice,
-		Files:        files,
-		ArchiveFiles: archiveFiles,
-		ArchiveOpen:  strings.HasPrefix(selected, archiveDirectory),
+		AgentEnabled:    a.agentEnabled,
+		AgentBaseURL:    a.agentBaseURL,
+		GitEnabled:      a.gitFileLinker != nil,
+		ReadOnly:        a.committer == nil,
+		Error:           notice,
+		Files:           makeSidebarTree(fileNames, selected),
+		ArchiveSelected: selected == archiveFolder || strings.HasPrefix(selected, archiveDirectory),
 	}
 }

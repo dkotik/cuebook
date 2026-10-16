@@ -120,17 +120,25 @@ func TestEntryTitleLinksBackToFile(t *testing.T) {
 				t.Fatalf("document title row is not closed: %s", body)
 			}
 			heading := html.UnescapeString(body[start : start+end])
-			wantLabel := tt.fileTitle
+			wantLabel := tt.file
+			if slash := strings.LastIndex(wantLabel, "/"); slash >= 0 {
+				wantLabel = wantLabel[slash+1:]
+			}
+			wantLabel = strings.TrimSuffix(wantLabel, ".cue")
 			if wantLabel == "" {
 				wantLabel = tt.file
-				if slash := strings.LastIndex(wantLabel, "/"); slash >= 0 {
-					wantLabel = wantLabel[slash+1:]
-				}
 			}
 			wantURL := tt.prefix + fileURL(tt.file)
+			parentFolder := ""
+			if slash := strings.LastIndex(tt.file, "/"); slash >= 0 {
+				parentFolder = tt.file[:slash]
+			}
+			breadcrumbURL := tt.prefix + folderURL(parentFolder)
 			for _, want := range []string{
 				`<nav class="breadcrumb" aria-label="File location">`,
-				`<li class="is-active" aria-current="page"><h1 class="document-title title is-4" title="` + tt.file + `">` + wantLabel + `</h1></li>`,
+				`<li class="is-active" aria-current="page">`,
+				`href="` + breadcrumbURL + `"`, `hx-get="` + breadcrumbURL + `"`,
+				`<h1 class="document-title title is-4" title="` + tt.file + `">` + wantLabel + `</h1>`,
 				`class="button is-small"`, `href="` + wantURL + `"`,
 				`hx-get="` + wantURL + `"`, `hx-target="#workspace"`, `hx-swap="outerHTML"`,
 				`hx-push-url="true"`, `aria-label="Return to file `, `title="Return to file `, `>↑</a>`,
@@ -140,9 +148,11 @@ func TestEntryTitleLinksBackToFile(t *testing.T) {
 				}
 			}
 			pathParts := strings.Split(tt.file, "/")
-			for _, directory := range pathParts[:len(pathParts)-1] {
-				if !strings.Contains(heading, `<li><span>`+directory+`</span></li>`) {
-					t.Errorf("file breadcrumb is missing directory %q: %s", directory, heading)
+			for index, directory := range pathParts[:len(pathParts)-1] {
+				directoryPath := strings.Join(pathParts[:index+1], "/")
+				wantDirectoryURL := tt.prefix + folderURL(directoryPath)
+				if !strings.Contains(heading, `href="`+wantDirectoryURL+`"`) || !strings.Contains(heading, directory) {
+					t.Errorf("file breadcrumb does not link directory %q to its folder view %q: %s", directory, wantDirectoryURL, heading)
 				}
 			}
 			list := get(wantURL)

@@ -106,7 +106,8 @@ file-tree-node {
 }
 
 .tree-node-toggle,
-.tree-file-link {
+.tree-file-link,
+.folder-view-item {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -126,7 +127,8 @@ file-tree-node {
 }
 
 .tree-node-toggle:hover,
-.tree-file-link:hover {
+.tree-file-link:hover,
+.folder-view-item:hover {
   background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
@@ -164,6 +166,28 @@ file-tree-node {
 
 .tree-children[hidden] {
   display: none;
+}
+
+.folder-view-list {
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.folder-view-list > li + li {
+  margin-top: 0.25rem;
+}
+
+.folder-view-item {
+  border-radius: 0.4rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.folder-view-kind {
+  margin-left: auto;
+  font-size: 0.8em;
+  opacity: 0.7;
 }
 
 .file-picker-tree {
@@ -204,13 +228,13 @@ file-tree-node {
   top: 0;
   left: 0;
   z-index: 31;
-  width: min(22rem, calc(100vw - 6rem));
+  width: min(21rem, calc(100vw - 6rem));
   height: 100vh;
   height: 100dvh;
   margin: 0;
   padding: 0;
   border: 0;
-  border-right: 1px solid green;
+  border-right: 1px solid var(--entry-card-border-color);
   transition: transform 180ms ease;
 }
 
@@ -290,8 +314,7 @@ file-tree-node {
   flex-wrap: wrap;
 }
 
-.document-title-row .breadcrumb li > span,
-.document-title-row .breadcrumb li > .document-title {
+.document-title-row .breadcrumb li > a {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -316,6 +339,7 @@ file-tree-node {
 .grid.entries-grid {
   --bulma-grid-column-min: min(100%, 12rem);
   align-items: start;
+  padding-bottom: 20vb;
 }
 
 .entry.card {

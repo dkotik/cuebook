@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"io/fs"
 	"net/url"
 	"sort"
 	"strings"
@@ -35,6 +36,12 @@ type filePickerOption struct {
 	Disabled  bool
 }
 
+type folderBreadcrumbItem struct {
+	Label   string
+	URL     string
+	Current bool
+}
+
 func makeFilePicker(fileNames []string, current string, options filePickerOptions) filePickerView {
 	files := makeFileTree(fileNames, options.Selected)
 	setFilePickerOptions(files, current, options)
@@ -60,6 +67,15 @@ func setFilePickerOptions(nodes []fileTreeNode, current string, options filePick
 func fileURL(name string) string {
 	query := url.Values{}
 	query.Set("file", name)
+	return "/?" + query.Encode()
+}
+
+func folderURL(name string) string {
+	if name == "" {
+		return "/"
+	}
+	query := url.Values{}
+	query.Set("folder", name)
 	return "/?" + query.Encode()
 }
 
@@ -92,7 +108,9 @@ func makeFileTree(fileNames []string, selected string) []fileTreeNode {
 					}
 				}
 				node := fileTreeNode{Name: name, DisplayName: displayName, Path: currentPath, IsDir: isDir}
-				if !isDir {
+				if isDir {
+					node.URL = folderURL(currentPath)
+				} else {
 					node.URL = fileURL(currentPath)
 					node.Selected = currentPath == selected
 				}
@@ -106,15 +124,55 @@ func makeFileTree(fileNames []string, selected string) []fileTreeNode {
 	return roots
 }
 
-func makeSidebarTrees(fileNames []string, selected string) (files, archiveFiles []fileTreeNode) {
+func makeSidebarTree(fileNames []string, selected string) []fileTreeNode {
+	var files []fileTreeNode
 	for _, node := range makeFileTree(fileNames, selected) {
-		if node.IsDir && node.Path == strings.TrimSuffix(archiveDirectory, "/") {
-			archiveFiles = node.Children
+		if node.IsDir && node.Path == archiveFolder {
 			continue
 		}
 		files = append(files, node)
 	}
-	return files, archiveFiles
+	return files
+}
+
+func folderContents(nodes []fileTreeNode, folder string) ([]fileTreeNode, bool) {
+	if folder == "" {
+		return nodes, true
+	}
+	if !fs.ValidPath(folder) {
+		return nil, false
+	}
+	for _, node := range nodes {
+		if !node.IsDir {
+			continue
+		}
+		if node.Path == folder {
+			return node.Children, true
+		}
+		if strings.HasPrefix(folder, node.Path+"/") {
+			return folderContents(node.Children, folder)
+		}
+	}
+	if folder == archiveFolder {
+		return nil, true
+	}
+	return nil, false
+}
+
+func makeFolderBreadcrumb(folder string) []folderBreadcrumbItem {
+	breadcrumbs := []folderBreadcrumbItem{{Label: "Files", URL: folderURL(""), Current: folder == ""}}
+	if folder == "" {
+		return breadcrumbs
+	}
+	parts := strings.Split(folder, "/")
+	for index, part := range parts {
+		breadcrumbs = append(breadcrumbs, folderBreadcrumbItem{
+			Label:   part,
+			URL:     folderURL(strings.Join(parts[:index+1], "/")),
+			Current: index == len(parts)-1,
+		})
+	}
+	return breadcrumbs
 }
 
 func sortFileTree(nodes []fileTreeNode) {

@@ -206,35 +206,35 @@ func TestFileFrontmatterView(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		fileName      string
-		source        string
-		wantTitle     string
-		wantVisible   string
-		wantCollapsed string
-		wantComponent bool
+		name           string
+		fileName       string
+		source         string
+		wantBreadcrumb string
+		wantVisible    string
+		wantCollapsed  string
+		wantComponent  bool
 	}{
 		{
-			name:          "frontmatter details after thematic break are collapsible",
-			fileName:      "described.cue",
-			source:        "// Document title\n//\n// Description with **markup**.\n//\n// ---\n// Additional details.\n[{Name: \"entry\"}]\n",
-			wantTitle:     "Document title",
-			wantVisible:   "Description with <strong>markup</strong>.",
-			wantCollapsed: "Additional details.",
-			wantComponent: true,
+			name:           "frontmatter details after thematic break are collapsible",
+			fileName:       "described.cue",
+			source:         "// Document title\n//\n// Description with **markup**.\n//\n// ---\n// Additional details.\n[{Name: \"entry\"}]\n",
+			wantBreadcrumb: "described",
+			wantVisible:    "Description with <strong>markup</strong>.",
+			wantCollapsed:  "Additional details.",
+			wantComponent:  true,
 		},
 		{
-			name:        "description without thematic break remains visible",
-			fileName:    "plain-description.cue",
-			source:      "// Plain title\n//\n// Plain description.\n[{Name: \"entry\"}]\n",
-			wantTitle:   "Plain title",
-			wantVisible: "Plain description.",
+			name:           "description without thematic break remains visible",
+			fileName:       "plain-description.cue",
+			source:         "// Plain title\n//\n// Plain description.\n[{Name: \"entry\"}]\n",
+			wantBreadcrumb: "plain-description",
+			wantVisible:    "Plain description.",
 		},
 		{
-			name:      "filename fallback when title is absent",
-			fileName:  "plain.cue",
-			source:    `[{Name: "entry"}]`,
-			wantTitle: "plain.cue",
+			name:           "filename fallback when title is absent",
+			fileName:       "plain.cue",
+			source:         `[{Name: "entry"}]`,
+			wantBreadcrumb: "plain",
 		},
 	}
 
@@ -256,8 +256,14 @@ func TestFileFrontmatterView(t *testing.T) {
 			}
 
 			body := response.Body.String()
-			if !strings.Contains(body, `<h1 class="document-title title is-4">`+test.wantTitle+`</h1>`) {
-				t.Errorf("file title %q not shown: %s", test.wantTitle, body)
+			for _, want := range []string{
+				`<nav class="breadcrumb" aria-label="File location">`,
+				`href="/" hx-get="/" hx-target="#workspace"`,
+				`title="` + test.fileName + `">` + test.wantBreadcrumb + `</h1>`,
+			} {
+				if !strings.Contains(body, want) {
+					t.Errorf("file breadcrumb or title is missing %q: %s", want, body)
+				}
 			}
 			if test.wantVisible != "" && !strings.Contains(body, test.wantVisible) {
 				t.Errorf("visible description %q not shown: %s", test.wantVisible, body)
@@ -283,9 +289,7 @@ func TestFileFrontmatterView(t *testing.T) {
 				!strings.Contains(component, test.wantCollapsed) {
 				t.Errorf("description component missing expected content: %s", component)
 			}
-			if titlePosition := strings.Index(body, test.wantTitle); titlePosition > componentStart {
-				t.Errorf("title should appear before the collapsible description: %s", body)
-			}
+
 			if visiblePosition := strings.Index(body, test.wantVisible); visiblePosition > componentStart {
 				t.Errorf("visible description should precede the collapsed details: %s", body)
 			}
@@ -317,20 +321,20 @@ func TestReadOnlyHandler(t *testing.T) {
 			omits:      []string{"notes.txt", `<span>core1.cue</span>`, `<span>sub1.cue</span>`, "First11111aa", "Dark mode", "Light mode"},
 		},
 		{
-			name:       "selected nested file renders entries",
+			name:       "selected nested file renders entries and file breadcrumbs",
 			method:     http.MethodGet,
 			path:       "/?file=subfolder%2Fsub1.cue",
 			wantStatus: http.StatusOK,
-			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source", `aria-current="page"`, `<article class="entry card cell" id="entry-0" data-entry-index="0"`, `<header class="card-header">`, `<div class="card-content">`, `<h2 class="card-header-title">`},
+			contains:   []string{"subfolder/sub1.cue", "First11111aa", "test1@testdomain.com", "Read-only source", `<nav class="breadcrumb" aria-label="File location">`, `href="/?folder=subfolder"`, `aria-current="page"`, `<article class="entry card cell" id="entry-0" data-entry-index="0"`, `<header class="card-header">`, `<div class="card-content">`, `<h2 class="card-header-title">`},
 			omits:      []string{`hx-post="/add"`, `data-entry-drag-handle`, `entry-drag-handle`},
 		},
 		{
-			name:       "htmx request gets workspace fragment",
+			name:       "htmx request gets workspace fragment with file breadcrumb",
 			method:     http.MethodGet,
 			path:       "/?file=core1.cue",
 			htmx:       true,
 			wantStatus: http.StatusOK,
-			contains:   []string{`<main id="workspace"`, "First11111aa"},
+			contains:   []string{`<main id="workspace"`, `<nav class="breadcrumb" aria-label="File location">`, `href="/"`, "First11111aa"},
 			omits:      []string{"<!doctype html>", "file-nav"},
 		},
 		{
@@ -396,47 +400,180 @@ func TestReadOnlyHandler(t *testing.T) {
 	}
 }
 
-func TestArchiveFilesAppearInSeparateNavigationSection(t *testing.T) {
+func TestFolderViewListsFilesAndFolders(t *testing.T) {
+	handler, err := New(fstest.MapFS{
+		"root.cue":              &fstest.MapFile{Data: []byte(`[{Name: "Root"}]`)},
+		"nested/first.cue":      &fstest.MapFile{Data: []byte(`[{Name: "First"}]`)},
+		"nested/child/deep.cue": &fstest.MapFile{Data: []byte(`[{Name: "Deep"}]`)},
+		"other.cue":             &fstest.MapFile{Data: []byte(`[{Name: "Other"}]`)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name     string
-		source   fstest.MapFS
-		selected string
+		folder   string
+		htmx     bool
 		contains []string
 		omits    []string
 	}{
 		{
-			name: "archive files are listed separately and selected archive expands section",
+			name: "root folder lists direct files and subfolders",
+			contains: []string{
+				`<nav class="breadcrumb" aria-label="Folder location">`,
+				`<li class="is-active" aria-current="page"><span>Files</span></li>`,
+				`data-folder-path="nested"`,
+				`href="/?folder=nested"`,
+				`data-file="root.cue"`,
+			},
+			omits: []string{`data-file="nested/first.cue"`, `data-file="nested/child/deep.cue"`},
+		},
+		{
+			name:   "nested folder shows its contents and breadcrumb",
+			folder: "nested",
+			htmx:   true,
+			contains: []string{
+				`<li><a href="/" hx-get="/"`,
+				`<li class="is-active" aria-current="page"><span>nested</span></li>`,
+				`data-file="nested/first.cue"`,
+				`data-folder-path="nested/child"`,
+			},
+			omits: []string{`data-file="root.cue"`, `data-file="nested/child/deep.cue"`},
+		},
+		{
+			name:   "deep folder breadcrumb links to its parent",
+			folder: "nested/child",
+			contains: []string{
+				`href="/?folder=nested"`,
+				`<li class="is-active" aria-current="page"><span>child</span></li>`,
+				`data-file="nested/child/deep.cue"`,
+			},
+			omits: []string{`data-file="nested/first.cue"`},
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			query := url.Values{}
+			if test.folder != "" {
+				query.Set("folder", test.folder)
+			}
+			target := "/"
+			if encoded := query.Encode(); encoded != "" {
+				target += "?" + encoded
+			}
+			request := httptest.NewRequest(http.MethodGet, "http://example.test"+target, nil)
+			if test.htmx {
+				request.Header.Set("HX-Request", "true")
+			}
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+
+			body := response.Body.String()
+			if test.htmx && !strings.HasPrefix(body, `<main id="workspace"`) {
+				t.Fatalf("HTMX folder request did not return the workspace fragment: %s", body)
+			}
+			if test.htmx && strings.Contains(body, `<!doctype html>`) {
+				t.Fatalf("HTMX folder request unexpectedly returned a full page: %s", body)
+			}
+			start := strings.Index(body, `<section class="folder-view"`)
+			if start < 0 {
+				t.Fatalf("folder view is missing: %s", body)
+			}
+			endOffset := strings.Index(body[start:], `</section>`)
+			if endOffset < 0 {
+				t.Fatalf("folder view is not closed: %s", body[start:])
+			}
+			folderView := body[start : start+endOffset+len(`</section>`)]
+			for _, want := range test.contains {
+				if !strings.Contains(folderView, want) {
+					t.Errorf("folder view does not contain %q: %s", want, folderView)
+				}
+			}
+			for _, unwanted := range test.omits {
+				if strings.Contains(folderView, unwanted) {
+					t.Errorf("folder view unexpectedly contains %q: %s", unwanted, folderView)
+				}
+			}
+		})
+	}
+}
+
+func TestFolderViewRejectsUnknownFolder(t *testing.T) {
+	t.Parallel()
+
+	handler, err := New(fstest.MapFS{
+		"nested/file.cue": &fstest.MapFile{Data: []byte(`[{Name: "Entry"}]`)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "http://example.test/?folder=..%2Fprivate", nil))
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusNotFound, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), "not found: path=../private") {
+		t.Fatalf("response does not identify the missing folder: %s", response.Body.String())
+	}
+}
+
+func TestArchiveShortcutOpensFolderView(t *testing.T) {
+	tests := []struct {
+		name        string
+		source      fstest.MapFS
+		path        string
+		contains    []string
+		omits       []string
+		navContains []string
+		navOmits    []string
+	}{
+		{
+			name: "selected archive file highlights shortcut but is not listed in the sidebar",
 			source: fstest.MapFS{
 				"regular.cue":             &fstest.MapFile{Data: []byte(`[{Name: "Regular"}]`)},
 				".archive/2025-01-01.cue": &fstest.MapFile{Data: []byte(`[{Name: "Archived"}]`)},
 			},
-			selected: ".archive/2025-01-01.cue",
-			contains: []string{
-				`data-file="regular.cue"`,
-				`<remember-details data-storage-key="archive-files" open>`,
-				`<summary class="menu-label">Archive</summary>`,
-				`data-file=".archive/2025-01-01.cue"`,
-				`aria-current="page"`,
-			},
-			omits: []string{`data-node-path=".archive"`},
+			path:        "/?file=.archive%2F2025-01-01.cue",
+			navContains: []string{`href="/?folder=.archive"`, `hx-get="/?folder=.archive"`, `aria-current="page"`},
+			navOmits:    []string{`data-node-path=".archive"`, `data-file=".archive/2025-01-01.cue"`},
 		},
 		{
-			name: "archive-only source does not show archive as a root folder or claim there are no files",
+			name: "archive folder view lists archived files",
+			source: fstest.MapFS{
+				"regular.cue":             &fstest.MapFile{Data: []byte(`[{Name: "Regular"}]`)},
+				".archive/2025-01-01.cue": &fstest.MapFile{Data: []byte(`[{Name: "Archived"}]`)},
+			},
+			path:        "/?folder=.archive",
+			contains:    []string{`data-file=".archive/2025-01-01.cue"`, `<span>2025-01-01</span>`},
+			omits:       []string{`data-file="regular.cue"`},
+			navContains: []string{`href="/?folder=.archive"`, `aria-current="page"`},
+			navOmits:    []string{`data-file=".archive/2025-01-01.cue"`},
+		},
+		{
+			name: "archive-only source keeps archive out of the regular sidebar tree",
 			source: fstest.MapFS{
 				".archive/2025-01-01.cue": &fstest.MapFile{Data: []byte(`[{Name: "Archived"}]`)},
 			},
-			contains: []string{
-				`<summary class="menu-label">Archive</summary>`,
-				`data-file=".archive/2025-01-01.cue"`,
-			},
-			omits: []string{`data-node-path=".archive"`, "No CUE files found."},
+			path:        "/",
+			contains:    []string{`data-folder-path=".archive"`},
+			navContains: []string{`href="/?folder=.archive"`},
+			navOmits:    []string{`data-node-path=".archive"`, `data-file=".archive/2025-01-01.cue"`},
 		},
 		{
-			name: "empty archive section is still available",
+			name: "archive shortcut opens an empty archive folder",
 			source: fstest.MapFS{
 				"regular.cue": &fstest.MapFile{Data: []byte(`[{Name: "Regular"}]`)},
 			},
-			contains: []string{`<summary class="menu-label">Archive</summary>`, "No archived files."},
+			path:        "/?folder=.archive",
+			contains:    []string{"This folder contains no CUE files or subfolders."},
+			navContains: []string{`href="/?folder=.archive"`, `aria-current="page"`},
 		},
 	}
 
@@ -448,19 +585,42 @@ func TestArchiveFilesAppearInSeparateNavigationSection(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			target := "/"
-			if test.selected != "" {
-				target += "?file=" + url.QueryEscape(test.selected)
-			}
-			request := httptest.NewRequest(http.MethodGet, "http://example.test"+target, nil)
 			response := httptest.NewRecorder()
-			handler.ServeHTTP(response, request)
+			handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "http://example.test"+test.path, nil))
 			if response.Code != http.StatusOK {
 				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 			}
-
 			body := response.Body.String()
+			navStart := strings.Index(body, `<nav class="file-nav menu"`)
+			if navStart < 0 {
+				t.Fatalf("file navigation is missing: %s", body)
+			}
+			navEnd := strings.Index(body[navStart:], `</nav>`)
+			if navEnd < 0 {
+				t.Fatalf("file navigation is not closed: %s", body[navStart:])
+			}
+			navigation := body[navStart : navStart+navEnd+len(`</nav>`)]
+			for _, want := range test.navContains {
+				if !strings.Contains(navigation, want) {
+					t.Errorf("navigation does not contain %q: %s", want, navigation)
+				}
+			}
+			for _, unwanted := range test.navOmits {
+				if strings.Contains(navigation, unwanted) {
+					t.Errorf("navigation unexpectedly contains %q: %s", unwanted, navigation)
+				}
+			}
+			if strings.Contains(test.path, "folder=") {
+				start := strings.Index(body, `<section class="folder-view"`)
+				if start < 0 {
+					t.Fatalf("folder view is missing: %s", body)
+				}
+				endOffset := strings.Index(body[start:], `</section>`)
+				if endOffset < 0 {
+					t.Fatalf("folder view is not closed: %s", body[start:])
+				}
+				body = body[start : start+endOffset+len(`</section>`)]
+			}
 			for _, want := range test.contains {
 				if !strings.Contains(body, want) {
 					t.Errorf("body does not contain %q", want)

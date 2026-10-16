@@ -90,26 +90,17 @@
       <ul class="file-tree">
         {{range .Files}}{{template "file-tree-node.html" .}}{{end}}
       </ul>
-      {{else if not .ArchiveFiles}}
+      {{else}}
       <p class="muted">No CUE files found.</p>
       {{end}}
+      <a href="{{route "/?folder=.archive"}}" hx-get="{{route "/?folder=.archive"}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" {{if .ArchiveSelected}}aria-current="page"{{end}}>
+        <h3 class="menu-label">Archive</h3>
+      </a>
       {{if .GitEnabled}}
         <a href="{{route "/changes"}}" hx-get="{{route "/changes"}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" {{if .GitSelected}}aria-current="page"{{end}}>
           <h3 class="menu-label">Changes</h3>
         </a>
       {{end}}
-      <remember-details data-storage-key="archive-files" {{if .ArchiveOpen}}open{{end}}>
-        <summary class="menu-label">Archive</summary>
-        <div id="archive-files" data-details-content>
-          {{if .ArchiveFiles}}
-          <ul class="file-tree archive-tree">
-            {{range .ArchiveFiles}}{{template "file-tree-node.html" .}}{{end}}
-          </ul>
-          {{else}}
-          <p class="muted">No archived files.</p>
-          {{end}}
-        </div>
-      </remember-details>
     </nav>
     {{template "workspace.html" .}}
   </div>

@@ -1,0 +1,36 @@
+{{define "folder-view.html"}}
+<section class="folder-view" aria-labelledby="folder-view-heading">
+  <h1 id="folder-view-heading" class="title is-4">Select a CUE file</h1>
+  <nav class="breadcrumb" aria-label="Folder location">
+    <ul>
+      {{range .FolderBreadcrumb}}
+      {{if .Current}}
+      <li class="is-active" aria-current="page"><span>{{.Label}}</span></li>
+      {{else}}
+      <li><a href="{{route .URL}}" hx-get="{{route .URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true">{{.Label}}</a></li>
+      {{end}}
+      {{end}}
+    </ul>
+  </nav>
+  <ul class="folder-view-list" aria-label="Files and folders">
+    {{range .FolderItems}}
+    <li>
+      {{if .IsDir}}
+      <a class="folder-view-item" data-folder-path="{{.Path}}" href="{{route .URL}}" hx-get="{{route .URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" aria-label="Open folder {{.Path}}">
+        <svg class="tree-folder-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3.5 9h17"/></svg>
+        <span>{{.Name}}</span>
+        <span class="folder-view-kind">Folder</span>
+      </a>
+      {{else}}
+      <a class="folder-view-item" data-file="{{.Path}}" href="{{route .URL}}" hx-get="{{route .URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true">
+        {{template "file-tree-file-content" .}}
+        <span class="folder-view-kind">CUE file</span>
+      </a>
+      {{end}}
+    </li>
+    {{else}}
+    <li class="muted">This folder contains no CUE files or subfolders.</li>
+    {{end}}
+  </ul>
+</section>
+{{end}}

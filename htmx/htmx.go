@@ -111,7 +111,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	listPageHandler, err := config.Adaptor.AdaptFunc(app.list,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page.html")),
-		htadaptor.WithQueryValues("file"),
+		htadaptor.WithQueryValues("file", "folder"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt list route: %w", err)
@@ -119,7 +119,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	listWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.list,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
-		htadaptor.WithQueryValues("file"),
+		htadaptor.WithQueryValues("file", "folder"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("htmx: adapt list HTMX route: %w", err)

@@ -38,6 +38,8 @@
       <p class="muted">This document has no entries.</p>
     {{end}}
     {{if .AddFields}}{{template "add-entry-dock.html" .}}{{end}}
+  {{else if .FolderView}}
+    {{template "folder-view.html" .}}
   {{else}}
     <h1 class="title is-4">Select a CUE file</h1>
     <p class="muted">Choose a file from the tree to view its entries.</p>
@@ -45,22 +47,21 @@
 </main>
 
 {{define "document-title.html"}}
-  {{if .SelectedEntry}}
   <div class="document-title-row">
     <nav class="breadcrumb" aria-label="File location">
       <ul>
         {{range .FileBreadcrumb}}
-          {{if .Current}}
-          <li class="is-active" aria-current="page"><h1 class="document-title title is-4" title="{{$.Selected}}">{{.Label}}</h1></li>
-          {{else}}
-          <li><span>{{.Label}}</span></li>
-          {{end}}
+        <li {{if .Current}}class="is-active" aria-current="page"{{end}}>
+          <a href="{{route .URL}}" hx-get="{{route .URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true">
+            {{if .Current}}<h1 class="document-title title is-4" title="{{$.Selected}}">{{.Label}}</h1>{{else}}{{.Label}}{{end}}
+          </a>
+        </li>
         {{end}}
       </ul>
     </nav>
+    {{if .SelectedEntry}}
     <a class="button is-small" href="{{route "/"}}?file={{urlquery .Selected}}" hx-get="{{route "/"}}?file={{urlquery .Selected}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" aria-label="Return to file {{.Selected}}" title="Return to file {{.Selected}}">↑</a>
+    {{end}}
   </div>
-  {{else}}
   <h1 class="document-title title is-4">{{.FileTitle}}</h1>
-  {{end}}
 {{end}}
