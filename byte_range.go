@@ -33,6 +33,9 @@ func NewByteRange(v cue.Value) (byteRange ByteRange, err error) {
 }
 
 func (r ByteRange) Anchor(source []byte) ByteAnchor {
+	if !validByteRange(r, source) {
+		return ByteAnchor{}
+	}
 	content := source[r.Head:r.Tail]
 	return ByteAnchor{
 		Content:              content,
@@ -42,6 +45,9 @@ func (r ByteRange) Anchor(source []byte) ByteAnchor {
 }
 
 func (r ByteRange) PreceedingEntryAnchor(source []byte) ByteAnchor {
+	if !validByteRange(r, source) {
+		return ByteAnchor{}
+	}
 	previousListHead := bytes.LastIndex(source[:r.Head], []byte("{"))
 	if previousListHead == -1 {
 		// there are no preceeding structs
@@ -59,23 +65,36 @@ type ByteAnchor struct {
 	// ApproximateHead      int
 }
 
-// Match locates the [ByteRange] that
-// correponds to [ByteAnchor.Content]
-// by finding the exact bytes and skipping
-// likely identical duplicates from the
-// beginning of the Cue source.
+// Match locates the [ByteRange] that corresponds to [ByteAnchor.Content] by
+// skipping likely identical duplicates from the beginning of the CUE source.
+// If earlier duplicates have disappeared since the anchor was created, it
+// returns the last remaining match rather than rejecting an otherwise usable
+// anchor.
 func (a ByteAnchor) Match(source []byte) (r ByteRange, err error) {
-	index, length := -1, len(a.Content)
-	for i := range a.PreceedingDuplicates + 1 {
-		index = bytes.Index(source[r.Tail:], a.Content)
-		if index == -1 {
+	if a.PreceedingDuplicates < 0 {
+		return r, ErrByteRangeNotFound
+	}
+	length := len(a.Content)
+	if length == 0 {
+		offset := a.PreceedingDuplicates - 1
+		if offset < 0 || offset > len(source) {
+			return r, ErrByteRangeNotFound
+		}
+		return ByteRange{Head: offset, Tail: offset}, nil
+	}
+
+	searchFrom := 0
+	for i := 0; i <= a.PreceedingDuplicates; i++ {
+		index := bytes.Index(source[searchFrom:], a.Content)
+		if index < 0 {
 			if i == 0 {
-				return r, ErrByteRangeNotFound
+				return ByteRange{}, ErrByteRangeNotFound
 			}
 			break
 		}
-		r.Head = r.Tail + index
+		r.Head = searchFrom + index
 		r.Tail = r.Head + length
+		searchFrom = r.Tail
 	}
 	return r, nil
 }
@@ -85,4 +104,33 @@ func (a ByteAnchor) LogValue() slog.Value {
 		slog.String("content", string(a.Content)),
 		slog.Int("preceedingDuplicates", a.PreceedingDuplicates),
 	)
+}
+
+func validByteRange(r ByteRange, source []byte) bool {
+	return r.Head >= 0 && r.Head <= r.Tail && r.Tail <= len(source)
+}
+
+func anchorForRange(r ByteRange, source []byte) (ByteAnchor, error) {
+	if !validByteRange(r, source) {
+		return ByteAnchor{}, ErrByteRangeNotFound
+	}
+	return r.Anchor(source), nil
+}
+
+func spliceRange(source []byte, r ByteRange, replacement []byte) ([]byte, error) {
+	if !validByteRange(r, source) {
+		return nil, ErrByteRangeNotFound
+	}
+	result := make([]byte, 0, len(source)-(r.Tail-r.Head)+len(replacement))
+	result = append(result, source[:r.Head]...)
+	result = append(result, replacement...)
+	result = append(result, source[r.Tail:]...)
+	return result, nil
+}
+
+func spliceAt(source []byte, at int, inserted []byte) ([]byte, error) {
+	if at < 0 || at > len(source) {
+		return nil, ErrByteRangeNotFound
+	}
+	return spliceRange(source, ByteRange{Head: at, Tail: at}, inserted)
 }

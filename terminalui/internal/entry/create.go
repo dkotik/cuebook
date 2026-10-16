@@ -6,7 +6,6 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 	listForm "github.com/dkotik/cuebook/terminalui/form"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -14,7 +13,7 @@ import (
 )
 
 type createEntryPatch struct {
-	patch.Patch
+	cuebook.Patch
 }
 
 type createForm struct {
@@ -76,14 +75,14 @@ func (f createForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case createFormFields:
 		f.Model, cmd = f.Model.Update(list.SetItems(msg...)())
 		return f, tea.Sequence(cmd, tea.RequestWindowSize(), window.RequestLocalizer())
-	case patch.Result:
+	case cuebook.Result:
 		f.Source = msg.Source
 		if _, ok := msg.LastChange.(createEntryPatch); ok {
 			return f, func() tea.Msg { return window.BackEvent{} }
 		}
 	case listForm.SaveChangesEvent:
 		return f, func() tea.Msg {
-			p, err := patch.AppendToStructList(f.Source, cuecontext.New().BuildExpr(
+			p, err := cuebook.AppendToStructList(f.Source, cuecontext.New().BuildExpr(
 				ast.NewStruct(
 					&ast.Field{
 						Label: ast.NewString("Name"),

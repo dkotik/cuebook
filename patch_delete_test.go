@@ -1,4 +1,4 @@
-package patch
+package cuebook
 
 import (
 	"slices"
@@ -6,7 +6,6 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	"github.com/dkotik/cuebook"
 )
 
 func TestDeleteStructFromList(t *testing.T) {
@@ -20,7 +19,7 @@ func TestDeleteStructFromList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for value := range cuebook.EachValue(document) {
+	for value := range EachValue(document) {
 		if err = value.Err(); err != nil {
 			t.Fatal(err)
 		}

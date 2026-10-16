@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 )
 
 type searchResultsView struct {
@@ -101,7 +100,7 @@ func (a *handler) applyFileChange(filePath string, change func() error) error {
 	return a.searchFS.ApplyFileChange(filePath, change)
 }
 
-func (a *handler) commitFile(filePath string, change patch.Patch) error {
+func (a *handler) commitFile(filePath string, change cuebook.Patch) error {
 	return a.applyFileChange(filePath, func() error {
 		return a.committer.Commit(filePath, change)
 	})

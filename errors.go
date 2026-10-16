@@ -1,17 +1,16 @@
-package patch
+package cuebook
 
 import (
 	"fmt"
 
-	"github.com/dkotik/cuebook"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-// Error identifies a patch error code.
-type Error uint8
+// PatchError identifies a source-change error code.
+type PatchError uint8
 
 const (
-	ErrUnknown Error = iota
+	ErrUnknown PatchError = iota
 	ErrSourceIsNotList
 	ErrByteRangesOverlap
 	ErrUnableToFormatFieldValue
@@ -22,15 +21,12 @@ const (
 	ErrRootListEndNotFound
 )
 
-// ErrByteRangeNotFound aliases the root package's byte-range lookup error.
-var ErrByteRangeNotFound = cuebook.ErrByteRangeNotFound
-
 // Localizable represents errors that can return localized messages.
 type Localizable interface {
 	LocalizeWith(*i18n.Localizer) (string, error)
 }
 
-func (e Error) Error() string {
+func (e PatchError) Error() string {
 	switch e {
 	case ErrSourceIsNotList:
 		return "source is not a list"
@@ -53,7 +49,7 @@ func (e Error) Error() string {
 	}
 }
 
-func (e Error) LocalizeWith(localizer *i18n.Localizer) (string, error) {
+func (e PatchError) LocalizeWith(localizer *i18n.Localizer) (string, error) {
 	var message i18n.Message
 	switch e {
 	case ErrSourceIsNotList:
@@ -81,4 +77,4 @@ func (e Error) LocalizeWith(localizer *i18n.Localizer) (string, error) {
 	})
 }
 
-var _ Localizable = Error(0)
+var _ Localizable = PatchError(0)

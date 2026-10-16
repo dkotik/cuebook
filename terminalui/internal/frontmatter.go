@@ -7,7 +7,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
-	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/markdown"
 	"github.com/dkotik/cuebook/terminalui/textarea"
@@ -20,14 +19,14 @@ type (
 	frontMatterUpdate    struct{}
 
 	frontMatterPatch struct {
-		patch.Patch
+		cuebook.Patch
 	}
 )
 
 type FrontMatterView struct {
 	tea.Model
 
-	state patch.Result
+	state cuebook.Result
 }
 
 func (v FrontMatterView) Init() (_ tea.Model, cmd tea.Cmd) {
@@ -37,7 +36,7 @@ func (v FrontMatterView) Init() (_ tea.Model, cmd tea.Cmd) {
 
 func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
-	case patch.Result:
+	case cuebook.Result:
 		if v.state.IsEqual(msg) {
 			return v, nil
 		}
@@ -84,7 +83,7 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 							_, _ = b.WriteRune('\n')
 						}
 						_, _ = b.WriteRune('\n') // skip a line after comments
-						p, err := patch.UpdateRange(source, cuebook.ByteRange{
+						p, err := cuebook.UpdateRange(source, cuebook.ByteRange{
 							Head: 0,
 							Tail: md.TailBytePosition,
 						}, b.Bytes())

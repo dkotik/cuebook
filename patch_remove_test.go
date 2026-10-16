@@ -1,4 +1,4 @@
-package patch
+package cuebook
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	"github.com/dkotik/cuebook"
 )
 
 func TestRemoveFieldValue(t *testing.T) {
@@ -30,7 +29,7 @@ func TestRemoveFieldValue(t *testing.T) {
 			t.Parallel()
 			item := `{Name: "Existing", Other: false, Secret: "stored-secret"` + tt.input + `}`
 			source := []byte("#entry: {Name: string, Other: bool, Secret: string @cuebook(argon2id), Missing?: *true | bool, " + tt.declaration + "}\n[...#entry] & [" + item + ", " + item + "]")
-			book, err := cuebook.New(source)
+			book, err := New(source)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -49,7 +48,7 @@ func TestRemoveFieldValue(t *testing.T) {
 			if tt.unchanged && !bytes.Equal(updated, source) {
 				t.Fatal("absent field changed the source")
 			}
-			book, err = cuebook.New(updated)
+			book, err = New(updated)
 			if err != nil {
 				t.Fatalf("invalid result: %v\n%s", err, updated)
 			}

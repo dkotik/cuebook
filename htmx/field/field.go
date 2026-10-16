@@ -8,7 +8,6 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/literal"
-	"cuelang.org/go/cue/token"
 	"github.com/dkotik/cuebook/metadata"
 )
 
@@ -66,34 +65,8 @@ func marshalerFor(value cue.Value) textMarshaler {
 	}
 }
 
-func (f Field) WithValue(value string) (_ *ast.Field, err error) {
-	value, err = metadata.FormatAccordingToAttributes(f.Value, value)
-	if err != nil {
-		return nil, fmt.Errorf("failed to format field value: %w", err)
-	}
-	if f.Value.IncompleteKind() == cue.BoolKind && !isPassword(f.Value) {
-		var kind token.Token
-		switch value {
-		case "true":
-			kind = token.TRUE
-		case "false":
-			kind = token.FALSE
-		default:
-			return nil, fmt.Errorf("invalid boolean field value: %q", value)
-		}
-		return &ast.Field{
-			Label: ast.NewString(f.Name),
-			Value: ast.NewLit(kind, value),
-		}, nil
-	}
-	quoted := stringValue{}.quote(value)
-	if metadata.IsMultiLine(f.Value) {
-		quoted = multiline{}.quote(value)
-	}
-	return &ast.Field{
-		Label: ast.NewString(f.Name),
-		Value: ast.NewLit(token.STRING, quoted),
-	}, nil
+func (f Field) WithValue(value string) (*ast.Field, error) {
+	return metadata.FormatFieldValue(f.Name, f.Value, value)
 }
 
 func (f Field) Default() (string, bool) {

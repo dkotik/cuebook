@@ -1,4 +1,4 @@
-package patch
+package cuebook
 
 import (
 	"errors"
@@ -8,7 +8,6 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/literal"
 	"cuelang.org/go/cue/token"
-	"github.com/dkotik/cuebook"
 )
 
 func TestAppendToEmptyStructList(t *testing.T) {
@@ -48,12 +47,38 @@ func TestAppendToEmptyStructList(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			document, err := cuebook.New(updated)
+			document, err := New(updated)
 			if err != nil {
 				t.Fatalf("appended source is invalid: %v\n%s", err, updated)
 			}
 			if length, err := document.Len(); err != nil || length != 1 {
 				t.Fatalf("document length = %d, err = %v; want 1", length, err)
+			}
+		})
+	}
+}
+
+func TestAppendRejectsNonListSource(t *testing.T) {
+	tests := []struct {
+		name   string
+		source []byte
+	}{
+		{name: "struct", source: []byte(`{Name: "Existing"}`)},
+		{name: "string", source: []byte(`"Existing"`)},
+	}
+	entry := cuecontext.New().CompileString(`{Name: "Added"}`)
+	if err := entry.Err(); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			change, err := AppendToStructList(test.source, entry)
+			if !errors.Is(err, ErrSourceIsNotList) {
+				t.Fatalf("AppendToStructList() error = %v, want %v", err, ErrSourceIsNotList)
+			}
+			if change != nil {
+				t.Fatalf("AppendToStructList() change = %v, want nil", change)
 			}
 		})
 	}
@@ -125,7 +150,7 @@ func TestInsertPatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(string(result))
-	_, err = cuebook.New(result)
+	_, err = New(result)
 	if err != nil {
 		t.Fatal(err)
 	}

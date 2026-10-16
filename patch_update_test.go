@@ -1,4 +1,4 @@
-package patch
+package cuebook
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
-	"github.com/dkotik/cuebook"
 )
 
 func TestUpdateStructInList(t *testing.T) {
@@ -29,7 +28,7 @@ func TestUpdateStructInList(t *testing.T) {
 
 	// // last := document.LookupPath(cue.MakePath(cue.Index(2)))
 	replacement := []byte(`{ replacement: "replacement"}`)
-	for value := range cuebook.EachValue(document) {
+	for value := range EachValue(document) {
 		if err = value.Err(); err != nil {
 			t.Fatal(err)
 		}
@@ -108,7 +107,7 @@ func TestMergeFieldValuesWrapsFormattingError(t *testing.T) {
 		t.Fatalf("error = %q, want %q", got, want)
 	}
 
-	var code Error
+	var code PatchError
 	if !errors.As(err, &code) || code != ErrUnableToFormatFieldValue {
 		t.Fatalf("error code = %v, want %v", code, ErrUnableToFormatFieldValue)
 	}
@@ -146,7 +145,7 @@ func TestUpdateStructField(t *testing.T) {
 	if target.Err() != nil {
 		t.Fatal(target.Err())
 	}
-	entry, err := cuebook.NewEntry(target)
+	entry, err := NewEntry(target)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +203,7 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	if target.Err() != nil {
 		t.Fatal(target.Err())
 	}
-	entry, err := cuebook.NewEntry(target)
+	entry, err := NewEntry(target)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,6 +256,30 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	if value != "new" {
 		t.Fatal("another value was not updated:", value, "vs new")
 	}
+}
 
-	// t.Fatal("check")
+func TestMergeFieldValuesAddsNewFieldsInStableOrder(t *testing.T) {
+	source := []byte(`[{}]`)
+	document := cuecontext.New().CompileBytes(source)
+	if err := document.Err(); err != nil {
+		t.Fatal(err)
+	}
+	entry := document.LookupPath(cue.MakePath(cue.Index(0)))
+	change, err := MergeFieldValues(source, entry, map[string]string{
+		"zField": "last",
+		"aField": "first",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := change.ApplyToCueSource(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	aIndex := bytes.Index(updated, []byte("aField"))
+	zIndex := bytes.Index(updated, []byte("zField"))
+	if aIndex < 0 || zIndex < 0 || aIndex >= zIndex {
+		t.Fatalf("new fields are not in stable sorted order: %s", updated)
+	}
 }

@@ -14,7 +14,6 @@ import (
 	"testing/fstest"
 
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 )
 
 func TestWritableDirectoryMovesEntries(t *testing.T) {
@@ -379,7 +378,7 @@ type transferCommitter struct {
 	failCalls map[int]error
 }
 
-func (c *transferCommitter) Commit(name string, change patch.Patch) error {
+func (c *transferCommitter) Commit(name string, change cuebook.Patch) error {
 	c.calls = append(c.calls, name)
 	if err := c.failCalls[len(c.calls)]; err != nil {
 		return err

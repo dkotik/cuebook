@@ -15,7 +15,6 @@ import (
 	"github.com/dkotik/cuebook"
 	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
-	"github.com/dkotik/cuebook/patch"
 )
 
 type editFormRequest struct {
@@ -150,11 +149,11 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 	}
 
 	unset := value == "not_set" && field.Value.IncompleteKind() == cue.BoolKind && !isSecretField(field.Value)
-	var change patch.Patch
+	var change cuebook.Patch
 	if unset {
-		change, err = patch.RemoveFieldValue(raw, entryValue, fieldName)
+		change, err = cuebook.RemoveFieldValue(raw, entryValue, fieldName)
 	} else {
-		change, err = patch.UpdateFieldValue(raw, entryValue, field.Value, value)
+		change, err = cuebook.UpdateFieldValue(raw, entryValue, field.Value, value)
 	}
 	if err != nil {
 		return editResponse{}, errors.New("The field value could not be formatted.")
@@ -178,7 +177,7 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 		return editResponse{}, errors.New("The submitted value does not satisfy the CUE constraints: " + err.Error())
 	}
 	if err = a.commitFile(fileName, change); err != nil {
-		if errors.Is(err, patch.ErrByteRangeNotFound) {
+		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return editResponse{}, errors.New("The entry changed before the edit could be applied. Reload and try again.")
 		}
 		return editResponse{}, errors.New("The edit could not be saved.")

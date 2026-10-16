@@ -3,7 +3,6 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/file"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -17,7 +16,7 @@ func parseBook(source []byte) tea.Cmd {
 		}
 		return tea.BatchMsg{
 			func() tea.Msg {
-				return patch.Result{
+				return cuebook.Result{
 					Document: document,
 					Source:   source,
 					Hash:     1, // TODO: think if this is smart; needed so that first value override nil

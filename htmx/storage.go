@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/dkotik/cuebook/patch"
+	"github.com/dkotik/cuebook"
 )
 
 // NewDirectory returns a writable handler rooted at directory. Only regular
@@ -48,7 +48,7 @@ type directoryCommitter struct {
 	root string
 }
 
-func (c directoryCommitter) Commit(name string, change patch.Patch) error {
+func (c directoryCommitter) Commit(name string, change cuebook.Patch) error {
 	if !validFileName(name) {
 		return fs.ErrPermission
 	}
@@ -60,7 +60,7 @@ func (c directoryCommitter) Commit(name string, change patch.Patch) error {
 	if err := c.verifyRegularFile(name); err != nil {
 		return err
 	}
-	_, err = patch.Commit(target, filepath.Dir(target), change)
+	_, err = cuebook.Commit(target, filepath.Dir(target), change)
 	return err
 }
 

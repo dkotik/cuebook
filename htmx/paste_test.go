@@ -13,7 +13,6 @@ import (
 
 	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 )
 
 func TestPasteEntry(t *testing.T) {
@@ -88,7 +87,7 @@ func TestPasteErrorsPreserveWorkspaceAndSource(t *testing.T) {
 		{name: "invalid document", source: `{Name: "Pasted"}`, file: "invalid.cue", wantNotice: "Unable to parse or validate"},
 		{name: "read only", source: `{Name: "Pasted"}`, readOnly: true, wantNotice: "read-only"},
 		{name: "save failure", source: `{Name: "Pasted"}`, commitError: errors.New("disk full"), wantNotice: "could not be saved"},
-		{name: "stale patch", source: `{Name: "Pasted"}`, commitError: patch.ErrByteRangeNotFound, wantNotice: "document changed"},
+		{name: "stale patch", source: `{Name: "Pasted"}`, commitError: cuebook.ErrByteRangeNotFound, wantNotice: "document changed"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

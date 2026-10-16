@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
-	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/internal/entry"
@@ -27,7 +26,7 @@ type entryHighlighted int
 type EntryList struct {
 	tea.Model
 
-	book     patch.Result
+	book     cuebook.Result
 	selected int // *cuebook.ByteAnchor
 }
 
@@ -55,15 +54,15 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			}
 			return patch
 		}
-	case patch.Patch:
+	case cuebook.Patch:
 		return l, func() tea.Msg { // TODO: handle switch highlight
-			result, err := patch.Commit("test/testdata/simple.cue", "test/testdata", msg)
+			result, err := cuebook.Commit("test/testdata/simple.cue", "test/testdata", msg)
 			if err != nil {
 				return err
 			}
 			return result
 		}
-	case patch.Result:
+	case cuebook.Result:
 		// if msg.LastChange != nil {
 		// 	target, err := msg.LastChange.Difference().Match(msg.Source)
 		// 	if err == nil {
@@ -133,7 +132,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if b.Kind() == cue.BottomKind {
 				return nil // does not exist
 			}
-			p, err := patch.SwapEntries(l.book.Source, a, b)
+			p, err := cuebook.SwapEntries(l.book.Source, a, b)
 			if err != nil {
 				return err
 			}
@@ -156,7 +155,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				if err != nil {
 					return err
 				}
-				p, err := patch.DeleteFromStructList(
+				p, err := cuebook.DeleteFromStructList(
 					l.book.Source, entry.Value)
 				if err != nil {
 					return err
@@ -176,7 +175,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return l, cmd
 }
 
-func LoadEntries(r patch.Result, selectionIndex int) tea.Cmd {
+func LoadEntries(r cuebook.Result, selectionIndex int) tea.Cmd {
 	return func() tea.Msg {
 		total, err := r.Document.Len()
 		if err != nil {

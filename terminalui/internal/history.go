@@ -2,15 +2,15 @@ package internal
 
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/patch"
+	"github.com/dkotik/cuebook"
 )
 
 type historyPatch struct {
-	patch.Patch
+	cuebook.Patch
 }
 
 type snapShot struct {
-	Patch              patch.Patch
+	Patch              cuebook.Patch
 	SelectedEntryIndex int
 	SelectedFieldIndex int
 }
@@ -65,7 +65,7 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case historyPatch:
 		// ignore all patches issued by this component
-	case patch.Patch:
+	case cuebook.Patch:
 		total := len(h.history)
 		if total > 0 {
 			if total > 5 {

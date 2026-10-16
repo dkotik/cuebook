@@ -1,39 +1,34 @@
-package patch
+package cuebook
 
 import (
 	"bytes"
 	"fmt"
-	"io"
+	"sort"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/format"
 	"cuelang.org/go/cue/literal"
 	"cuelang.org/go/cue/token"
-	"github.com/dkotik/cuebook"
-	fieldmodel "github.com/dkotik/cuebook/htmx/field"
+
 	"github.com/dkotik/cuebook/metadata"
 )
 
 type replacePatch struct {
-	Target      cuebook.ByteAnchor
-	Replacement cuebook.ByteAnchor
+	Target      ByteAnchor
+	Replacement ByteAnchor
 }
 
-func (p replacePatch) Difference() cuebook.ByteAnchor {
+func (p replacePatch) Difference() ByteAnchor {
 	return p.Replacement
 }
 
-func (p replacePatch) ApplyToCueSource(source []byte) (result []byte, err error) {
+func (p replacePatch) ApplyToCueSource(source []byte) ([]byte, error) {
 	r, err := p.Target.Match(source)
 	if err != nil {
 		return nil, err
 	}
-	b := &bytes.Buffer{}
-	_, _ = io.Copy(b, bytes.NewReader(source[:r.Head]))
-	_, _ = io.Copy(b, bytes.NewReader(p.Replacement.Content))
-	_, _ = io.Copy(b, bytes.NewReader(source[r.Tail:]))
-	return b.Bytes(), nil
+	return spliceRange(source, r, p.Replacement.Content)
 }
 
 func (p replacePatch) Invert() Patch {
@@ -43,32 +38,40 @@ func (p replacePatch) Invert() Patch {
 	}
 }
 
-func UpdateRange(source []byte, r cuebook.ByteRange, replacement []byte) (Patch, error) {
+func UpdateRange(source []byte, r ByteRange, replacement []byte) (Patch, error) {
+	target, err := anchorForRange(r, source)
+	if err != nil {
+		return nil, err
+	}
 	return replacePatch{
-		Target: r.Anchor(source),
-		Replacement: cuebook.ByteAnchor{
+		Target: target,
+		Replacement: ByteAnchor{
 			Content:              replacement,
 			PreceedingDuplicates: bytes.Count(source[:r.Head], replacement),
 		},
 	}, nil
 }
 
-func ReplaceStructListEntry(source []byte, value cue.Value, b []byte) (Patch, error) {
-	r, err := cuebook.NewByteRange(value)
+func ReplaceStructListEntry(source []byte, value cue.Value, replacement []byte) (Patch, error) {
+	r, err := NewByteRange(value)
+	if err != nil {
+		return nil, err
+	}
+	target, err := anchorForRange(r, source)
 	if err != nil {
 		return nil, err
 	}
 	return replacePatch{
-		Target: r.Anchor(source),
-		Replacement: cuebook.ByteAnchor{
-			Content:              b,
-			PreceedingDuplicates: bytes.Count(source[:r.Head], b),
+		Target: target,
+		Replacement: ByteAnchor{
+			Content:              replacement,
+			PreceedingDuplicates: bytes.Count(source[:r.Head], replacement),
 		},
 	}, nil
 }
 
 func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patch, error) {
-	tree := entry.Syntax(cue.Concrete(true)) // TODO: concrete OPTION is CRITICAL
+	tree := entry.Syntax(cue.Concrete(true))
 	fields, ok := tree.(*ast.StructLit)
 	if !ok {
 		return nil, ErrEntryNotStruct
@@ -77,7 +80,7 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	if !ok {
 		return nil, ErrTargetFieldNotStructField
 	}
-	replacement, err := fieldmodel.NewField(search, field).WithValue(value)
+	replacement, err := metadata.FormatFieldValue(search, field, value)
 	if err != nil {
 		return nil, err
 	}
@@ -89,10 +92,7 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 			continue
 		}
 		label, _, err := ast.LabelName(sourceField.Label)
-		if err != nil {
-			continue
-		}
-		if label != search {
+		if err != nil || label != search {
 			continue
 		}
 		sourceField.Value = replacement.Value
@@ -115,8 +115,8 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	return ReplaceStructListEntry(source, entry, content)
 }
 
-// RemoveFieldValue omits a field from the entry's concrete values without
-// materializing other optional fields or changing the surrounding document.
+// RemoveFieldValue omits a field from an entry's concrete values without
+// materializing optional fields or changing the surrounding document.
 func RemoveFieldValue(source []byte, entry cue.Value, fieldName string) (Patch, error) {
 	fields, ok := entry.Syntax(cue.Concrete(true)).(*ast.StructLit)
 	if !ok {
@@ -151,7 +151,7 @@ func RemoveFieldValue(source []byte, entry cue.Value, fieldName string) (Patch, 
 }
 
 func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) (_ Patch, err error) {
-	tree := entry.Syntax(cue.Concrete(true)) // TODO: concrete OPTION is CRITICAL
+	tree := entry.Syntax(cue.Concrete(true))
 	fields, ok := tree.(*ast.StructLit)
 	if !ok {
 		return nil, ErrEntryNotStruct
@@ -163,7 +163,7 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 		label string
 		i     int
 	)
-	for selector, field := range cuebook.EachField(entry, cue.All()) {
+	for selector, field := range EachField(entry, cue.All()) {
 		label = selector.Unquoted()
 		all[label] = field
 		if field.IsConcrete() {
@@ -172,16 +172,18 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 		}
 	}
 
-	for label, value := range values {
+	labels := make([]string, 0, len(values))
+	for label := range values {
+		labels = append(labels, label)
+	}
+	sort.Strings(labels)
+	for _, label := range labels {
+		value := values[label]
 		if known, ok := all[label]; ok {
 			value, err = metadata.FormatAccordingToAttributes(known, value)
 			if err != nil {
 				return nil, fmt.Errorf("%w: %w", ErrUnableToFormatFieldValue, err)
 			}
-			// if value == "" {
-			// 	value, _ = metadata.GetDefaultValue(field)
-			// }
-			// fmt.Println("sdfsdfsdf:", found.String(), value)
 		}
 
 		updated := &ast.Field{

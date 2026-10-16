@@ -3,7 +3,7 @@ Package htmx provides an embeddable HTML interface to Cuebook documents.
 
 New creates a read-only handler for any fs.FS. NewWithCommitter adds editing
 through an explicit commit implementation, and NewDirectory provides a
-filesystem-backed handler that commits edits atomically through patch.Commit.
+filesystem-backed handler that commits edits atomically through cuebook.Commit.
 
 The handler recursively discovers `.cue` files and displays their validated
 entries in a navigable file tree. It supports creating entries and editing
@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dkotik/cuebook"
 	gitview "github.com/dkotik/cuebook/htmx/git"
-	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/search"
 	"github.com/dkotik/htadaptor"
 )
@@ -38,7 +38,7 @@ var assetFiles embed.FS
 // Committer applies a prepared Cuebook patch to a named source file.
 // Implementations should apply patches to fresh source and commit atomically.
 type Committer interface {
-	Commit(name string, change patch.Patch) error
+	Commit(name string, change cuebook.Patch) error
 }
 
 type handler struct {

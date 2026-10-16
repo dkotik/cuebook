@@ -11,7 +11,6 @@ import (
 	"github.com/dkotik/cuebook"
 	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
-	"github.com/dkotik/cuebook/patch"
 )
 
 type addFieldRequest struct {
@@ -122,7 +121,7 @@ func (a *handler) add(_ context.Context, request *addRequest) (addResponse, erro
 }
 
 func (a *handler) appendEntry(fileName string, raw []byte, entry cue.Value) error {
-	change, err := patch.AppendToStructList(raw, entry)
+	change, err := cuebook.AppendToStructList(raw, entry)
 	if err != nil {
 		return errors.New("The entry could not be added to this CUE document.")
 	}
@@ -134,7 +133,7 @@ func (a *handler) appendEntry(fileName string, raw []byte, entry cue.Value) erro
 		return errors.New("The submitted entry does not satisfy the CUE constraints: " + err.Error())
 	}
 	if err := a.commitFile(fileName, change); err != nil {
-		if errors.Is(err, patch.ErrByteRangeNotFound) {
+		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return errors.New("The document changed before the entry could be added. Reload and try again.")
 		}
 		return errors.New("The entry could not be saved.")

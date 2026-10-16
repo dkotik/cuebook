@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	fieldmodel "github.com/dkotik/cuebook/htmx/field"
-	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/event"
 	listForm "github.com/dkotik/cuebook/terminalui/form"
 	"github.com/dkotik/cuebook/terminalui/list"
@@ -33,21 +32,21 @@ type (
 	applyFieldChanges struct{}
 
 	updateFieldPatch struct {
-		patch.Patch
+		cuebook.Patch
 		Entry cuebook.Entry
 	}
 
 	swapEntriesPatch struct {
-		patch.Patch
+		cuebook.Patch
 		// Target cuebook.ByteAnchor
 	}
 
 	swapFieldsPatch struct {
-		patch.Patch
+		cuebook.Patch
 	}
 
 	deleteEntryPatch struct {
-		patch.Patch
+		cuebook.Patch
 		Entry cuebook.Entry
 	}
 )
@@ -131,8 +130,8 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case listForm.SaveChangesEvent:
 		return f, func() tea.Msg {
-			return Update(func(state patch.Result) (patch.Patch, error) {
-				p, err := patch.MergeFieldValues(state.Source, f.Entry.Value, f.Changes)
+			return Update(func(state cuebook.Result) (cuebook.Patch, error) {
+				p, err := cuebook.MergeFieldValues(state.Source, f.Entry.Value, f.Changes)
 				if err != nil {
 					return nil, err
 				}
@@ -144,7 +143,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 	case list.SwapOrderEvent:
 		return f, func() tea.Msg {
-			return Update(func(state patch.Result) (patch.Patch, error) {
+			return Update(func(state cuebook.Result) (cuebook.Patch, error) {
 				a, err := f.Entry.GetField(msg.CurrentIndex)
 				if err != nil {
 					return nil, err
@@ -153,7 +152,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				if err != nil {
 					return nil, err
 				}
-				p, err := patch.SwapEntries(state.Source, a.Value, b.Value)
+				p, err := cuebook.SwapEntries(state.Source, a.Value, b.Value)
 				if err != nil {
 					return nil, err
 				}
@@ -162,12 +161,12 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 	case deleteEvent:
 		return f, func() tea.Msg {
-			return Update(func(state patch.Result) (patch.Patch, error) {
-				p, err := patch.DeleteFromStructList(state.Source, f.Entry.Value)
+			return Update(func(state cuebook.Result) (cuebook.Patch, error) {
+				p, err := cuebook.DeleteFromStructList(state.Source, f.Entry.Value)
 				if err != nil {
 					return nil, err
 				}
-				return deleteEntryPatch{ // TODO: restore matching to patch.Result.LastChange type
+				return deleteEntryPatch{ // TODO: restore matching to cuebook.Result.LastChange type
 					Patch: p,
 					Entry: f.Entry,
 				}, nil
@@ -226,7 +225,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				PluralCount: len(f.Changes),
 			})
 		}
-	case patch.Result:
+	case cuebook.Result:
 		switch p := msg.LastChange.(type) {
 		case swapFieldsPatch:
 			return f, func() tea.Msg {
@@ -289,7 +288,7 @@ func displayFieldForm(source []byte, entry cuebook.Entry, field fieldmodel.Field
 			textarea.WithValue(field.String()),
 			textarea.WithOnSubmitCommand(func(value string) tea.Cmd {
 				return func() tea.Msg {
-					p, err := patch.UpdateFieldValue(source, entry.Value, field.Value, value)
+					p, err := cuebook.UpdateFieldValue(source, entry.Value, field.Value, value)
 					if err != nil {
 						return err
 					}

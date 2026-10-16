@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
+
 	"github.com/dkotik/cuebook/search"
 	"github.com/dkotik/htadaptor"
 )
@@ -196,7 +196,7 @@ type mapFileCommitter struct {
 	files fstest.MapFS
 }
 
-func (c mapFileCommitter) Commit(name string, change patch.Patch) error {
+func (c mapFileCommitter) Commit(name string, change cuebook.Patch) error {
 	file, ok := c.files[name]
 	if !ok {
 		return fs.ErrNotExist

@@ -1,29 +1,27 @@
-package patch
+package cuebook
 
 import (
 	"bytes"
-	"io"
 
 	"cuelang.org/go/cue"
-	"github.com/dkotik/cuebook"
 )
 
 type swapPatch struct {
-	Earlier                cuebook.ByteAnchor
-	Later                  cuebook.ByteAnchor
+	Earlier                ByteAnchor
+	Later                  ByteAnchor
 	EarlierIsTarget        bool
 	EarlierDuplicatesInGap int
 	LaterDuplicatesInGap   int
 }
 
-func (p swapPatch) Difference() cuebook.ByteAnchor {
+func (p swapPatch) Difference() ByteAnchor {
 	if p.EarlierIsTarget {
 		return p.Earlier
 	}
 	return p.Later
 }
 
-func (p swapPatch) ApplyToCueSource(source []byte) (result []byte, err error) {
+func (p swapPatch) ApplyToCueSource(source []byte) ([]byte, error) {
 	earlier, err := p.Earlier.Match(source)
 	if err != nil {
 		return nil, err
@@ -33,14 +31,20 @@ func (p swapPatch) ApplyToCueSource(source []byte) (result []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	b := &bytes.Buffer{}
-	b.Grow(len(source))
-	_, _ = io.Copy(b, bytes.NewReader(source[:earlier.Head]))
-	_, _ = io.Copy(b, bytes.NewReader(source[later.Head:later.Tail]))
-	_, _ = io.Copy(b, bytes.NewReader(source[earlier.Tail:later.Head]))
-	_, _ = io.Copy(b, bytes.NewReader(source[earlier.Head:earlier.Tail]))
-	_, _ = io.Copy(b, bytes.NewReader(source[later.Tail:]))
-	return b.Bytes(), nil
+	if !validByteRange(earlier, source) || !validByteRange(later, source) {
+		return nil, ErrByteRangeNotFound
+	}
+	if earlier.Head > later.Head || earlier.Tail > later.Head {
+		return nil, ErrByteRangesOverlap
+	}
+
+	result := make([]byte, 0, len(source))
+	result = append(result, source[:earlier.Head]...)
+	result = append(result, source[later.Head:later.Tail]...)
+	result = append(result, source[earlier.Tail:later.Head]...)
+	result = append(result, source[earlier.Head:earlier.Tail]...)
+	result = append(result, source[later.Tail:]...)
+	return result, nil
 }
 
 func (p swapPatch) Invert() Patch {
@@ -54,13 +58,16 @@ func (p swapPatch) Invert() Patch {
 }
 
 func SwapEntries(source []byte, a, b cue.Value) (Patch, error) {
-	aRange, err := cuebook.NewByteRange(a)
+	aRange, err := NewByteRange(a)
 	if err != nil {
 		return nil, err
 	}
-	bRange, err := cuebook.NewByteRange(b)
+	bRange, err := NewByteRange(b)
 	if err != nil {
 		return nil, err
+	}
+	if !validByteRange(aRange, source) || !validByteRange(bRange, source) {
+		return nil, ErrByteRangeNotFound
 	}
 	if bytes.Equal(source[aRange.Head:aRange.Tail], source[bRange.Head:bRange.Tail]) {
 		if aRange.Head > bRange.Head {
@@ -74,6 +81,7 @@ func SwapEntries(source []byte, a, b cue.Value) (Patch, error) {
 			B: bRange.Anchor(source),
 		}, nil
 	}
+
 	p := swapPatch{}
 	if aRange.Head > bRange.Head {
 		aRange, bRange = bRange, aRange

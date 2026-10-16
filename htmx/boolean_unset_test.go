@@ -10,7 +10,6 @@ import (
 
 	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 )
 
 type booleanUnsetCommitter struct {
@@ -18,7 +17,7 @@ type booleanUnsetCommitter struct {
 	calls int
 }
 
-func (c *booleanUnsetCommitter) Commit(name string, change patch.Patch) error {
+func (c *booleanUnsetCommitter) Commit(name string, change cuebook.Patch) error {
 	c.calls++
 	return c.mapFileCommitter.Commit(name, change)
 }

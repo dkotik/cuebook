@@ -14,7 +14,6 @@ import (
 	"testing/fstest"
 
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 )
 
 //go:embed testdata/core1.cue testdata/subfolder/sub1.cue
@@ -692,7 +691,7 @@ type recordingCommitter struct {
 	err   error
 }
 
-func (c *recordingCommitter) Commit(_ string, _ patch.Patch) error {
+func (c *recordingCommitter) Commit(_ string, _ cuebook.Patch) error {
 	c.calls++
 	return c.err
 }

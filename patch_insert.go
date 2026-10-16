@@ -1,34 +1,29 @@
-package patch
+package cuebook
 
 import (
 	"bytes"
-	"io"
 	"unicode"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/format"
-	"github.com/dkotik/cuebook"
 )
 
 type insertAfter struct {
-	Preceeding cuebook.ByteAnchor
-	Target     cuebook.ByteAnchor
+	Preceeding ByteAnchor
+	Target     ByteAnchor
 }
 
-func (p insertAfter) Difference() cuebook.ByteAnchor {
+func (p insertAfter) Difference() ByteAnchor {
 	return p.Target
 }
 
-func (p insertAfter) ApplyToCueSource(source []byte) (result []byte, err error) {
+func (p insertAfter) ApplyToCueSource(source []byte) ([]byte, error) {
 	r, err := p.Preceeding.Match(source)
 	if err != nil {
 		return nil, err
 	}
-	b := &bytes.Buffer{}
-	_, _ = io.Copy(b, bytes.NewReader(source[:r.Tail]))
-	_, _ = io.Copy(b, bytes.NewReader(p.Target.Content))
-	_, _ = io.Copy(b, bytes.NewReader(source[r.Tail:]))
-	return b.Bytes(), nil
+	return spliceAt(source, r.Tail, p.Target.Content)
 }
 
 func (p insertAfter) Invert() Patch {
@@ -45,9 +40,31 @@ func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if len(source) < 2 {
-		source = []byte("[\n]\n")
+		if len(bytes.TrimSpace(source)) != 0 {
+			return nil, ErrSourceIsNotList
+		}
+		inserted := append([]byte("[\n  "), content...)
+		inserted = append(inserted, []byte("\n]\n")...)
+		preceding, err := anchorForRange(ByteRange{}, source)
+		if err != nil {
+			return nil, err
+		}
+		return insertAfter{
+			Preceeding: preceding,
+			Target: ByteAnchor{
+				Content:              inserted,
+				PreceedingDuplicates: bytes.Count(source, inserted),
+			},
+		}, nil
 	}
+
+	compiled := cuecontext.New().CompileBytes(source)
+	if compiled.Err() == nil && compiled.Kind() != cue.ListKind {
+		return nil, ErrSourceIsNotList
+	}
+
 	listEnd, commaFound, empty, err := locateRootListEnd(source)
 	if err != nil {
 		return nil, err
@@ -57,12 +74,16 @@ func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 	} else {
 		content = append([]byte(",\n  "), content...)
 	}
+	preceding, err := anchorForRange(ByteRange{
+		Head: max(0, listEnd-1000),
+		Tail: listEnd,
+	}, source)
+	if err != nil {
+		return nil, err
+	}
 	return insertAfter{
-		Preceeding: cuebook.ByteRange{
-			Head: max(0, listEnd-1000),
-			Tail: listEnd,
-		}.Anchor(source),
-		Target: cuebook.ByteAnchor{
+		Preceeding: preceding,
+		Target: ByteAnchor{
 			Content:              content,
 			PreceedingDuplicates: bytes.Count(source[:listEnd], content),
 		},
@@ -76,7 +97,7 @@ func locateRootListEnd(source []byte) (i int, commaFound, empty bool, err error)
 	listEndFound := false
 
 loop:
-	for i := len(source) - 1; i >= min(0, len(source)-1000); i-- {
+	for i := len(source) - 1; i >= max(0, len(source)-1000); i-- {
 		switch c := source[i]; c {
 		case '}':
 			if commaFound {

@@ -9,7 +9,6 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/patch"
 )
 
 type moveRequest struct {
@@ -74,7 +73,7 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		if errors.Is(err, patch.ErrByteRangeNotFound) {
+		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return moveResponse{}, errors.New("The document changed before the entries could be reordered. Reload and try again.")
 		}
 		return moveResponse{}, errors.New("The entries could not be reordered.")
@@ -83,7 +82,7 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 		return moveResponse{}, errors.New("The reordered document does not satisfy the CUE constraints.")
 	}
 	if err := a.commitFile(fileName, change); err != nil {
-		if errors.Is(err, patch.ErrByteRangeNotFound) {
+		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return moveResponse{}, errors.New("The document changed before the entries could be reordered. Reload and try again.")
 		}
 		return moveResponse{}, errors.New("The entries could not be saved.")
@@ -110,7 +109,7 @@ func (a *handler) transferEntry(sourceName, destinationName string, sourceRaw []
 		return pageData{}, errors.New("The source entry could not be converted for transfer.")
 	}
 
-	appendChange, err := patch.AppendToStructList(destinationRaw, destinationEntryValue)
+	appendChange, err := cuebook.AppendToStructList(destinationRaw, destinationEntryValue)
 	if err != nil {
 		return pageData{}, errors.New("The entry could not be added to the destination file.")
 	}
@@ -122,7 +121,7 @@ func (a *handler) transferEntry(sourceName, destinationName string, sourceRaw []
 		return pageData{}, errors.New("The entry does not satisfy the destination file's CUE constraints.")
 	}
 
-	deleteChange, err := patch.DeleteFromStructList(sourceRaw, sourceEntryValue)
+	deleteChange, err := cuebook.DeleteFromStructList(sourceRaw, sourceEntryValue)
 	if err != nil {
 		return pageData{}, errors.New("The entry could not be removed from the source file.")
 	}
@@ -134,18 +133,18 @@ func (a *handler) transferEntry(sourceName, destinationName string, sourceRaw []
 		return pageData{}, errors.New("Removing the entry does not satisfy the source file's CUE constraints.")
 	}
 
-	if err := a.commitFile(destinationName, patch.Validated(appendChange)); err != nil {
-		if errors.Is(err, patch.ErrByteRangeNotFound) {
+	if err := a.commitFile(destinationName, cuebook.Validated(appendChange)); err != nil {
+		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return pageData{}, errors.New("The destination file changed before the entry could be added. Reload and try again.")
 		}
 		return pageData{}, errors.New("The entry could not be added to the destination file.")
 	}
-	if err := a.commitFile(sourceName, patch.Validated(deleteChange)); err != nil {
-		rollbackErr := a.commitFile(destinationName, patch.Validated(appendChange.Invert()))
+	if err := a.commitFile(sourceName, cuebook.Validated(deleteChange)); err != nil {
+		rollbackErr := a.commitFile(destinationName, cuebook.Validated(appendChange.Invert()))
 		if rollbackErr != nil {
 			return pageData{}, errors.New("The entry was added to the destination, but the source could not be updated and the destination change could not be rolled back. It may now exist in both files.")
 		}
-		if errors.Is(err, patch.ErrByteRangeNotFound) {
+		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return pageData{}, errors.New("The source file changed before the entry could be removed. The destination change was rolled back; reload and try again.")
 		}
 		return pageData{}, errors.New("The transfer could not be completed; the destination change was rolled back.")
@@ -167,13 +166,13 @@ func entryValueWithoutConstraints(value cue.Value) (cue.Value, string, error) {
 	return decoded, intermediate, nil
 }
 
-func entryMovePatch(source []byte, from, to int) (patch.Patch, error) {
+func entryMovePatch(source []byte, from, to int) (cuebook.Patch, error) {
 	if from == to {
 		return nil, nil
 	}
 
 	current := append([]byte(nil), source...)
-	steps := make([]patch.Patch, 0, max(from-to, to-from))
+	steps := make([]cuebook.Patch, 0, max(from-to, to-from))
 	direction := 1
 	if from > to {
 		direction = -1
@@ -183,7 +182,7 @@ func entryMovePatch(source []byte, from, to int) (patch.Patch, error) {
 		compiled := cuecontext.New().CompileBytes(current)
 		earlier := compiled.LookupPath(cue.MakePath(cue.Index(index)))
 		later := compiled.LookupPath(cue.MakePath(cue.Index(index + direction)))
-		change, err := patch.SwapEntries(current, earlier, later)
+		change, err := cuebook.SwapEntries(current, earlier, later)
 		if err != nil {
 			return nil, err
 		}
@@ -200,7 +199,7 @@ func entryMovePatch(source []byte, from, to int) (patch.Patch, error) {
 }
 
 type swapSequencePatch struct {
-	steps []patch.Patch
+	steps []cuebook.Patch
 }
 
 func (p swapSequencePatch) ApplyToCueSource(source []byte) ([]byte, error) {
@@ -221,8 +220,8 @@ func (p swapSequencePatch) Difference() cuebook.ByteAnchor {
 	return p.steps[len(p.steps)-1].Difference()
 }
 
-func (p swapSequencePatch) Invert() patch.Patch {
-	inverse := make([]patch.Patch, 0, len(p.steps))
+func (p swapSequencePatch) Invert() cuebook.Patch {
+	inverse := make([]cuebook.Patch, 0, len(p.steps))
 	for i := len(p.steps) - 1; i >= 0; i-- {
 		inverse = append(inverse, p.steps[i].Invert())
 	}
