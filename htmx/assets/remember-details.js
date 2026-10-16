@@ -18,6 +18,7 @@
         return;
       }
 
+      this.summary.classList.add("tag");
       this.initialized = true;
       this.setAttribute("role", "group");
       this.summary.setAttribute("role", "button");

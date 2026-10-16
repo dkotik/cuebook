@@ -304,9 +304,9 @@ file-tree-node {
   min-width: 0;
 }
 
-.document-title-row .breadcrumb {
+.breadcrumb {
   min-width: 0;
-  margin: 0;
+  margin: 0 0 1rem 0;
   white-space: normal;
 }
 
@@ -314,12 +314,12 @@ file-tree-node {
   flex-wrap: wrap;
 }
 
-.document-title-row .breadcrumb li > a {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  padding: 0 0.75em;
+.document-title-row .breadcrumb li {
+  /*display: flex;*/
+  /*min-width: 0;*/
+  /*align-items: center;*/
+  /*justify-content: center;*/
+  /*padding: 0 0.75em;*/
   overflow-wrap: anywhere;
 }
 
@@ -333,7 +333,6 @@ file-tree-node {
 
 .file-description {
   overflow-wrap: anywhere;
-  white-space: pre-line;
 }
 
 .grid.entries-grid {
@@ -594,8 +593,7 @@ button {
 
 remember-details {
   display: block;
-  margin-top: 0.75rem;
-  border-top: 1px solid GrayText;
+  margin-top: 0.75rem 0.75rem 0rem 0.75rem;
 }
 
 remember-details > summary {
@@ -606,6 +604,7 @@ remember-details > summary {
   cursor: pointer;
   font-weight: 650;
   list-style: none;
+  margin: 0.6rem 0 0.9rem 0;
 }
 
 remember-details > summary::before {
@@ -628,7 +627,9 @@ remember-details > summary:focus-visible {
 }
 
 remember-details > [data-details-content] {
-  padding-bottom: 0.5rem;
+  border-left: 1px dotted var(--entry-card-border-color);
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
 }
 
 remember-details > [data-details-content][hidden] {

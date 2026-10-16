@@ -206,32 +206,35 @@ func TestFileFrontmatterView(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		fileName       string
-		source         string
-		wantBreadcrumb string
-		wantVisible    string
-		wantCollapsed  string
-		wantComponent  bool
+		name              string
+		fileName          string
+		source            string
+		wantBreadcrumb    string
+		wantMetadataTitle string
+		wantVisible       string
+		wantCollapsed     string
+		wantComponent     bool
 	}{
 		{
-			name:           "frontmatter details after thematic break are collapsible",
-			fileName:       "described.cue",
-			source:         "// Document title\n//\n// Description with **markup**.\n//\n// ---\n// Additional details.\n[{Name: \"entry\"}]\n",
-			wantBreadcrumb: "described",
-			wantVisible:    "Description with <strong>markup</strong>.",
-			wantCollapsed:  "Additional details.",
-			wantComponent:  true,
+			name:              "frontmatter details after thematic break are collapsible",
+			fileName:          "described.cue",
+			source:            "// Document title\n//\n// Description with **markup**.\n//\n// ---\n// Additional details.\n[{Name: \"entry\"}]\n",
+			wantBreadcrumb:    "described",
+			wantMetadataTitle: "Document title",
+			wantVisible:       "Description with <strong>markup</strong>.",
+			wantCollapsed:     "Additional details.",
+			wantComponent:     true,
 		},
 		{
-			name:           "description without thematic break remains visible",
-			fileName:       "plain-description.cue",
-			source:         "// Plain title\n//\n// Plain description.\n[{Name: \"entry\"}]\n",
-			wantBreadcrumb: "plain-description",
-			wantVisible:    "Plain description.",
+			name:              "description without thematic break remains visible",
+			fileName:          "plain-description.cue",
+			source:            "// Plain title\n//\n// Plain description.\n[{Name: \"entry\"}]\n",
+			wantBreadcrumb:    "plain-description",
+			wantMetadataTitle: "Plain title",
+			wantVisible:       "Plain description.",
 		},
 		{
-			name:           "filename fallback when title is absent",
+			name:           "no metadata title leaves only the basename breadcrumb",
 			fileName:       "plain.cue",
 			source:         `[{Name: "entry"}]`,
 			wantBreadcrumb: "plain",
@@ -259,11 +262,22 @@ func TestFileFrontmatterView(t *testing.T) {
 			for _, want := range []string{
 				`<nav class="breadcrumb" aria-label="File location">`,
 				`href="/" hx-get="/" hx-target="#workspace"`,
-				`title="` + test.fileName + `">` + test.wantBreadcrumb + `</h1>`,
+				`title="` + test.fileName + `">` + test.wantBreadcrumb + `</a>`,
 			} {
 				if !strings.Contains(body, want) {
 					t.Errorf("file breadcrumb or title is missing %q: %s", want, body)
 				}
+			}
+			metadataTitleHeading := `<h1 class="document-title title is-4">` + test.wantMetadataTitle + `</h1>`
+			if test.wantMetadataTitle != "" {
+				metadataTitlePosition := strings.Index(body, metadataTitleHeading)
+				if metadataTitlePosition < 0 {
+					t.Errorf("metadata title heading %q is missing: %s", test.wantMetadataTitle, body)
+				} else if breadcrumbPosition := strings.Index(body, `<nav class="breadcrumb" aria-label="File location">`); breadcrumbPosition < 0 || metadataTitlePosition >= breadcrumbPosition {
+					t.Errorf("metadata title should appear above the breadcrumb: %s", body)
+				}
+			} else if strings.Contains(body, `<h1 class="document-title title is-4">`) {
+				t.Errorf("title heading should be absent without metadata: %s", body)
 			}
 			if test.wantVisible != "" && !strings.Contains(body, test.wantVisible) {
 				t.Errorf("visible description %q not shown: %s", test.wantVisible, body)

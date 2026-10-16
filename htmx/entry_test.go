@@ -52,7 +52,7 @@ func TestAddEntryFormRendersFieldDocumentationAsHelp(t *testing.T) {
 	}
 }
 
-func TestEntryTitleLinksBackToFile(t *testing.T) {
+func TestEntryViewHidesFileMetadataAndShowsFileBreadcrumb(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name      string
@@ -64,6 +64,7 @@ func TestEntryTitleLinksBackToFile(t *testing.T) {
 	}{
 		{name: "browser navigation", file: "people.cue"},
 		{name: "HTMX navigation", file: "people.cue", htmx: true},
+		{name: "entry view hides file metadata", file: "people.cue", fileTitle: "Document title"},
 		{name: "mounted nested file with special characters", file: "nested/people & friends.cue", fileTitle: "Friends", prefix: "/catalog", htmx: true},
 		{name: "read only entry", file: "people.cue", readOnly: true},
 	}
@@ -72,7 +73,7 @@ func TestEntryTitleLinksBackToFile(t *testing.T) {
 			t.Parallel()
 			sourceText := `[{Name: "Target entry"}]`
 			if tt.fileTitle != "" {
-				sourceText = "// " + tt.fileTitle + "\n//\n" + sourceText
+				sourceText = "// " + tt.fileTitle + "\n//\n// Metadata description.\n" + sourceText
 			}
 			source := []byte(sourceText)
 			book, err := cuebook.New(source)
@@ -138,10 +139,8 @@ func TestEntryTitleLinksBackToFile(t *testing.T) {
 				`<nav class="breadcrumb" aria-label="File location">`,
 				`<li class="is-active" aria-current="page">`,
 				`href="` + breadcrumbURL + `"`, `hx-get="` + breadcrumbURL + `"`,
-				`<h1 class="document-title title is-4" title="` + tt.file + `">` + wantLabel + `</h1>`,
-				`class="button is-small"`, `href="` + wantURL + `"`,
-				`hx-get="` + wantURL + `"`, `hx-target="#workspace"`, `hx-swap="outerHTML"`,
-				`hx-push-url="true"`, `aria-label="Return to file `, `title="Return to file `, `>↑</a>`,
+				`title="` + tt.file + `">` + wantLabel + `</a>`,
+				`hx-target="#workspace"`, `hx-swap="outerHTML"`,
 			} {
 				if !strings.Contains(heading, want) {
 					t.Errorf("entry title row missing %q: %s", want, heading)
@@ -155,12 +154,24 @@ func TestEntryTitleLinksBackToFile(t *testing.T) {
 					t.Errorf("file breadcrumb does not link directory %q to its folder view %q: %s", directory, wantDirectoryURL, heading)
 				}
 			}
+			if strings.Contains(body, `<h1 class="document-title title is-4">`) {
+				t.Errorf("entry view unexpectedly displays file metadata title: %s", body)
+			}
+			if strings.Contains(body, "Metadata description.") {
+				t.Errorf("entry view unexpectedly displays file metadata description: %s", body)
+			}
 			list := get(wantURL)
+			if tt.fileTitle != "" {
+				metadataHeading := `<h1 class="document-title title is-4">` + tt.fileTitle + `</h1>`
+				if !strings.Contains(list, metadataHeading) || !strings.Contains(list, "Metadata description.") {
+					t.Errorf("file list should display its metadata title and description: %s", list)
+				}
+			}
 			if strings.Contains(list, `aria-label="Return to file `) {
 				t.Error("file list unexpectedly includes a return-to-file button")
 			}
 			if !strings.Contains(list, "Target entry") {
-				t.Error("return link did not render the source file's entries")
+				t.Error("file breadcrumb did not render the source file's entries")
 			}
 		})
 	}

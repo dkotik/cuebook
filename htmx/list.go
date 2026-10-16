@@ -147,9 +147,8 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 		return data, http.StatusOK
 	}
 	data.Selected = fileName
-	data.FileTitle = fileName
 	raw, document, status, message := a.readDocument(fileName, fileNames)
-	setFileFrontmatter(&data, fileName, raw)
+	setFileFrontmatter(&data, raw)
 	data.FileBreadcrumb = makeFileBreadcrumb(fileName)
 	if status != http.StatusOK {
 		data.DocumentError = message
@@ -322,8 +321,7 @@ func makeFileBreadcrumb(fileName string) []fileBreadcrumbItem {
 	return breadcrumb
 }
 
-func setFileFrontmatter(data *pageData, fileName string, source []byte) {
-	data.FileTitle = fileName
+func setFileFrontmatter(data *pageData, source []byte) {
 	descriptionParser := parser.New(parser.WithASTTransformers(util.Prioritized(
 		metadata.NewDetailsTransformer(fileFrontmatterDetailsHead, fileFrontmatterDetailsTail), 0,
 	)))
