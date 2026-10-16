@@ -38,6 +38,7 @@ type pageData struct {
 	ArchiveOpen       bool
 	Selected          string
 	FileTitle         string
+	FileBreadcrumb    []fileBreadcrumbItem
 	FileDescription   template.HTML
 	Entries           []entryView
 	SelectedEntry     *entryView
@@ -52,6 +53,11 @@ type pageData struct {
 	ReadOnly      bool
 	Error         string
 	DocumentError string
+}
+
+type fileBreadcrumbItem struct {
+	Label   string
+	Current bool
 }
 
 type entryView struct {
@@ -261,6 +267,19 @@ const (
 	fileFrontmatterDetailsHead = `<remember-details data-storage-key="view-file-frontmatter"><summary>More...</summary><div id="file-frontmatter-description" class="file-description" data-details-content>`
 	fileFrontmatterDetailsTail = `</div></remember-details>`
 )
+
+func makeFileBreadcrumb(fileName, fileTitle string) []fileBreadcrumbItem {
+	parts := strings.Split(fileName, "/")
+	breadcrumb := make([]fileBreadcrumbItem, 0, len(parts))
+	for index, part := range parts {
+		item := fileBreadcrumbItem{Label: part, Current: index == len(parts)-1}
+		if item.Current && strings.TrimSpace(fileTitle) != "" {
+			item.Label = fileTitle
+		}
+		breadcrumb = append(breadcrumb, item)
+	}
+	return breadcrumb
+}
 
 func setFileFrontmatter(data *pageData, fileName string, source []byte) {
 	data.FileTitle = fileName

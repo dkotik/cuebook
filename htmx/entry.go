@@ -119,6 +119,7 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 	page := a.basePage(fileNames, filePath, "")
 	page.Selected = filePath
 	setFileFrontmatter(&page, filePath, raw)
+	page.FileBreadcrumb = makeFileBreadcrumb(filePath, page.FileTitle)
 	page.SelectedEntry = selected
 	if !page.ReadOnly {
 		page.AddFields = makeAddFieldViews(document)

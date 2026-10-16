@@ -45,7 +45,22 @@
 </main>
 
 {{define "document-title.html"}}
-  <h1 class="document-title title is-4">{{.FileTitle}}{{if .SelectedEntry}}
-    <a class="button is-small is-pulled-right" href="{{route "/"}}?file={{urlquery .Selected}}" hx-get="{{route "/"}}?file={{urlquery .Selected}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" aria-label="Return to file {{.Selected}}" title="Return to file {{.Selected}}">↑</a>
-  {{end}}</h1>
+  {{if .SelectedEntry}}
+  <div class="document-title-row">
+    <nav class="breadcrumb" aria-label="File location">
+      <ul>
+        {{range .FileBreadcrumb}}
+          {{if .Current}}
+          <li class="is-active" aria-current="page"><h1 class="document-title title is-4" title="{{$.Selected}}">{{.Label}}</h1></li>
+          {{else}}
+          <li><span>{{.Label}}</span></li>
+          {{end}}
+        {{end}}
+      </ul>
+    </nav>
+    <a class="button is-small" href="{{route "/"}}?file={{urlquery .Selected}}" hx-get="{{route "/"}}?file={{urlquery .Selected}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" aria-label="Return to file {{.Selected}}" title="Return to file {{.Selected}}">↑</a>
+  </div>
+  {{else}}
+  <h1 class="document-title title is-4">{{.FileTitle}}</h1>
+  {{end}}
 {{end}}

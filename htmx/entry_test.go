@@ -55,21 +55,26 @@ func TestAddEntryFormRendersFieldDocumentationAsHelp(t *testing.T) {
 func TestEntryTitleLinksBackToFile(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name     string
-		file     string
-		prefix   string
-		htmx     bool
-		readOnly bool
+		name      string
+		file      string
+		fileTitle string
+		prefix    string
+		htmx      bool
+		readOnly  bool
 	}{
 		{name: "browser navigation", file: "people.cue"},
 		{name: "HTMX navigation", file: "people.cue", htmx: true},
-		{name: "mounted nested file with special characters", file: "nested/people & friends.cue", prefix: "/catalog", htmx: true},
+		{name: "mounted nested file with special characters", file: "nested/people & friends.cue", fileTitle: "Friends", prefix: "/catalog", htmx: true},
 		{name: "read only entry", file: "people.cue", readOnly: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			source := []byte(`[{Name: "Target entry"}]`)
+			sourceText := `[{Name: "Target entry"}]`
+			if tt.fileTitle != "" {
+				sourceText = "// " + tt.fileTitle + "\n//\n" + sourceText
+			}
+			source := []byte(sourceText)
 			book, err := cuebook.New(source)
 			if err != nil {
 				t.Fatal(err)
@@ -106,23 +111,38 @@ func TestEntryTitleLinksBackToFile(t *testing.T) {
 				return response.Body.String()
 			}
 			body := get(tt.prefix + entryURL(tt.file, span))
-			start := strings.Index(body, `<h1 class="document-title title is-4">`)
+			start := strings.Index(body, `<div class="document-title-row">`)
 			if start < 0 {
-				t.Fatalf("document title not found: %s", body)
+				t.Fatalf("document title row not found: %s", body)
 			}
-			end := strings.Index(body[start:], "</h1>")
+			end := strings.Index(body[start:], `</div>`)
 			if end < 0 {
-				t.Fatalf("document title is not closed: %s", body)
+				t.Fatalf("document title row is not closed: %s", body)
 			}
 			heading := html.UnescapeString(body[start : start+end])
+			wantLabel := tt.fileTitle
+			if wantLabel == "" {
+				wantLabel = tt.file
+				if slash := strings.LastIndex(wantLabel, "/"); slash >= 0 {
+					wantLabel = wantLabel[slash+1:]
+				}
+			}
 			wantURL := tt.prefix + fileURL(tt.file)
 			for _, want := range []string{
-				`class="button is-small is-pulled-right"`, `href="` + wantURL + `"`,
+				`<nav class="breadcrumb" aria-label="File location">`,
+				`<li class="is-active" aria-current="page"><h1 class="document-title title is-4" title="` + tt.file + `">` + wantLabel + `</h1></li>`,
+				`class="button is-small"`, `href="` + wantURL + `"`,
 				`hx-get="` + wantURL + `"`, `hx-target="#workspace"`, `hx-swap="outerHTML"`,
 				`hx-push-url="true"`, `aria-label="Return to file `, `title="Return to file `, `>↑</a>`,
 			} {
 				if !strings.Contains(heading, want) {
-					t.Errorf("entry title missing %q: %s", want, heading)
+					t.Errorf("entry title row missing %q: %s", want, heading)
+				}
+			}
+			pathParts := strings.Split(tt.file, "/")
+			for _, directory := range pathParts[:len(pathParts)-1] {
+				if !strings.Contains(heading, `<li><span>`+directory+`</span></li>`) {
+					t.Errorf("file breadcrumb is missing directory %q: %s", directory, heading)
 				}
 			}
 			list := get(wantURL)
