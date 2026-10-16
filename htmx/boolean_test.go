@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -26,12 +27,15 @@ func TestBooleanFormRendering(t *testing.T) {
 	}{
 		{name: "required add starts false", declaration: "Enabled: bool", existing: "true", selected: "false"},
 		{name: "required add ignores true default", declaration: "Enabled: *true | bool", existing: "true", selected: "false"},
-		{name: "optional add starts unset", declaration: "Enabled?: bool", optional: true},
-		{name: "optional add ignores true default", declaration: "Enabled?: *true | bool", optional: true},
+		{name: "optional add starts unset", declaration: "Enabled?: bool", optional: true, selected: "not_set"},
+		{name: "optional populated add starts unset", declaration: "Enabled?: bool", existing: "true", optional: true, selected: "not_set"},
+		{name: "optional add ignores true default", declaration: "Enabled?: *true | bool", optional: true, selected: "not_set"},
 		{name: "edit selects false", declaration: "Enabled: bool", existing: "false", edit: true, selected: "false"},
 		{name: "edit selects true", declaration: "Enabled: bool", existing: "true", edit: true, selected: "true"},
-		{name: "optional edit selects false", declaration: "Enabled?: bool", existing: "false", edit: true, selected: "false"},
-		{name: "optional edit selects true", declaration: "Enabled?: bool", existing: "true", edit: true, selected: "true"},
+		{name: "optional edit selects false", declaration: "Enabled?: bool", existing: "false", edit: true, optional: true, selected: "false"},
+		{name: "optional edit selects true", declaration: "Enabled?: bool", existing: "true", edit: true, optional: true, selected: "true"},
+		{name: "optional edit stays unset", declaration: "Enabled?: bool", edit: true, optional: true, selected: "not_set"},
+		{name: "optional edit ignores true default", declaration: "Enabled?: *true | bool", edit: true, optional: true, selected: "not_set"},
 		{name: "secret required add stays password", declaration: "Enabled: bool @cuebook(argon2id)", existing: "true", secret: true},
 		{name: "secret optional add stays password", declaration: "Enabled?: bool @cuebook(argon2id)", optional: true, secret: true},
 		{name: "secret false edit stays password", declaration: "Enabled: bool @cuebook(argon2id)", existing: "false", edit: true, secret: true},
@@ -95,51 +99,38 @@ func TestBooleanFormRendering(t *testing.T) {
 				return
 			}
 
-			groups := regexp.MustCompile(`(?s)<div class="buttons has-addons boolean-toggle" role="radiogroup"[^>]*>(.*?)</div>`).FindAllStringSubmatch(form, -1)
-			if len(groups) != 1 {
-				t.Fatalf("boolean radio group count = %d, want 1: %s", len(groups), form)
+			components := regexp.MustCompile(`(?s)<boolean-toggle\b[^>]*>.*?</boolean-toggle>`).FindAllString(form, -1)
+			if len(components) != 1 {
+				t.Fatalf("boolean component count = %d, want 1: %s", len(components), form)
 			}
-			group := groups[0][1]
-			labels := regexp.MustCompile(`(?s)<label class="button(?: [^"]*)?"[^>]*>.*?</label>`).FindAllString(group, -1)
-			choices := []string{"false", "true"}
-			if tt.optional {
-				choices = append([]string{""}, choices...)
-				if !strings.Contains(group, "Not set") {
-					t.Errorf("optional boolean has no Not set label: %s", group)
-				}
-			} else if strings.Contains(group, `value=""`) || strings.Contains(group, "Not set") {
-				t.Errorf("required boolean unexpectedly offers an unset choice: %s", group)
+			component := components[0]
+			if strings.Count(component, "<button ") != 1 || strings.Count(component, "<input ") != 1 {
+				t.Errorf("want one button and one hidden input per component: %s", component)
 			}
-			if len(labels) != len(choices) || strings.Count(group, `type="radio"`) != len(choices) {
-				t.Fatalf("want %d button labels containing radios, got %d labels: %s", len(choices), len(labels), group)
+			class, pressed, symbol := "button boolean-toggle", tt.selected, "✖"
+			switch tt.selected {
+			case "true":
+				class, symbol = class+" is-link", "✔"
+			case "not_set":
+				pressed, symbol = "mixed", "☐"
 			}
-			if got := strings.Count(group, " checked"); got != 1 {
-				t.Errorf("checked radio count = %d, want 1: %s", got, group)
+			toggleTag := `<boolean-toggle data-optional="` + strconv.FormatBool(tt.optional) + `"`
+			if !tt.edit {
+				toggleTag += ` data-allow-unset="true"`
 			}
-			for _, choice := range choices {
-				want := `<input class="is-sr-only" type="radio" name="` + inputName + `" value="` + choice + `"`
-				if choice == tt.selected {
-					want += " checked"
-				}
-				if !tt.optional {
-					want += " required"
-				}
-				want += ">"
-				found := false
-				for _, label := range labels {
-					if strings.Contains(label, want) {
-						found = true
-						if choice == "" && !strings.Contains(label, "Not set") {
-							t.Errorf("unset radio is not inside its Not set label: %s", label)
-						}
-					}
-				}
-				if !found {
-					t.Errorf("no button label contains %q: %s", want, group)
+			for _, want := range []string{
+				toggleTag + `>`,
+				`<input type="hidden" name="` + inputName + `" value="` + tt.selected + `">`,
+				`<button class="` + class + `" type="button" aria-label="Enabled" aria-pressed="` + pressed + `" title="Enabled: ` + tt.selected + `">` + symbol + `</button>`,
+			} {
+				if !strings.Contains(component, want) {
+					t.Errorf("boolean component missing %q: %s", want, component)
 				}
 			}
-			if strings.Contains(form, `<select name="`+inputName+`"`) || strings.Contains(form, `type="text" name="`+inputName+`"`) {
-				t.Errorf("boolean still renders a select or text input: %s", form)
+			for _, unwanted := range []string{`type="radio"`, `<select`, `type="text" name="` + inputName + `"`} {
+				if strings.Contains(form, unwanted) {
+					t.Errorf("boolean form unexpectedly contains %q: %s", unwanted, form)
+				}
 			}
 		})
 	}
@@ -197,8 +188,9 @@ func TestBooleanAddSubmission(t *testing.T) {
 		{name: "required true saves", declaration: "Enabled: bool", value: "true", want: true},
 		{name: "optional false saves", declaration: "Enabled?: bool", value: "false"},
 		{name: "optional true saves", declaration: "Enabled?: bool", value: "true", want: true},
-		{name: "optional unset is omitted", declaration: "Enabled?: bool", unset: true},
-		{name: "optional unset does not apply true default", declaration: "Enabled?: *true | bool", unset: true},
+		{name: "optional unset is omitted", declaration: "Enabled?: bool", value: "not_set", unset: true},
+		{name: "optional unset does not apply true default", declaration: "Enabled?: *true | bool", value: "not_set", unset: true},
+		{name: "legacy optional empty input is omitted", declaration: "Enabled?: bool", unset: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

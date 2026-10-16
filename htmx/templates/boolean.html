@@ -1,0 +1,24 @@
+{{define "boolean-symbol.html" -}}
+  {{- if eq .Value "true" -}}✔
+  {{- else if eq .Value "false" -}}✖
+  {{- else -}}☐
+  {{- end -}}
+{{- end}}
+
+{{define "boolean-pressed.html" -}}
+  {{- if eq .Value "true" -}}true
+  {{- else if eq .Value "false" -}}false
+  {{- else -}}mixed
+  {{- end -}}
+{{- end}}
+
+{{define "boolean-next.html" -}}
+  {{- if eq .Value "true" -}}false
+  {{- else if and (eq .Value "false") .Optional -}}not_set
+  {{- else -}}true
+  {{- end -}}
+{{- end}}
+
+{{define "boolean-button.html"}}
+  <button class="button boolean-toggle{{if eq .Value "true"}} is-link{{end}}" type="button" aria-label="{{.Name}}" aria-pressed="{{template "boolean-pressed.html" .}}" title="{{.Name}}: {{.Value}}">{{template "boolean-symbol.html" .}}</button>
+{{end}}

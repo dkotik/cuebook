@@ -44,8 +44,9 @@ func makeAddFieldViews(document cuebook.Book) []addFieldView {
 			if !view.Optional {
 				view.Value = "0"
 			}
-		case kind&cue.BoolKind != 0:
+		case kind == cue.BoolKind:
 			view.Boolean = true
+			view.Value = "not_set"
 			if !view.Optional {
 				view.Value = "false"
 			}
@@ -78,10 +79,11 @@ func splitAddFieldViews(fields []addFieldView) (required, optional []addFieldVie
 
 func entryFieldDefinitions(document cuebook.Book) []entryFieldDefinition {
 	var result []entryFieldDefinition
+	entry := document.Value.LookupPath(cue.MakePath(cue.Index(0)))
 	for selector, value := range cuebook.EachFieldDefinition(document.Value) {
 		result = append(result, entryFieldDefinition{
 			Field:    fieldmodel.NewField(selector.Unquoted(), value),
-			Optional: selector.ConstraintType() == cue.OptionalConstraint,
+			Optional: selector.ConstraintType() == cue.OptionalConstraint || entryFieldOptional(entry, selector.Unquoted()),
 		})
 	}
 	return result

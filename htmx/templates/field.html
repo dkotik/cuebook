@@ -9,10 +9,7 @@
     {{else if and .EntryView .Boolean (not .Secret)}}
       <form class="boolean-field-form" action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-target="#workspace" hx-swap="outerHTML">
         {{template "field-form-controls.html" .}}
-        <div class="buttons has-addons boolean-toggle" role="group" aria-label="{{.Name}}">
-          <button class="button{{if ne .Value "true"}} is-link is-selected{{end}}" type="submit" name="value" value="false" aria-pressed="{{if eq .Value "true"}}false{{else}}true{{end}}" aria-label="Set {{.Name}} to false">✖</button>
-          <button class="button{{if eq .Value "true"}} is-link is-selected{{end}}" type="submit" name="value" value="true" aria-pressed="{{if eq .Value "true"}}true{{else}}false{{end}}" aria-label="Set {{.Name}} to true">✔</button>
-        </div>
+        <button class="button boolean-toggle{{if eq .Value "true"}} is-link{{end}}" type="submit" name="value" value="{{template "boolean-next.html" .}}" aria-pressed="{{template "boolean-pressed.html" .}}" aria-label="{{.Name}}" title="{{.Name}}: {{.Value}}; set to {{template "boolean-next.html" .}}">{{template "boolean-symbol.html" .}}</button>
       </form>
     {{else}}
       <button class="field-value-edit" type="button" aria-label="Edit {{.Name}} value" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger hx-get="{{route .EditURL}}" hx-target="#field-edit-modal" hx-swap="innerHTML">
@@ -32,8 +29,8 @@
 {{end}}
 
 {{define "field-output.html" -}}
-  {{- if and .Boolean (not .EntryView) (not .Secret) -}}
-    {{if eq .Value "true"}}✔{{else}}✖{{end}} {{.Name}}
+  {{- if and .Boolean (not .Secret) -}}
+    {{template "boolean-symbol.html" .}}{{if not .EntryView}} {{.Name}}{{end}}
   {{- else if .Empty -}}...
   {{- else if .Secret -}}••••••••
   {{- else -}}{{.Value}}

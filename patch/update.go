@@ -115,6 +115,41 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	return ReplaceStructListEntry(source, entry, content)
 }
 
+// RemoveFieldValue omits a field from the entry's concrete values without
+// materializing other optional fields or changing the surrounding document.
+func RemoveFieldValue(source []byte, entry cue.Value, fieldName string) (Patch, error) {
+	fields, ok := entry.Syntax(cue.Concrete(true)).(*ast.StructLit)
+	if !ok {
+		return nil, ErrEntryNotStruct
+	}
+	kept := fields.Elts[:0]
+	found := false
+	for _, element := range fields.Elts {
+		if field, ok := element.(*ast.Field); ok {
+			label, _, err := ast.LabelName(field.Label)
+			if err == nil && label == fieldName {
+				found = true
+				continue
+			}
+		}
+		kept = append(kept, element)
+	}
+	if !found {
+		return nothingPatch{}, nil
+	}
+	fields.Elts = kept
+	content, err := format.Node(
+		fields,
+		format.Simplify(),
+		format.IndentPrefix(1),
+		format.UseSpaces(4),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return ReplaceStructListEntry(source, entry, content)
+}
+
 func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) (_ Patch, err error) {
 	tree := entry.Syntax(cue.Concrete(true)) // TODO: concrete OPTION is CRITICAL
 	fields, ok := tree.(*ast.StructLit)

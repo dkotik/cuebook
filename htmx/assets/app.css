@@ -394,11 +394,6 @@ file-tree-node {
   align-items: start;
 }
 
-.card-content.entry-content > .field.field-item,
-.card-content.entry-content > .details > .field.field-item {
-  padding: 0.35rem 0;
-}
-
 .card-content.entry-content > .details > summary {
   grid-column: 1 / -1;
 }
@@ -416,14 +411,10 @@ file-tree-node {
   grid-column: 1 / -1;
 }
 
-.field {
-  padding: 0.5rem 0;
-}
-
 .field-item__value {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  /*gap: 0.5rem;*/
 }
 
 .field-item__value > output,
@@ -501,26 +492,13 @@ file-tree-node {
   display: block;
 }
 
-.boolean-toggle > label.button {
+boolean-toggle {
   display: inline-flex;
 }
 
-.boolean-toggle > .button:has(input:checked) {
-  --bulma-button-h: var(--bulma-link-h);
-  --bulma-button-s: var(--bulma-link-s);
-  --bulma-button-l: var(--bulma-link-l);
-  --bulma-button-background-l: var(--bulma-link-l);
-  --bulma-button-border-l: var(--bulma-link-l);
-  --bulma-button-border-width: 0px;
-  --bulma-button-color-l: var(--bulma-link-invert-l);
-  --bulma-button-outer-shadow-a: 0;
-  z-index: 1;
-}
-
-.boolean-toggle > .button:has(input:focus-visible) {
+.boolean-toggle:focus-visible {
   outline: 2px solid var(--bulma-link);
   outline-offset: 2px;
-  z-index: 2;
 }
 
 .field-name {

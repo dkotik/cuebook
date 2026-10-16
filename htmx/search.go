@@ -26,6 +26,39 @@ type searchResultView struct {
 	Description []string
 }
 
+func searchEntryDescription(entry cuebook.Entry) []string {
+	description := entry.GetDescription()
+	for i := range description {
+		field, err := entry.GetField(i)
+		if err != nil {
+			continue
+		}
+		view := makeFieldView(field, "", 0, true, false)
+		if !view.Boolean {
+			continue
+		}
+		if view.Secret {
+			if !view.Empty {
+				description[i] = "••••••••"
+			}
+			continue
+		}
+		var symbol string
+		switch view.Value {
+		case "true":
+			symbol = "✔"
+		case "false":
+			symbol = "✖"
+		case "not_set":
+			symbol = "☐"
+		default:
+			continue
+		}
+		description[i] = symbol + "\u00a0" + view.Name
+	}
+	return description
+}
+
 type searchEntryPosition struct {
 	Index int
 	Count int
@@ -117,7 +150,7 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 			EntryURL:    entryURL(result.Path, result.ByteRange),
 			Title:       title,
 			Path:        result.Path,
-			Description: result.Entry.GetDescription(),
+			Description: searchEntryDescription(result.Entry),
 		}
 		if a.committer != nil {
 			positions, exists := positionsByFile[result.Path]

@@ -291,6 +291,71 @@ func TestSearchResultsExposeDraggableSourceEntries(t *testing.T) {
 	}
 }
 
+func TestSearchResultsBooleanDescriptions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		declaration string
+		existing    string
+		want        string
+	}{
+		{name: "true", declaration: "Enabled: bool", existing: "Enabled: true", want: "✔\u00a0Enabled"},
+		{name: "false", declaration: "Enabled: bool", existing: "Enabled: false", want: "✖\u00a0Enabled"},
+		{name: "not set", declaration: "Enabled?: bool", want: "☐\u00a0Enabled"},
+		{name: "optional true default stays not set", declaration: "Enabled?: *true | bool", want: "☐\u00a0Enabled"},
+		{name: "optional false default stays not set", declaration: "Enabled?: *false | bool", want: "☐\u00a0Enabled"},
+		{name: "detail true", declaration: "Enabled: bool @cuebook(detail)", existing: "Enabled: true", want: "✔\u00a0Enabled"},
+		{name: "detail false", declaration: "Enabled: bool @cuebook(detail)", existing: "Enabled: false", want: "✖\u00a0Enabled"},
+		{name: "detail not set", declaration: "Enabled?: bool @cuebook(detail)", want: "☐\u00a0Enabled"},
+		{name: "escaped label", declaration: `"<Enabled & ready>": bool`, existing: `"<Enabled & ready>": true`, want: "✔\u00a0<Enabled & ready>"},
+		{name: "secret true masked", declaration: "Enabled: bool @cuebook(argon2id)", existing: "Enabled: true", want: "••••••••"},
+		{name: "secret false masked", declaration: "Enabled: bool @cuebook(argon2id)", existing: "Enabled: false", want: "••••••••"},
+		{name: "secret not set", declaration: "Enabled?: bool @cuebook(argon2id)", want: "..."},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source := []byte(`#entry: {
+				Name: string @cuebook(title)
+				Text: string
+				Count: int
+				Blank: string
+				` + test.declaration + `
+			}
+			[...#entry] & [{Name: "Needle entry", Text: "plain <text> & more", Count: 42, Blank: "", ` + test.existing + `}]`)
+			handler, err := New(fstest.MapFS{
+				"booleans.cue": &fstest.MapFile{Data: source},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response := waitForSearchResponse(t, handler, "needle")
+			if response.Code != http.StatusOK {
+				t.Fatalf("search status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+			body := response.Body.String()
+			const descriptionStart = `<div class="search-result-description">`
+			start := strings.Index(body, descriptionStart)
+			if start < 0 {
+				t.Fatalf("search result description is missing: %s", body)
+			}
+			description := body[start+len(descriptionStart):]
+			end := strings.Index(description, "</div>")
+			if end < 0 {
+				t.Fatalf("search result description is unclosed: %s", body)
+			}
+			got := strings.TrimSpace(description[:end])
+			want := `<p>Needle entry</p><p>plain &lt;text&gt; &amp; more</p><p>42</p><p>...</p><p>` + html.EscapeString(test.want) + `</p>`
+			if got != want {
+				t.Errorf("search result description = %q, want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestSearchResultsLinkToMatchingEntry(t *testing.T) {
 	t.Parallel()
 

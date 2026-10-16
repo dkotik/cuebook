@@ -22,16 +22,26 @@ func TestInlineBooleanRendering(t *testing.T) {
 		existing    string
 		prefix      string
 		selected    string
+		optional    bool
 		readOnly    bool
 		list        bool
 		secret      bool
 	}{
 		{name: "stored false", declaration: "Enabled: bool", existing: "false", selected: "false"},
 		{name: "stored true", declaration: "Enabled: bool", existing: "true", selected: "true"},
-		{name: "abstract optional bool defaults false", declaration: "Enabled?: bool", selected: "false"},
-		{name: "unset optional detail defaults false", declaration: "Enabled?: bool @cuebook(detail)", selected: "false"},
+		{name: "optional false", declaration: "Enabled?: bool", existing: "false", selected: "false", optional: true},
+		{name: "optional true", declaration: "Enabled?: bool", existing: "true", selected: "true", optional: true},
+		{name: "optional unset", declaration: "Enabled?: bool", selected: "not_set", optional: true},
+		{name: "unset optional ignores true default", declaration: "Enabled?: *true | bool", selected: "not_set", optional: true},
+		{name: "unset optional detail", declaration: "Enabled?: bool @cuebook(detail)", selected: "not_set", optional: true},
 		{name: "mounted routes", declaration: "Enabled: bool", existing: "true", prefix: "/catalog", selected: "true"},
-		{name: "read only stays output", declaration: "Enabled: bool", existing: "true", readOnly: true},
+		{name: "read only true", declaration: "Enabled: bool", existing: "true", selected: "true", readOnly: true},
+		{name: "read only false", declaration: "Enabled: bool", existing: "false", selected: "false", readOnly: true},
+		{name: "read only unset", declaration: "Enabled?: bool", selected: "not_set", readOnly: true},
+		{name: "read only optional false", declaration: "Enabled?: bool", existing: "false", selected: "false", readOnly: true},
+		{name: "read only optional true", declaration: "Enabled?: bool", existing: "true", selected: "true", readOnly: true},
+		{name: "read only unset ignores true default", declaration: "Enabled?: *true | bool", selected: "not_set", readOnly: true},
+		{name: "read only secret stays masked", declaration: "Enabled: bool @cuebook(argon2id)", existing: "true", readOnly: true, secret: true},
 		{name: "secret stays modal", declaration: "Enabled: bool @cuebook(argon2id)", existing: "true", secret: true},
 		{name: "list stays modal", declaration: "Enabled: bool", existing: "false", list: true},
 	}
@@ -67,12 +77,16 @@ func TestInlineBooleanRendering(t *testing.T) {
 			}
 			article := inlineBooleanArticle(t, response.Body.String())
 			forms := regexp.MustCompile(`(?s)<form class="boolean-field-form"[^>]*>.*?</form>`).FindAllString(article, -1)
-			if tt.selected == "" {
+			if tt.readOnly || tt.list || tt.secret {
 				if len(forms) != 0 || strings.Contains(article, "boolean-toggle") {
 					t.Errorf("unexpected inline boolean controls: %s", article)
 				}
 				if tt.readOnly {
-					if !strings.Contains(article, "<output>true</output>") || strings.Contains(article, "data-field-edit-trigger") {
+					symbol := map[string]string{"true": "✔", "false": "✖", "not_set": "☐"}[tt.selected]
+					if tt.secret {
+						symbol = "••••••••"
+					}
+					if !strings.Contains(article, "<output>"+symbol+"</output>") || strings.Contains(article, "data-field-edit-trigger") {
 						t.Errorf("read-only field must remain static output: %s", article)
 					}
 				} else {
@@ -95,26 +109,13 @@ func TestInlineBooleanRendering(t *testing.T) {
 					`<input type="hidden" name="entry" value="0">`,
 					`<input type="hidden" name="field" value="Enabled">`,
 					`<input type="hidden" name="view" value="entry">`,
-					`<div class="buttons has-addons boolean-toggle" role="group" aria-label="Enabled">`,
 				} {
 					if !strings.Contains(form, want) {
 						t.Errorf("inline form missing %q: %s", want, form)
 					}
 				}
-				if strings.Count(form, "<button ") != 2 || strings.Count(form, "is-link is-selected") != 1 {
-					t.Errorf("want two buttons with exactly one selected: %s", form)
-				}
-				for _, choice := range []string{"false", "true"} {
-					class := "button"
-					if choice == tt.selected {
-						class += " is-link is-selected"
-					}
-					want := `<button class="` + class + `" type="submit" name="value" value="` + choice + `" aria-pressed="` + strconv.FormatBool(choice == tt.selected) + `" aria-label="Set Enabled to ` + choice + `">`
-					if !strings.Contains(form, want) {
-						t.Errorf("inline form missing button %q: %s", want, form)
-					}
-				}
-				for _, unwanted := range []string{`aria-label="Edit Enabled value"`, `aria-label="Edit Enabled"`, `type="radio"`, `value=""`} {
+				assertInlineBooleanToggle(t, form, tt.selected, tt.optional)
+				for _, unwanted := range []string{`aria-label="Edit Enabled value"`, `aria-label="Edit Enabled"`, `type="radio"`, `<select`, `value=""`} {
 					if strings.Contains(article, unwanted) {
 						t.Errorf("inline boolean unexpectedly contains %q: %s", unwanted, article)
 					}
@@ -141,11 +142,14 @@ func TestListBooleanLabels(t *testing.T) {
 		{name: "writable false", declaration: "bool", value: "false", want: "✖\u00a0Enabled"},
 		{name: "read only true", declaration: "bool", value: "true", readOnly: true, want: "✔\u00a0Enabled"},
 		{name: "read only false", declaration: "bool", value: "false", readOnly: true, want: "✖\u00a0Enabled"},
-		{name: "unset optional defaults false", declaration: "bool", want: "✖\u00a0Enabled"},
-		{name: "unset read only defaults false", declaration: "bool", readOnly: true, want: "✖\u00a0Enabled"},
+		{name: "unset optional", declaration: "bool", want: "☐\u00a0Enabled"},
+		{name: "unset read only", declaration: "bool", readOnly: true, want: "☐\u00a0Enabled"},
+		{name: "unset optional ignores true default", declaration: "*true | bool", want: "☐\u00a0Enabled"},
+		{name: "unset read only ignores true default", declaration: "*true | bool", readOnly: true, want: "☐\u00a0Enabled"},
 
 		{name: "label is escaped", declaration: "bool", value: "false", label: "<Enabled & ready>", want: "✖\u00a0&lt;Enabled &amp; ready&gt;"},
 		{name: "secret remains masked", declaration: "bool @cuebook(argon2id)", value: "true", want: "••••••••"},
+		{name: "read only secret remains masked", declaration: "bool @cuebook(argon2id)", value: "false", readOnly: true, want: "••••••••"},
 		{name: "string false is not a boolean", declaration: "string", value: `"false"`, want: "false"},
 	}
 	for _, tt := range tests {
@@ -183,8 +187,15 @@ func TestListBooleanLabels(t *testing.T) {
 			if want := "<output>" + tt.want + "</output>"; !strings.Contains(article, want) {
 				t.Errorf("list does not contain %q: %s", want, article)
 			}
-			if strings.Contains(article, "boolean-field-form") {
+			if strings.Contains(article, "boolean-field-form") || strings.Contains(article, "boolean-toggle") {
 				t.Errorf("list unexpectedly contains entry-view toggle buttons: %s", article)
+			}
+			if tt.readOnly {
+				if strings.Contains(article, "data-field-edit-trigger") {
+					t.Errorf("read-only list contains modal edit controls: %s", article)
+				}
+			} else if !strings.Contains(article, `aria-label="Edit `+label+` value"`) && tt.label == "" {
+				t.Errorf("writable list lost its modal edit control: %s", article)
 			}
 		})
 	}
@@ -198,10 +209,13 @@ func TestInlineBooleanSubmission(t *testing.T) {
 		existing    string
 		value       string
 		prefix      string
+		optional    bool
 	}{
 		{name: "false to true", declaration: "Enabled: bool", existing: "false", value: "true"},
 		{name: "true to false mounted", declaration: "Enabled: bool", existing: "true", value: "false", prefix: "/catalog"},
-		{name: "unset optional detail to true", declaration: "Enabled?: bool @cuebook(detail)", value: "true"},
+		{name: "unset optional detail to true", declaration: "Enabled?: bool @cuebook(detail)", value: "true", optional: true},
+		{name: "optional true to false", declaration: "Enabled?: bool", existing: "true", value: "false", optional: true},
+		{name: "optional false to unset", declaration: "Enabled?: bool", existing: "false", value: "not_set", optional: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -239,7 +253,12 @@ func TestInlineBooleanSubmission(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, err := updated.LookupPath(cue.ParsePath("Enabled")).Bool(); err != nil || got != (tt.value == "true") {
+			enabled := updated.LookupPath(cue.ParsePath("Enabled"))
+			if tt.value == "not_set" {
+				if enabled.Exists() {
+					t.Fatalf("unset optional Enabled was not removed: %s", files["booleans.cue"].Data)
+				}
+			} else if got, err := enabled.Bool(); err != nil || got != (tt.value == "true") {
 				t.Fatalf("saved Enabled = %t, err = %v; want typed boolean %s", got, err, tt.value)
 			}
 			wantURL := inlineBooleanEntryURL(t, files, 1, tt.prefix)
@@ -264,18 +283,50 @@ func TestInlineBooleanSubmission(t *testing.T) {
 				t.Error("save did not preserve the single-entry workspace fragment")
 			}
 			article := inlineBooleanArticle(t, body)
-			want := `value="` + tt.value + `" aria-pressed="true" aria-label="Set Enabled to ` + tt.value + `">`
-			if !strings.Contains(article, want) {
-				t.Errorf("saved value is not selected: %s", article)
-			}
+			assertInlineBooleanToggle(t, article, tt.value, tt.optional)
 			get := httptest.NewRequest(http.MethodGet, "http://example.test"+wantURL, nil)
 			get.Header.Set("HX-Request", "true")
 			refreshed := httptest.NewRecorder()
 			handler.ServeHTTP(refreshed, get)
-			if refreshed.Code != http.StatusOK || !strings.Contains(inlineBooleanArticle(t, refreshed.Body.String()), want) {
-				t.Errorf("replacement URL does not render the saved entry: status %d; %s", refreshed.Code, refreshed.Body.String())
+			if refreshed.Code != http.StatusOK {
+				t.Fatalf("replacement URL status = %d; body: %s", refreshed.Code, refreshed.Body.String())
 			}
+			assertInlineBooleanToggle(t, inlineBooleanArticle(t, refreshed.Body.String()), tt.value, tt.optional)
 		})
+	}
+}
+
+func assertInlineBooleanToggle(t *testing.T, markup, state string, optional bool) {
+	t.Helper()
+	forms := regexp.MustCompile(`(?s)<form class="boolean-field-form"[^>]*>.*?</form>`).FindAllString(markup, -1)
+	if len(forms) != 1 {
+		t.Fatalf("inline boolean form count = %d, want 1: %s", len(forms), markup)
+	}
+	markup = forms[0]
+	class, pressed, next, symbol := "button boolean-toggle", state, "true", "✖"
+	switch state {
+	case "true":
+		class, next, symbol = class+" is-link", "false", "✔"
+	case "false":
+		if optional {
+			next = "not_set"
+		}
+	case "not_set":
+		pressed, symbol = "mixed", "☐"
+	default:
+		t.Fatalf("unknown boolean state %q", state)
+	}
+	if strings.Count(markup, "<button ") != 1 {
+		t.Errorf("want a single boolean toggle button: %s", markup)
+	}
+	want := `<button class="` + class + `" type="submit" name="value" value="` + next + `" aria-pressed="` + pressed + `" aria-label="Enabled" title="Enabled: ` + state + `; set to ` + next + `">` + symbol + `</button>`
+	if !strings.Contains(markup, want) {
+		t.Errorf("inline boolean missing toggle %q: %s", want, markup)
+	}
+	for _, unwanted := range []string{`type="radio"`, `<select`, `type="hidden" name="value"`} {
+		if strings.Contains(markup, unwanted) {
+			t.Errorf("inline boolean unexpectedly contains %q: %s", unwanted, markup)
+		}
 	}
 }
 

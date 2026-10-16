@@ -1,22 +1,10 @@
 <div class="field">
   {{if and .Boolean (not .Secret)}}
     <span id="add-field-{{.Index}}-label" class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
-    <div class="buttons has-addons boolean-toggle" role="radiogroup" aria-labelledby="add-field-{{.Index}}-label">
-      {{if .Optional}}
-        <label class="button">
-          <input class="is-sr-only" type="radio" name="entry.{{.Index}}.value" value=""{{if eq .Value ""}} checked{{end}}>
-          <span>Not set</span>
-        </label>
-      {{end}}
-      <label class="button">
-        <input class="is-sr-only" type="radio" name="entry.{{.Index}}.value" value="false"{{if eq .Value "false"}} checked{{end}}{{if not .Optional}} required{{end}}>
-        <span>✖</span>
-      </label>
-      <label class="button">
-        <input class="is-sr-only" type="radio" name="entry.{{.Index}}.value" value="true"{{if eq .Value "true"}} checked{{end}}{{if not .Optional}} required{{end}}>
-        <span>✔</span>
-      </label>
-    </div>
+    <boolean-toggle data-optional="{{.Optional}}" data-allow-unset="true">
+      <input type="hidden" name="entry.{{.Index}}.value" value="{{.Value}}">
+      {{template "boolean-button.html" .}}
+    </boolean-toggle>
   {{else}}
     <label>
       <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>

@@ -182,13 +182,17 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 		if !includeTitleField && (metadata.IsTitleField(field.Value) || (!hasTitleField && fieldIndex == 0 && entry.GetTitle() != "")) {
 			continue
 		}
-		view.Fields = append(view.Fields, makeFieldView(field, fileName, index, readOnly, includeTitleField))
+		fieldView := makeFieldView(field, fileName, index, readOnly, includeTitleField)
+		fieldView.Optional = entryFieldOptional(entry.Value, field.Name)
+		view.Fields = append(view.Fields, fieldView)
 	}
 	for _, field := range entry.Details {
 		if !includeTitleField && metadata.IsTitleField(field.Value) {
 			continue
 		}
-		view.Details = append(view.Details, makeFieldView(field, fileName, index, readOnly, includeTitleField))
+		fieldView := makeFieldView(field, fileName, index, readOnly, includeTitleField)
+		fieldView.Optional = entryFieldOptional(entry.Value, field.Name)
+		view.Details = append(view.Details, fieldView)
 	}
 	return view
 }

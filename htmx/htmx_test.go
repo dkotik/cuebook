@@ -59,7 +59,7 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 		`<section class="add-entry" id="add-entry-dock-panel" aria-labelledby="add-entry-heading" data-details-content>`,
 		`action="/add"`,
 		`hx-post="/add"`,
-		`<h2 id="add-entry-heading" class="title is-5">Add entry</h2>`,
+		`<h2 id="add-entry-heading" class="is-sr-only">Add entry</h2>`,
 
 		`name="entry.0.field" value="Name"`,
 		`name="entry.1.field" value="Email"`,
@@ -67,7 +67,7 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 		`name="entry.3.field" value="Password"`,
 		`placeholder="..."`,
 		"(optional)",
-		"Add entry",
+		`<button class="button is-link" type="submit">Create</button>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page does not contain %q", want)
@@ -215,14 +215,23 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 		`name="entry.1.field" value="Count"`,
 		`type="number" name="entry.1.value" value="0" step="any" required`,
 		`name="entry.2.field" value="Enabled"`,
-		`type="radio" name="entry.2.value" value="false" checked required`,
-		`type="radio" name="entry.2.value" value="true" required`,
+		`<boolean-toggle data-optional="false" data-allow-unset="true">`,
+		`<input type="hidden" name="entry.2.value" value="false">`,
+		`<button class="button boolean-toggle" type="button" aria-label="Enabled" aria-pressed="false" title="Enabled: false">✖</button>`,
 	} {
 		if !strings.Contains(form, want) {
 			t.Errorf("add-entry form does not contain %q: %s", want, form)
 		}
 	}
-	for _, unwanted := range []string{"Default name", `value="42"`, `value="true" checked`} {
+	componentStart := strings.Index(form, `<boolean-toggle `)
+	componentEnd := strings.Index(form, `</boolean-toggle>`)
+	if componentStart < 0 || componentEnd < componentStart {
+		t.Fatalf("boolean component not found or not closed: %s", form)
+	}
+	if component := form[componentStart:componentEnd]; strings.Count(component, "<button ") != 1 {
+		t.Errorf("boolean component must contain one button: %s", component)
+	}
+	for _, unwanted := range []string{"Default name", `value="42"`, `value="true" checked`, `type="radio"`, `<select`} {
 		if strings.Contains(form, unwanted) {
 			t.Errorf("add-entry form unexpectedly contains %q", unwanted)
 		}
@@ -286,6 +295,8 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "flash message controller", path: "/assets/flash.js", contains: []string{`"cuebook:flash"`, "textContent", "flash.hidden = false"}, wantStatus: http.StatusOK},
 		{name: "field edit dialog controller", path: "/assets/field-edit-dialog.js", contains: []string{"htmx:afterSwap", `classList.add("is-active")`, `event.key === "Escape"`, `source.closest("#field-edit-modal form")`, `modalSavePending`, `last.focus()`}, wantStatus: http.StatusOK},
 		{name: "live reload component", path: "/assets/live-reload.js", contains: []string{"class LiveReload extends HTMLElement", `new EventSource(eventsURL)`, "window.location.reload()"}, wantStatus: http.StatusOK},
+		{name: "boolean toggle component", path: "/assets/boolean-toggle.js", contains: []string{`customElements.define("boolean-toggle"`, "not_set", "☐"}, wantStatus: http.StatusOK},
+		{name: "JavaScript tests are not served", path: "/assets/boolean-toggle.test.js", wantStatus: http.StatusNotFound},
 		{name: "unknown asset", path: "/assets/secret.txt", wantStatus: http.StatusNotFound},
 	}
 	for _, tt := range tests {
@@ -335,7 +346,7 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 	searchStart := strings.Index(page, `<div class="navbar-item topbar-search-item is-expanded">`)
 	formStart := strings.Index(page, `<form class="topbar-search field has-addons"`)
 	searchButtonStart := strings.Index(page, `<button class="button" type="submit" aria-label="Search">`)
-	burgerStart := strings.Index(page, `<button class="navbar-burger"`)
+	burgerStart := strings.Index(page, `<button class="navbar-burger button"`)
 	menuStart := strings.Index(page, `<div id="cuebook-navbar-menu"`)
 	formEnd := -1
 	if formStart >= 0 {
@@ -418,7 +429,7 @@ func TestWritableDirectoryAppendsEntries(t *testing.T) {
 				body := response.Body.String()
 				wantEntryID := `id="entry-` + strconv.Itoa(beforeLength) + `"`
 				if strings.Contains(body, `<main id="workspace"`) || strings.Contains(body, `entries-grid`) ||
-					!strings.Contains(body, `<article class="card" `+wantEntryID) ||
+					!strings.Contains(body, `<article class="entry card cell" `+wantEntryID) ||
 					!strings.Contains(body, `class="buttons entry-actions is-right"`) || !strings.Contains(body, "Added Contact") {
 					t.Fatalf("expected the newly-added entry view fragment, got: %s", body)
 				}

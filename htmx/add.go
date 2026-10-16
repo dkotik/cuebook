@@ -77,14 +77,23 @@ func (a *handler) add(_ context.Context, request *addRequest) (addResponse, erro
 	declarations := make([]any, 0, len(definitions))
 	for _, definition := range definitions {
 		field := definition.Field
+		optional := definition.Optional
+		boolean := field.Value.IncompleteKind() == cue.BoolKind && !isSecretField(field.Value)
+
 		value, ok := submitted[field.Name]
 		if !ok {
-			if definition.Optional {
+			if optional {
 				continue
 			}
 			return addResponse{}, errors.New("A required entry field is missing.")
 		}
-		if definition.Optional && value == "" {
+		if value == "not_set" && boolean {
+			if !optional {
+				return addResponse{}, errors.New("The required boolean field " + field.Name + " cannot be unset.")
+			}
+			continue
+		}
+		if optional && value == "" {
 			continue
 		}
 		declaration, err := addFieldDeclaration(field, value)

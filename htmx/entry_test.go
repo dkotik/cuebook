@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"html"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -48,6 +49,90 @@ func TestAddEntryFormRendersFieldDocumentationAsHelp(t *testing.T) {
 	}
 	if got := strings.Count(body, `<p class="help">`); got != 2 {
 		t.Errorf("add form has %d help descriptions, want 2", got)
+	}
+}
+
+func TestEntryTitleLinksBackToFile(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		file     string
+		prefix   string
+		htmx     bool
+		readOnly bool
+	}{
+		{name: "browser navigation", file: "people.cue"},
+		{name: "HTMX navigation", file: "people.cue", htmx: true},
+		{name: "mounted nested file with special characters", file: "nested/people & friends.cue", prefix: "/catalog", htmx: true},
+		{name: "read only entry", file: "people.cue", readOnly: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			source := []byte(`[{Name: "Target entry"}]`)
+			book, err := cuebook.New(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entry, err := book.GetValue(0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			span, err := cuebook.NewByteRange(entry)
+			if err != nil {
+				t.Fatal(err)
+			}
+			files := fstest.MapFS{tt.file: &fstest.MapFile{Data: source}}
+			var handler http.Handler
+			if tt.readOnly {
+				handler, err = New(files, WithServeMuxPrefix(tt.prefix))
+			} else {
+				handler, err = NewWithCommitter(files, &recordingCommitter{}, WithServeMuxPrefix(tt.prefix))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			get := func(target string) string {
+				t.Helper()
+				request := httptest.NewRequest(http.MethodGet, "http://example.test"+target, nil)
+				if tt.htmx {
+					request.Header.Set("HX-Request", "true")
+				}
+				response := httptest.NewRecorder()
+				handler.ServeHTTP(response, request)
+				if response.Code != http.StatusOK {
+					t.Fatalf("GET %s: status %d; body: %s", target, response.Code, response.Body.String())
+				}
+				return response.Body.String()
+			}
+			body := get(tt.prefix + entryURL(tt.file, span))
+			start := strings.Index(body, `<h1 class="document-title title is-4">`)
+			if start < 0 {
+				t.Fatalf("document title not found: %s", body)
+			}
+			end := strings.Index(body[start:], "</h1>")
+			if end < 0 {
+				t.Fatalf("document title is not closed: %s", body)
+			}
+			heading := html.UnescapeString(body[start : start+end])
+			wantURL := tt.prefix + fileURL(tt.file)
+			for _, want := range []string{
+				`class="button is-small is-pulled-right"`, `href="` + wantURL + `"`,
+				`hx-get="` + wantURL + `"`, `hx-target="#workspace"`, `hx-swap="outerHTML"`,
+				`hx-push-url="true"`, `aria-label="Return to file `, `title="Return to file `, `>↑</a>`,
+			} {
+				if !strings.Contains(heading, want) {
+					t.Errorf("entry title missing %q: %s", want, heading)
+				}
+			}
+			list := get(wantURL)
+			if strings.Contains(list, `aria-label="Return to file `) {
+				t.Error("file list unexpectedly includes a return-to-file button")
+			}
+			if !strings.Contains(list, "Target entry") {
+				t.Error("return link did not render the source file's entries")
+			}
+		})
 	}
 }
 
@@ -163,7 +248,7 @@ func TestEntryViewAlwaysShowsDetailsAndEmptyOptionalFields(t *testing.T) {
 	}
 
 	body := response.Body.String()
-	articleStart := strings.Index(body, `<article class="card"`)
+	articleStart := strings.Index(body, `<article `)
 	articleEnd := strings.Index(body, `</article>`)
 	if articleStart < 0 || articleEnd < articleStart {
 		t.Fatalf("entry article not found: %s", body)
@@ -298,8 +383,8 @@ func TestEntryHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 					t.Errorf("body unexpectedly contains %q: %s", unwanted, body)
 				}
 			}
-			if test.wantStatus == http.StatusOK && strings.Count(body, `<article class="card"`) != 1 {
-				t.Errorf("rendered entry count = %d, want 1: %s", strings.Count(body, `<article class="card"`), body)
+			if test.wantStatus == http.StatusOK && strings.Count(body, `<article `) != 1 {
+				t.Errorf("rendered entry count = %d, want 1: %s", strings.Count(body, `<article `), body)
 			}
 		})
 	}

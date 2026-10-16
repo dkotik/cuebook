@@ -21,7 +21,7 @@
       {{end}}
     </ul>
   {{else if .Selected}}
-    <h1 class="document-title title is-4">{{.FileTitle}}</h1>
+    {{template "document-title.html" .}}
     {{- with .FileDescription -}}
       {{ . }}
     {{- end -}}
@@ -43,3 +43,9 @@
     <p class="muted">Choose a file from the tree to view its entries.</p>
   {{end}}
 </main>
+
+{{define "document-title.html"}}
+  <h1 class="document-title title is-4">{{.FileTitle}}{{if .SelectedEntry}}
+    <a class="button is-small is-pulled-right" href="{{route "/"}}?file={{urlquery .Selected}}" hx-get="{{route "/"}}?file={{urlquery .Selected}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" aria-label="Return to file {{.Selected}}" title="Return to file {{.Selected}}">↑</a>
+  {{end}}</h1>
+{{end}}
