@@ -1,6 +1,6 @@
-<article class="card" id="entry-{{.Index}}" data-entry-index="{{.Index}}" data-file="{{.File}}">
+<article class="entry card cell" id="entry-{{.Index}}" data-entry-index="{{.Index}}" data-file="{{.File}}">
   <header class="card-header">
-    {{template "entry-heading.html" .}}
+    <h2 class="card-header-title">{{.Title}}</h2>
   </header>
   {{template "entry-content.html" .}}
 </article>

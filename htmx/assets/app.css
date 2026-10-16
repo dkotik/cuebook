@@ -21,13 +21,17 @@ body {
 
 .topbar {
   background-color: var(--dock-background);
+
+  .navbar-burger {
+    background-color: var(--entry-card-background);
+  }
 }
 
 .topbar .navbar-menu {
   flex-grow: 0;
   flex-shrink: 0;
-  background-color: var(--dock-background);
-  border-bottom: 1px dotted var(--entry-card-border-color);
+  background-color: var(--entry-card-background);
+  border-bottom: 2px dashed var(--entry-card-border-color);
 }
 
 .topbar-search-item,
@@ -37,9 +41,7 @@ body {
 }
 
 .topbar-search-item {
-  max-width: 32rem;
   min-width: 0;
-  margin-inline: auto;
 }
 
 .topbar-search .control.is-expanded,
@@ -284,6 +286,7 @@ file-tree-node {
   position: relative;
   margin: 1rem 0;
   background-color: var(--entry-card-background);
+  border: 1px solid var(--entry-card-border-color);
   color: var(--entry-card-color);
   overflow: hidden;
 }
@@ -293,7 +296,6 @@ file-tree-node {
   max-width: 40rem;
   justify-self: center;
   margin: 0;
-  border: 1px solid var(--entry-card-border-color);
 }
 
 .entry .card-header-title {
@@ -373,7 +375,8 @@ file-tree-node {
 
 .card-content.entry-content {
   display: grid;
-  grid-template-columns: minmax(7rem, 0.45fr) minmax(0, 1fr);
+  padding: 1.5rem 2rem 1rem 2rem;
+  grid-template-columns: 6rem 1fr;
   gap: 0.5rem 1rem;
 }
 
@@ -492,6 +495,32 @@ file-tree-node {
 
 .field label {
   min-width: 0;
+}
+
+.field form.boolean-field-form {
+  display: block;
+}
+
+.boolean-toggle > label.button {
+  display: inline-flex;
+}
+
+.boolean-toggle > .button:has(input:checked) {
+  --bulma-button-h: var(--bulma-link-h);
+  --bulma-button-s: var(--bulma-link-s);
+  --bulma-button-l: var(--bulma-link-l);
+  --bulma-button-background-l: var(--bulma-link-l);
+  --bulma-button-border-l: var(--bulma-link-l);
+  --bulma-button-border-width: 0px;
+  --bulma-button-color-l: var(--bulma-link-invert-l);
+  --bulma-button-outer-shadow-a: 0;
+  z-index: 1;
+}
+
+.boolean-toggle > .button:has(input:focus-visible) {
+  outline: 2px solid var(--bulma-link);
+  outline-offset: 2px;
+  z-index: 2;
 }
 
 .field-name {

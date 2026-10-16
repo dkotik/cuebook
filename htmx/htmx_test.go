@@ -215,14 +215,14 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 		`name="entry.1.field" value="Count"`,
 		`type="number" name="entry.1.value" value="0" step="any" required`,
 		`name="entry.2.field" value="Enabled"`,
-		`<option value="false" selected>false</option>`,
-		`<option value="true">true</option>`,
+		`type="radio" name="entry.2.value" value="false" checked required`,
+		`type="radio" name="entry.2.value" value="true" required`,
 	} {
 		if !strings.Contains(form, want) {
 			t.Errorf("add-entry form does not contain %q: %s", want, form)
 		}
 	}
-	for _, unwanted := range []string{"Default name", `value="42"`, `<option value="true" selected>`} {
+	for _, unwanted := range []string{"Default name", `value="42"`, `value="true" checked`} {
 		if strings.Contains(form, unwanted) {
 			t.Errorf("add-entry form unexpectedly contains %q", unwanted)
 		}
@@ -333,16 +333,18 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 
 	brandStart := strings.Index(page, `<div class="navbar-brand">`)
 	searchStart := strings.Index(page, `<div class="navbar-item topbar-search-item is-expanded">`)
+	formStart := strings.Index(page, `<form class="topbar-search field has-addons"`)
+	searchButtonStart := strings.Index(page, `<button class="button" type="submit" aria-label="Search">`)
 	burgerStart := strings.Index(page, `<button class="navbar-burger"`)
 	menuStart := strings.Index(page, `<div id="cuebook-navbar-menu"`)
-	brandEnd := -1
-	if burgerStart >= 0 {
-		if offset := strings.Index(page[burgerStart:], `</div>`); offset >= 0 {
-			brandEnd = burgerStart + offset
+	formEnd := -1
+	if formStart >= 0 {
+		if offset := strings.Index(page[formStart:], `</form>`); offset >= 0 {
+			formEnd = formStart + offset
 		}
 	}
-	if !(brandStart >= 0 && brandStart < searchStart && searchStart < burgerStart && burgerStart < brandEnd && brandEnd < menuStart) {
-		t.Errorf("search should remain in the visible navbar brand row outside the collapsible menu")
+	if !(brandStart >= 0 && brandStart < searchStart && searchStart < formStart && formStart < searchButtonStart && searchButtonStart < burgerStart && burgerStart < formEnd && formEnd < menuStart) {
+		t.Errorf("search and navigation toggle should share the visible navbar brand row, with the toggle after search")
 	}
 }
 

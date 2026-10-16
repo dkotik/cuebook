@@ -1,22 +1,36 @@
 <div class="field">
-  <label>
-    <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
-    {{if .Secret}}
-      <input class="input" type="password" name="entry.{{.Index}}.value" value="" autocomplete="new-password" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
-    {{else if .Boolean}}
-      <div class="select"><select name="entry.{{.Index}}.value" {{if not .Optional}}required{{end}}>
-        {{if .Optional}}<option value="" selected>...</option>{{end}}
-        <option value="false"{{if eq .Value "false"}} selected{{end}}>false</option>
-        <option value="true"{{if eq .Value "true"}} selected{{end}}>true</option>
-      </select></div>
-    {{else if .Numeric}}
-      <input class="input" type="number" name="entry.{{.Index}}.value" value="{{.Value}}" step="any" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
-    {{else if .MultiLine}}
-      <textarea class="textarea" name="entry.{{.Index}}.value" rows="3" {{if .Optional}}placeholder="..."{{else}}required{{end}}>{{.Value}}</textarea>
-    {{else}}
-      <input class="input" type="text" name="entry.{{.Index}}.value" value="{{.Value}}" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
-    {{end}}
-  </label>
+  {{if and .Boolean (not .Secret)}}
+    <span id="add-field-{{.Index}}-label" class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
+    <div class="buttons has-addons boolean-toggle" role="radiogroup" aria-labelledby="add-field-{{.Index}}-label">
+      {{if .Optional}}
+        <label class="button">
+          <input class="is-sr-only" type="radio" name="entry.{{.Index}}.value" value=""{{if eq .Value ""}} checked{{end}}>
+          <span>Not set</span>
+        </label>
+      {{end}}
+      <label class="button">
+        <input class="is-sr-only" type="radio" name="entry.{{.Index}}.value" value="false"{{if eq .Value "false"}} checked{{end}}{{if not .Optional}} required{{end}}>
+        <span>✖</span>
+      </label>
+      <label class="button">
+        <input class="is-sr-only" type="radio" name="entry.{{.Index}}.value" value="true"{{if eq .Value "true"}} checked{{end}}{{if not .Optional}} required{{end}}>
+        <span>✔</span>
+      </label>
+    </div>
+  {{else}}
+    <label>
+      <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
+      {{if .Secret}}
+        <input class="input" type="password" name="entry.{{.Index}}.value" value="" autocomplete="new-password" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
+      {{else if .Numeric}}
+        <input class="input" type="number" name="entry.{{.Index}}.value" value="{{.Value}}" step="any" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
+      {{else if .MultiLine}}
+        <textarea class="textarea" name="entry.{{.Index}}.value" rows="3" {{if .Optional}}placeholder="..."{{else}}required{{end}}>{{.Value}}</textarea>
+      {{else}}
+        <input class="input" type="text" name="entry.{{.Index}}.value" value="{{.Value}}" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
+      {{end}}
+    </label>
+  {{end}}
   {{if .Description}}<p class="help">{{.Description}}</p>{{end}}
   <input type="hidden" name="entry.{{.Index}}.field" value="{{.Name}}">
 </div>

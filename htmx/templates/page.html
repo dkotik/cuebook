@@ -35,7 +35,6 @@
 <body class="has-navbar-fixed-top" data-route-prefix="{{route ""}}">
   <nav class="topbar navbar is-fixed-top" role="navigation" aria-label="main navigation">
     <div class="navbar-brand">
-      <a class="navbar-item topbar-brand" href="{{route "/"}}">Cuebook</a>
       <div class="navbar-item topbar-search-item is-expanded">
         <cuebook-search>
           <template data-clear-search-template>
@@ -50,15 +49,17 @@
             <div class="control">
               <button class="button" type="submit" aria-label="Search">🔍</button>
             </div>
+            <div class="control">
+              <button class="navbar-burger button" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="cuebook-navbar-menu" data-target="cuebook-navbar-menu">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+              </button>
+            </div>
           </form>
         </cuebook-search>
       </div>
-      <button class="navbar-burger" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="cuebook-navbar-menu" data-target="cuebook-navbar-menu">
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-        <span aria-hidden="true"></span>
-      </button>
     </div>
     <div id="cuebook-navbar-menu" class="navbar-menu">
       <div class="navbar-end">
@@ -83,7 +84,7 @@
   </div>
   <div class="layout">
     <nav class="file-nav menu" aria-label="CUE files">
-      <h3 class="menu-label">Files</h3>
+      <a href="{{route "/"}}"><h3 class="menu-label">Files</h3></a>
       {{if .Files}}
       <ul class="file-tree">
         {{range .Files}}{{template "file-tree-node.html" .}}{{end}}

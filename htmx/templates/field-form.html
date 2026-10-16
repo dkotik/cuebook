@@ -23,16 +23,30 @@
 
 {{define "field-form-input.html"}}
   <div class="field">
-    <label>
-      <span class="field-name label">{{.Name}}:</span>
-      {{if .Secret}}
-        <input class="input" type="password" name="value" value="{{if .Editing}}{{.Value}}{{end}}" autocomplete="new-password" placeholder="Leave blank to keep current value">
-      {{else if .MultiLine}}
-        <textarea class="textarea" name="value" rows="3">{{.Value}}</textarea>
-      {{else}}
-        <input class="input" type="text" name="value" value="{{.Value}}">
-      {{end}}
-    </label>
+    {{if and .Boolean (not .Secret)}}
+      <span id="edit-field-{{.Index}}-label" class="field-name label">{{.Name}}:</span>
+      <div class="buttons has-addons boolean-toggle" role="radiogroup" aria-labelledby="edit-field-{{.Index}}-label">
+        <label class="button">
+          <input class="is-sr-only" type="radio" name="value" value="false"{{if eq .Value "false"}} checked{{end}} required>
+          <span>false</span>
+        </label>
+        <label class="button">
+          <input class="is-sr-only" type="radio" name="value" value="true"{{if eq .Value "true"}} checked{{end}} required>
+          <span>true</span>
+        </label>
+      </div>
+    {{else}}
+      <label>
+        <span class="field-name label">{{.Name}}:</span>
+        {{if .Secret}}
+          <input class="input" type="password" name="value" value="{{if .Editing}}{{.Value}}{{end}}" autocomplete="new-password" placeholder="Leave blank to keep current value">
+        {{else if .MultiLine}}
+          <textarea class="textarea" name="value" rows="3">{{.Value}}</textarea>
+        {{else}}
+          <input class="input" type="text" name="value" value="{{.Value}}">
+        {{end}}
+      </label>
+    {{end}}
     {{if .Description}}<p class="help">{{.Description}}</p>{{end}}
   </div>
 {{end}}

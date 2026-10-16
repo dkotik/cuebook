@@ -71,6 +71,21 @@ func (f Field) WithValue(value string) (_ *ast.Field, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to format field value: %w", err)
 	}
+	if f.Value.IncompleteKind() == cue.BoolKind && !isPassword(f.Value) {
+		var kind token.Token
+		switch value {
+		case "true":
+			kind = token.TRUE
+		case "false":
+			kind = token.FALSE
+		default:
+			return nil, fmt.Errorf("invalid boolean field value: %q", value)
+		}
+		return &ast.Field{
+			Label: ast.NewString(f.Name),
+			Value: ast.NewLit(kind, value),
+		}, nil
+	}
 	quoted := stringValue{}.quote(value)
 	if metadata.IsMultiLine(f.Value) {
 		quoted = multiline{}.quote(value)

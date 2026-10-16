@@ -5,10 +5,18 @@
   {{if not .HideLabel}}<span class="field-name label">{{.Name}}:</span>{{end}}
   <div class="field-item__value">
     {{if .ReadOnly}}
-      <output>{{if .Empty}}...{{else if .Secret}}••••••••{{else}}{{.Value}}{{end}}</output>
+      <output>{{template "field-output.html" .}}</output>
+    {{else if and .EntryView .Boolean (not .Secret)}}
+      <form class="boolean-field-form" action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-target="#workspace" hx-swap="outerHTML">
+        {{template "field-form-controls.html" .}}
+        <div class="buttons has-addons boolean-toggle" role="group" aria-label="{{.Name}}">
+          <button class="button{{if ne .Value "true"}} is-link is-selected{{end}}" type="submit" name="value" value="false" aria-pressed="{{if eq .Value "true"}}false{{else}}true{{end}}" aria-label="Set {{.Name}} to false">✖</button>
+          <button class="button{{if eq .Value "true"}} is-link is-selected{{end}}" type="submit" name="value" value="true" aria-pressed="{{if eq .Value "true"}}true{{else}}false{{end}}" aria-label="Set {{.Name}} to true">✔</button>
+        </div>
+      </form>
     {{else}}
       <button class="field-value-edit" type="button" aria-label="Edit {{.Name}} value" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger hx-get="{{route .EditURL}}" hx-target="#field-edit-modal" hx-swap="innerHTML">
-        <output>{{if .Empty}}...{{else if .Secret}}••••••••{{else}}{{.Value}}{{end}}</output>
+        <output>{{template "field-output.html" .}}</output>
       </button>
       {{if .ShowEditIcon}}
       <button class="button is-small is-ghost field-edit-button" type="button" aria-label="Edit {{.Name}}" title="Edit {{.Name}}" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger hx-get="{{route .EditURL}}" hx-target="#field-edit-modal" hx-swap="innerHTML">
@@ -22,3 +30,12 @@
   </div>
 </div>
 {{end}}
+
+{{define "field-output.html" -}}
+  {{- if and .Boolean (not .EntryView) (not .Secret) -}}
+    {{if eq .Value "true"}}✔{{else}}✖{{end}} {{.Name}}
+  {{- else if .Empty -}}...
+  {{- else if .Secret -}}••••••••
+  {{- else -}}{{.Value}}
+  {{- end -}}
+{{- end}}

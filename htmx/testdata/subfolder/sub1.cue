@@ -3,16 +3,19 @@
 	// current definition scanner cannot detect abstract definitions yet
 	Name: string @cuebook(title)
 	Email: #email | [...#email]
+	Introduced?: bool
 	Notes?:    string @cuebook(detail)
-	Password?: string @cuebook(detail,trim,argon2id)
+	Password?: string @cuebook(detail, trim, argon2id)
 	... // allow any additional fields
 }
 
 [...#contact] & [
   {
-		Name:     "aFirst11111aaDD222Dzxa" @cuebook(title)
-		Email:    "tes44t1@testdo1m1zzzzain.com"
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg" @cuebook(detail,trim,argon2id)
+		Name:       "aFirst11111aaDD222Dzxa11" @cuebook(title)
+		Email:      "tes44t1@testdo1m1zzzzain.com"
+		Password:   "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg" @cuebook(detail,trim,argon2id) @cuebook(detail, trim, argon2id)
+		Notes:      "sdf sdfsdf12"                                                                                      @cuebook(detail)
+		Introduced: true
 	},
   {
 		Name:     "12sdf33zz" @cuebook(title)
@@ -25,9 +28,10 @@
 		Email: "sdf@sdf.com1"
 	},
   {
-		Name:  "1 really great21" @cuebook(title)
-		Email: "1dfjd@kekeke.kekeke1"
-		Notes: "dfgdf"
+		Name:       "1 really great21" @cuebook(title)
+		Email:      "1dfjd@kekeke.kekeke1"
+		Notes:      "dfgdf" @cuebook(detail)
+		Introduced: true
 	},
   {
 		Name:  "Maria"

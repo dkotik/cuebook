@@ -206,6 +206,7 @@ type fieldView struct {
 	EditURL      string
 	ViewURL      string
 	MultiLine    bool
+	Boolean      bool
 	Secret       bool
 	ReadOnly     bool
 	Editing      bool
@@ -231,6 +232,9 @@ func fieldEditURL(fileName string, entryIndex int, fieldName string, view, entry
 func makeFieldView(field fieldmodel.Field, fileName string, index int, readOnly, entryView bool) fieldView {
 	_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
 	value := field.String()
+	if boolean, err := field.Value.Bool(); err == nil {
+		value = strconv.FormatBool(boolean)
+	}
 	empty := !field.Value.IsConcrete() || strings.TrimSpace(value) == ""
 	if !field.Value.IsConcrete() {
 		value = ""
@@ -246,6 +250,7 @@ func makeFieldView(field fieldmodel.Field, fileName string, index int, readOnly,
 		ViewURL:      fieldEditURL(fileName, index, field.Name, true, entryView),
 		EntryView:    entryView,
 		MultiLine:    metadata.IsMultiLine(field.Value),
+		Boolean:      field.Value.IncompleteKind()&cue.BoolKind != 0,
 		Secret:       secret,
 		ReadOnly:     readOnly,
 		ShowEditIcon: true,
