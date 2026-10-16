@@ -29,6 +29,6 @@ A range is tied to the exact source version that produced it. Do not apply its o
 
 `ByteRange.PreceedingEntryAnchor(source)` captures nearby preceding content to help identify an entry relative to its context. Both helpers are useful when source can be edited between reading an entry and applying a change.
 
-The patching workflow lives in the separate `github.com/dkotik/cuebook/patch` package. The root package only reports locations and anchors; it does not alter or persist source files.
+Source edits, reversible changes, and atomic file commits are provided by the root `cuebook` package alongside byte ranges and anchors. Applications can use these core APIs without importing a separate patch package.
 
 [Back to getting started]({{< relref "getting-started.md" >}}).
