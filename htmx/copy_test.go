@@ -80,7 +80,7 @@ func TestEntryCopyRoundTripsThroughPaste(t *testing.T) {
 				t.Fatalf("entry status = %d; body: %s", response.Code, response.Body.String())
 			}
 			body := response.Body.String()
-			if !strings.Contains(body, `data-entry-copy="entry-cue-`+strconv.Itoa(tt.index)+`"`) || !strings.Contains(body, ">Copy CUE</button>") {
+			if !strings.Contains(body, `data-entry-copy="entry-cue-`+strconv.Itoa(tt.index)+`"`) || !strings.Contains(body, `title="Copy entry as CUE">Copy</button>`) {
 				t.Fatal("copy button missing or targets the wrong entry")
 			}
 			if !tt.htmx && !strings.Contains(body, `src="`+tt.prefix+`/assets/entry-copy.js"`) {

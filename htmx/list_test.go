@@ -414,7 +414,7 @@ func TestArchiveFilesAppearInSeparateNavigationSection(t *testing.T) {
 			contains: []string{
 				`data-file="regular.cue"`,
 				`<remember-details data-storage-key="archive-files" open>`,
-				"<summary>Archive</summary>",
+				`<summary class="menu-label">Archive</summary>`,
 				`data-file=".archive/2025-01-01.cue"`,
 				`aria-current="page"`,
 			},
@@ -426,7 +426,7 @@ func TestArchiveFilesAppearInSeparateNavigationSection(t *testing.T) {
 				".archive/2025-01-01.cue": &fstest.MapFile{Data: []byte(`[{Name: "Archived"}]`)},
 			},
 			contains: []string{
-				"<summary>Archive</summary>",
+				`<summary class="menu-label">Archive</summary>`,
 				`data-file=".archive/2025-01-01.cue"`,
 			},
 			omits: []string{`data-node-path=".archive"`, "No CUE files found."},
@@ -436,7 +436,7 @@ func TestArchiveFilesAppearInSeparateNavigationSection(t *testing.T) {
 			source: fstest.MapFS{
 				"regular.cue": &fstest.MapFile{Data: []byte(`[{Name: "Regular"}]`)},
 			},
-			contains: []string{"<summary>Archive</summary>", "No archived files."},
+			contains: []string{`<summary class="menu-label">Archive</summary>`, "No archived files."},
 		},
 	}
 

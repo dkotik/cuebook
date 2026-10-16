@@ -10,6 +10,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
+	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/patch"
 )
@@ -227,7 +228,7 @@ func fieldEditURL(fileName string, entryIndex int, fieldName string, view, entry
 	return "/edit?" + query.Encode()
 }
 
-func makeFieldView(field cuebook.Field, fileName string, index int, readOnly, entryView bool) fieldView {
+func makeFieldView(field fieldmodel.Field, fileName string, index int, readOnly, entryView bool) fieldView {
 	_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
 	value := field.String()
 	empty := !field.Value.IsConcrete() || strings.TrimSpace(value) == ""

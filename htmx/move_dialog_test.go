@@ -86,7 +86,7 @@ func TestEntryMoveDialog(t *testing.T) {
 				}
 				return
 			}
-			actionStart := strings.Index(body, `<div class="buttons entry-actions">`)
+			actionStart := strings.Index(body, `<div class="buttons entry-actions`)
 			if actionStart < 0 {
 				t.Fatal("bottom action row is missing")
 			}

@@ -12,6 +12,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
+	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 )
 
 // FileNotFoundError reports that a requested CUE file does not exist.
@@ -90,7 +91,7 @@ func (d Book) GetValue(atIndex int) (cue.Value, error) {
 	return value, value.Err()
 }
 
-func (d Book) GetField(atIndex, fieldIndex int) (f Field, err error) {
+func (d Book) GetField(atIndex, fieldIndex int) (f fieldmodel.Field, err error) {
 	value, err := d.GetValue(atIndex)
 	if err != nil {
 		return

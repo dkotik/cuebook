@@ -4,20 +4,20 @@
   </header>
   {{template "entry-content.html" .}}
 </article>
-<div class="buttons entry-actions">
+<div class="buttons entry-actions is-right">
   <pre id="entry-cue-{{.Index}}" hidden>{{.CUESource}}</pre>
-  <button class="button is-ghost" type="button" data-entry-copy="entry-cue-{{.Index}}" title="Copy entry as CUE">Copy CUE</button>
   <span class="muted" data-entry-copy-status role="status"></span>
   {{if .CanMove}}
-  <button class="button is-ghost" type="button" data-entry-cut="entry-cue-{{.Index}}" data-file="{{.File}}" data-entry-index="{{.Index}}" data-cut-fingerprint="{{.CutFingerprint}}" title="Cut entry as CUE">Cut CUE</button>
-  <button class="button is-ghost" type="button" data-file-picker-open="entry-move-dialog" aria-haspopup="dialog" aria-controls="entry-move-dialog">Move Entry</button>
+  <button class="button" type="button" data-entry-cut="entry-cue-{{.Index}}" data-file="{{.File}}" data-entry-index="{{.Index}}" data-cut-fingerprint="{{.CutFingerprint}}" title="Cut entry as CUE">Cut</button>
+  <button class="button" type="button" data-file-picker-open="entry-move-dialog" aria-haspopup="dialog" aria-controls="entry-move-dialog">Move</button>
   {{end}}
   {{if .CanArchive}}
   <form class="entry-archive-form" action="{{route "/archive"}}" method="post" hx-post="{{route "/archive"}}" hx-target="#workspace" hx-swap="outerHTML">
     <input type="hidden" name="file" value="{{.File}}">
     <input type="hidden" name="entry" value="{{.Index}}">
-    <button class="button is-ghost" type="submit">Archive Entry</button>
+    <button class="button" type="submit">Archive</button>
   </form>
   {{end}}
+  <button class="button" type="button" data-entry-copy="entry-cue-{{.Index}}" title="Copy entry as CUE">Copy</button>
 </div>
 {{if .CanMove}}{{template "entry-move-dialog.html" .}}{{end}}

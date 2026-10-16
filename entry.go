@@ -9,6 +9,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
+	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
 )
 
@@ -32,8 +33,8 @@ func (e *EntryNotFoundError) HyperTextStatusCode() int {
 type Entry struct {
 	title   string
 	Value   cue.Value
-	Fields  []Field
-	Details []Field // TODO: drop fields and details in favor of using iterators
+	Fields  []fieldmodel.Field
+	Details []fieldmodel.Field // TODO: drop fields and details in favor of using iterators
 }
 
 func NewEntry(v cue.Value) (entry Entry, err error) {
@@ -55,10 +56,10 @@ func NewEntry(v cue.Value) (entry Entry, err error) {
 			entry.title = metadata.ValueToString(value)
 		}
 		if metadata.IsDetailField(value) {
-			entry.Details = append(entry.Details, NewField(iterator.Selector().Unquoted(), value))
+			entry.Details = append(entry.Details, fieldmodel.NewField(iterator.Selector().Unquoted(), value))
 			continue
 		}
-		entry.Fields = append(entry.Fields, NewField(iterator.Selector().Unquoted(), value))
+		entry.Fields = append(entry.Fields, fieldmodel.NewField(iterator.Selector().Unquoted(), value))
 	}
 
 	if entry.title == "" {
@@ -77,7 +78,7 @@ func (e Entry) GetTitle() string {
 }
 
 func (e Entry) GetDescription() (description []string) {
-	for _, fields := range [][]Field{e.Fields, e.Details} {
+	for _, fields := range [][]fieldmodel.Field{e.Fields, e.Details} {
 		for _, field := range fields {
 			value := field.String()
 			if !field.Value.IsConcrete() || strings.TrimSpace(value) == "" {
@@ -89,7 +90,7 @@ func (e Entry) GetDescription() (description []string) {
 	return description
 }
 
-func (e Entry) GetField(atIndex int) (f Field, err error) {
+func (e Entry) GetField(atIndex int) (f fieldmodel.Field, err error) {
 	if atIndex < 0 {
 		return f, errors.New("not found: index out of range") // TODO: model
 	}
@@ -104,7 +105,7 @@ func (e Entry) GetField(atIndex int) (f Field, err error) {
 	return e.Details[atIndex], nil
 }
 
-func (e Entry) GetFieldByName(name string) (field Field, ok bool) {
+func (e Entry) GetFieldByName(name string) (field fieldmodel.Field, ok bool) {
 	for _, field = range e.Fields {
 		if field.Name == name {
 			return field, true

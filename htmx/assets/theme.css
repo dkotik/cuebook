@@ -1,4 +1,5 @@
 :root[data-theme="dark"] {
+  --dock-background: #313244;
   --entry-card-background: #181825;
   --entry-card-color: var(--bulma-text);
   --entry-card-border-color: #313244;
@@ -7,6 +8,7 @@
 }
 
 :root[data-theme="light"] {
+   --dock-background: #c6d0f5;
   --entry-card-background: var(--bulma-scheme-main);
   --entry-card-color: var(--bulma-text);
   --entry-card-border-color: #b4befe;

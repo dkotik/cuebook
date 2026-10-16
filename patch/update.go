@@ -11,6 +11,7 @@ import (
 	"cuelang.org/go/cue/literal"
 	"cuelang.org/go/cue/token"
 	"github.com/dkotik/cuebook"
+	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
 )
 
@@ -76,10 +77,7 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	if !ok {
 		return nil, ErrTargetFieldNotStructField
 	}
-	replacement, err := cuebook.Field{
-		Name:  search,
-		Value: field,
-	}.WithValue(value)
+	replacement, err := fieldmodel.NewField(search, field).WithValue(value)
 	if err != nil {
 		return nil, err
 	}

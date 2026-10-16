@@ -417,7 +417,7 @@ func TestWritableDirectoryAppendsEntries(t *testing.T) {
 				wantEntryID := `id="entry-` + strconv.Itoa(beforeLength) + `"`
 				if strings.Contains(body, `<main id="workspace"`) || strings.Contains(body, `entries-grid`) ||
 					!strings.Contains(body, `<article class="card" `+wantEntryID) ||
-					!strings.Contains(body, `class="buttons entry-actions"`) || !strings.Contains(body, "Added Contact") {
+					!strings.Contains(body, `class="buttons entry-actions is-right"`) || !strings.Contains(body, "Added Contact") {
 					t.Fatalf("expected the newly-added entry view fragment, got: %s", body)
 				}
 			} else {

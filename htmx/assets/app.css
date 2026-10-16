@@ -20,17 +20,14 @@ body {
 }
 
 .topbar {
-  border-bottom: 1px solid GrayText;
-}
-
-.topbar-brand {
-  font-weight: 700;
-  text-decoration: none;
+  background-color: var(--dock-background);
 }
 
 .topbar .navbar-menu {
   flex-grow: 0;
   flex-shrink: 0;
+  background-color: var(--dock-background);
+  border-bottom: 1px dotted var(--entry-card-border-color);
 }
 
 .topbar-search-item,
@@ -77,11 +74,14 @@ body {
 }
 
 .file-nav {
-  padding: 2rem 1rem 1rem 4rem;
+  padding: 1rem 1rem 1rem 4rem;
   overflow-wrap: anywhere;
+
+  .menu-label {
+    padding-top: 1rem;
+  }
 }
 
-.file-nav h1,
 #workspace h1 {
   font-size: 1.25rem;
 }

@@ -7,6 +7,7 @@ import (
 	"cuelang.org/go/cue"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/patch"
 	"github.com/dkotik/cuebook/terminalui/event"
 	listForm "github.com/dkotik/cuebook/terminalui/form"
@@ -196,7 +197,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			})
 		}
 		f.KnownFields = append(f.KnownFields, msg.Name)
-		f.Model, cmd = f.Model.Update(list.AddItems(createField(cuebook.Field{
+		f.Model, cmd = f.Model.Update(list.AddItems(createField(fieldmodel.Field{
 			Name: msg.Name,
 		}))())
 		return f, tea.Sequence(
@@ -281,7 +282,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return f, cmd
 }
 
-func displayFieldForm(source []byte, entry cuebook.Entry, field cuebook.Field) tea.Cmd {
+func displayFieldForm(source []byte, entry cuebook.Entry, field fieldmodel.Field) tea.Cmd {
 	return func() tea.Msg {
 		form, err := textarea.New(
 			textarea.WithLabel(field.Name),
@@ -306,7 +307,7 @@ func displayFieldForm(source []byte, entry cuebook.Entry, field cuebook.Field) t
 	}
 }
 
-func createField(f cuebook.Field) tea.Model {
+func createField(f fieldmodel.Field) tea.Model {
 	return listForm.NewField(f.Name, f.String(), func(updated string) tea.Cmd {
 		original := f.String()
 		return tea.Batch(

@@ -107,8 +107,8 @@ func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 	} else if articleEndIndex == -1 || archiveFormIndex < articleEndIndex {
 		t.Errorf("archive form is not placed below the entry container: %s", entryBody)
 	}
-	if !strings.Contains(entryBody, `<div class="buttons entry-actions">`) || !strings.Contains(entryBody, `>Archive Entry</button>`) {
-		t.Errorf("entry view does not render the Archive Entry button group: %s", entryBody)
+	if !strings.Contains(entryBody, `<div class="buttons entry-actions is-right">`) || !strings.Contains(entryBody, `>Archive</button>`) {
+		t.Errorf("entry view does not render the archive action group: %s", entryBody)
 	}
 	if !strings.Contains(entryBody, `<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`) || !strings.Contains(entryBody, `action="/add"`) {
 		t.Errorf("full entry view does not include the add-entry dock: %s", entryBody)

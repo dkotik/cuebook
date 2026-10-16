@@ -9,6 +9,7 @@ import (
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
 	"github.com/dkotik/cuebook"
+	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/patch"
 )
@@ -132,7 +133,7 @@ func (a *handler) appendEntry(fileName string, raw []byte, entry cue.Value) erro
 	return nil
 }
 
-func addFieldDeclaration(field cuebook.Field, input string) (ast.Decl, error) {
+func addFieldDeclaration(field fieldmodel.Field, input string) (ast.Decl, error) {
 	if field.Value.IncompleteKind()&cue.StringKind != 0 {
 		return field.WithValue(input)
 	}
