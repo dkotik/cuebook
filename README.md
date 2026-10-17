@@ -21,6 +21,11 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
+- [ ] Implement UUID-based patch variants for
+  - [ ] insert
+  - [ ] delete
+  - [ ] update
+  - [ ] swap
 - [?] the search index keeps accumulating entries
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
 - [x] HTMX interface
