@@ -110,7 +110,7 @@ func TestInlineBooleanRendering(t *testing.T) {
 				form := forms[0]
 				for _, want := range []string{
 					`action="` + tt.prefix + `/edit"`, `method="post"`,
-					`hx-post="` + tt.prefix + `/edit"`, `hx-target="#workspace"`, `hx-swap="outerHTML"`,
+					`hx-post="` + tt.prefix + `/edit"`, `hx-trigger="change"`, `hx-target="#workspace"`, `hx-swap="outerHTML"`,
 					`<input type="hidden" name="file" value="booleans.cue">`,
 					`<input type="hidden" name="entry" value="0">`,
 					`<input type="hidden" name="field" value="Enabled">`,
@@ -309,27 +309,31 @@ func assertInlineBooleanToggle(t *testing.T, markup, state string, optional bool
 		t.Fatalf("inline boolean form count = %d, want 1: %s", len(forms), markup)
 	}
 	markup = forms[0]
-	class, pressed, next, symbol := "button boolean-toggle", state, "true", "✖"
+	class, pressed, symbol := "button boolean-toggle", state, "✖"
 	switch state {
 	case "true":
-		class, next, symbol = class+" has-text-info", "false", "✔"
+		class, symbol = class+" has-text-info", "✔"
 	case "false":
-		if optional {
-			next = "not_set"
-		}
+		class += " has-text-danger"
 	case "not_set":
 		pressed, symbol = "mixed", "☐"
 	default:
 		t.Fatalf("unknown boolean state %q", state)
 	}
-	if strings.Count(markup, "<button ") != 1 {
-		t.Errorf("want a single boolean toggle button: %s", markup)
+	if !strings.Contains(markup, `<boolean-toggle data-optional="`+strconv.FormatBool(optional)+`" expanded="true">`) {
+		t.Errorf("inline boolean is missing its expanded toggle: %s", markup)
 	}
-	want := `<button class="` + class + `" type="submit" name="value" value="` + next + `" aria-pressed="` + pressed + `" aria-label="Enabled" title="Enabled: ` + state + `; set to ` + next + `">` + symbol + `</button>`
+	if !strings.Contains(markup, `<input type="hidden" name="value" value="`+state+`">`) {
+		t.Errorf("inline boolean is missing its current hidden value %q: %s", state, markup)
+	}
+	if strings.Count(markup, "<button ") != 1 {
+		t.Errorf("want one source button for the expanded boolean toggle: %s", markup)
+	}
+	want := `<button class="` + class + `" type="button" aria-label="Enabled" aria-pressed="` + pressed + `" title="Enabled: ` + state + `">` + symbol + `</button>`
 	if !strings.Contains(markup, want) {
 		t.Errorf("inline boolean missing toggle %q: %s", want, markup)
 	}
-	for _, unwanted := range []string{`type="radio"`, `<select`, `type="hidden" name="value"`} {
+	for _, unwanted := range []string{`type="radio"`, `<select`, `type="submit"`} {
 		if strings.Contains(markup, unwanted) {
 			t.Errorf("inline boolean unexpectedly contains %q: %s", unwanted, markup)
 		}

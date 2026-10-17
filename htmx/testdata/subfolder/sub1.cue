@@ -23,8 +23,9 @@
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$HIcmGlPcqeg1ARz64fu5Cg$RqThx3got34YXBHH7QyeIQ87Z3wT7CCNwPe/fyZp6cU"
 	},
   {
-		Name:  "2378" @cuebook(title)
-		Email: "sdf@sdf.com1"
+		Name:       "2378" @cuebook(title)
+		Email:      "sdf@sdf.com1"
+		Introduced: false
 	},
   {
 		Name:       "1 really great21" @cuebook(title)
@@ -33,9 +34,8 @@
 		Introduced: true
 	},
   {
-		Name:       "Maria" @cuebook(title)
-		Email:      "mr@sfsdf.com"
-		Introduced: false
+		Name:  "Maria" @cuebook(title)
+		Email: "mr@sfsdf.com"
 	},
   {
 		Name:  "First11111aa1axx44"
@@ -91,5 +91,11 @@
 		Name:  "new entry"
 		Email: "test1@testdomain.com"
 		Notes: "sdfsdf"
+	},
+  {
+		Name:       "test" @cuebook(title)
+		Email:      "sdfsdf@dsfasdf.com"
+		Notes:      "kljlj" @cuebook(detail)
+		Introduced: true
 	}
 ]

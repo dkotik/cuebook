@@ -7,9 +7,12 @@
     {{if .ReadOnly}}
       <output>{{template "field-output.html" .}}</output>
     {{else if and .EntryView .Boolean (not .Secret)}}
-      <form class="boolean-field-form" action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-target="#workspace" hx-swap="outerHTML">
+      <form class="boolean-field-form" action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-trigger="change" hx-target="#workspace" hx-swap="outerHTML">
         {{template "field-form-controls.html" .}}
-        <button class="button boolean-toggle{{if eq .Value "true"}} has-text-info{{end}}" type="submit" name="value" value="{{template "boolean-next.html" .}}" aria-pressed="{{template "boolean-pressed.html" .}}" aria-label="{{.Name}}" title="{{.Name}}: {{.Value}}; set to {{template "boolean-next.html" .}}">{{template "boolean-symbol.html" .}}</button>
+        <boolean-toggle data-optional="{{.Optional}}" expanded="true">
+          <input type="hidden" name="value" value="{{.Value}}">
+          {{template "boolean-button.html" .}}
+        </boolean-toggle>
       </form>
     {{else}}
       <button class="field-value-edit" type="button" aria-label="Edit {{.Name}} value" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger hx-get="{{route .EditURL}}" hx-target="#field-edit-modal" hx-swap="innerHTML">

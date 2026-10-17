@@ -120,6 +120,7 @@ func TestBooleanFormRendering(t *testing.T) {
 			if !tt.edit {
 				toggleTag += ` data-allow-unset="true"`
 			}
+			toggleTag += ` expanded="true"`
 			for _, want := range []string{
 				toggleTag + `>`,
 				`<input type="hidden" name="` + inputName + `" value="` + tt.selected + `">`,

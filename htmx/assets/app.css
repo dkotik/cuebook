@@ -207,7 +207,7 @@ file-tree-node {
 
 #workspace {
   min-width: 0;
-  padding: 2rem clamp(1rem, 4vw, 3rem);
+  padding: 1.6rem clamp(1rem, 4vw, 3rem);
 }
 
 .add-entry-dock {
@@ -527,6 +527,25 @@ h1.title.document-title {
 
 boolean-toggle {
   display: inline-flex;
+}
+
+boolean-toggle[expanded] > button.boolean-toggle {
+  margin: 0;
+  border-radius: 0;
+}
+
+boolean-toggle[expanded] > button.boolean-toggle + button.boolean-toggle {
+  margin-left: -1px;
+}
+
+boolean-toggle[expanded] > button.boolean-toggle:first-of-type {
+  border-top-left-radius: var(--bulma-radius);
+  border-bottom-left-radius: var(--bulma-radius);
+}
+
+boolean-toggle[expanded] > button.boolean-toggle:last-of-type {
+  border-top-right-radius: var(--bulma-radius);
+  border-bottom-right-radius: var(--bulma-radius);
 }
 
 .boolean-toggle:focus-visible {

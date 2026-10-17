@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-function browser({ value = "not_set", optional = "true", allowUnset = "false", name = "entry.0.value", label = "Enabled", withForm = true, missing = "" } = {}) {
+function browser({ value = "not_set", optional = "true", allowUnset = "false", name = "entry.0.value", label = "Enabled", withForm = true, missing = "", expanded = null } = {}) {
   class Element {
     constructor() {
       this.listeners = new Map();
@@ -33,12 +33,44 @@ function browser({ value = "not_set", optional = "true", allowUnset = "false", n
       }
       return !event.defaultPrevented;
     }
-    setAttribute(name, value) { this.attributes.set(name, value); }
+    setAttribute(name, value) {
+      const oldValue = this.attributes.get(name) ?? null;
+      this.attributes.set(name, String(value));
+      if (oldValue !== String(value)) this.attributeChangedCallback?.(name, oldValue, String(value));
+    }
+    removeAttribute(name) {
+      const oldValue = this.attributes.get(name) ?? null;
+      this.attributes.delete(name);
+      if (oldValue !== null) this.attributeChangedCallback?.(name, oldValue, null);
+    }
+    hasAttribute(name) { return this.attributes.has(name); }
     getAttribute(name) { return this.attributes.get(name) ?? null; }
     querySelector(selector) {
       if (selector === 'input[type="hidden"]') return this.children.find((child) => child.type === "hidden") || null;
       if (selector === "button.boolean-toggle") return this.children.find((child) => child.classList.contains("boolean-toggle")) || null;
       throw new Error(`Unexpected selector: ${selector}`);
+    }
+    appendChild(child) {
+      if (child.parentElement) child.parentElement.removeChild(child);
+      this.children.push(child);
+      child.parentElement = this;
+      return child;
+    }
+    removeChild(child) {
+      const index = this.children.indexOf(child);
+      if (index >= 0) this.children.splice(index, 1);
+      child.parentElement = null;
+      return child;
+    }
+    cloneNode() {
+      const clone = new Element();
+      clone.attributes = new Map(this.attributes);
+      clone.dataset = { ...this.dataset };
+      clone.classes = new Set(this.classes);
+      clone.type = this.type;
+      clone.textContent = this.textContent;
+      clone.title = this.title;
+      return clone;
     }
     click() { this.dispatchEvent(new Event("click", { bubbles: true })); }
   }
@@ -77,6 +109,7 @@ function browser({ value = "not_set", optional = "true", allowUnset = "false", n
   const toggle = new (definitions.get("boolean-toggle"))();
   toggle.dataset.optional = optional;
   toggle.dataset.allowUnset = allowUnset;
+  if (expanded !== null) toggle.setAttribute("expanded", expanded);
   const input = new HiddenInput();
   const button = new Element();
   button.type = "button";
@@ -101,7 +134,10 @@ function browser({ value = "not_set", optional = "true", allowUnset = "false", n
     toggle.parentElement = null;
   }
   connect();
-  return { toggle, input, button, form, connect, disconnect, Form };
+  return {
+    toggle, input, button, form, connect, disconnect, Form,
+    get buttons() { return toggle.children.filter((child) => child.classList.contains("boolean-toggle")); },
+  };
 }
 
 function assertState(app, state) {
@@ -159,6 +195,66 @@ test("boolean toggle cycles through native button clicks", async (t) => {
       }
     });
   }
+});
+
+test("expanded boolean toggle exposes all three state buttons", async (t) => {
+  const cases = [
+    { name: "empty attribute expands true state", expanded: "", value: "true" },
+    { name: "false-valued attribute still expands false state", expanded: "false", value: "false" },
+    { name: "arbitrary attribute value expands unset state", expanded: "anything", value: "not_set" },
+    { name: "required toggle also exposes unset", expanded: "true", optional: "false", value: "not_set" },
+  ];
+  const states = ["true", "false", "not_set"];
+  const symbols = { true: "✔", false: "✖", not_set: "☐" };
+  for (const scenario of cases) {
+    await t.test(scenario.name, () => {
+      const app = browser(scenario);
+      const assertExpandedState = (expected) => {
+        assert.equal(app.input.value, expected);
+        assert.equal(app.toggle.getAttribute("role"), "group");
+        assert.equal(app.toggle.getAttribute("aria-label"), "Enabled");
+        assert.deepEqual(app.buttons.map((button) => button.dataset.booleanState), states);
+        assert.equal(app.buttons.length, 3);
+        for (const button of app.buttons) {
+          const buttonState = button.dataset.booleanState;
+          const selected = buttonState === expected;
+          const label = `Enabled: ${buttonState === "not_set" ? "not set" : buttonState}`;
+          assert.equal(button.textContent, symbols[buttonState]);
+          assert.equal(button.getAttribute("aria-label"), label);
+          assert.equal(button.title, label);
+          assert.equal(button.getAttribute("aria-pressed"), String(selected));
+          assert.equal(button.classList.contains("is-link"), selected && buttonState === "true");
+          assert.equal(button.classList.contains("has-text-info"), selected && buttonState === "true");
+          assert.equal(button.classList.contains("has-text-danger"), selected && buttonState === "false");
+          assert.equal(button.type, "button");
+        }
+      };
+
+      assertExpandedState(scenario.value);
+      for (const state of states) {
+        app.buttons.find((button) => button.dataset.booleanState === state).click();
+        assertExpandedState(state);
+      }
+      app.form.reset();
+      return Promise.resolve().then(() => assertExpandedState(scenario.value));
+    });
+  }
+});
+
+test("expanded boolean toggle responds to attribute changes", async () => {
+  const app = browser();
+  app.toggle.setAttribute("expanded", "false");
+  assert.equal(app.buttons.length, 3);
+  app.buttons.find((button) => button.dataset.booleanState === "false").click();
+  assert.equal(app.input.value, "false");
+
+  app.toggle.removeAttribute("expanded");
+  assert.equal(app.buttons.length, 1);
+  assert.equal(app.toggle.children.length, 2);
+  assert.equal(app.toggle.getAttribute("role"), null);
+  assert.equal(app.button.getAttribute("aria-label"), "Enabled");
+  app.button.click();
+  assertState(app, "not_set");
 });
 
 test("boolean toggle updates serialized hidden values and bubbles native events", async (t) => {

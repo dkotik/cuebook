@@ -26,7 +26,7 @@
   <div class="field">
     {{if and .Boolean (not .Secret)}}
       <span id="edit-field-{{.Index}}-label" class="field-name label">{{.Name}}:</span>
-      <boolean-toggle data-optional="{{.Optional}}">
+      <boolean-toggle data-optional="{{.Optional}}" expanded="true">
         <input type="hidden" name="value" value="{{.Value}}">
         {{template "boolean-button.html" .}}
       </boolean-toggle>

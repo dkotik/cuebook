@@ -65,8 +65,8 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 		`name="entry.2.field" value="Notes"`,
 		`name="entry.3.field" value="Password"`,
 		`placeholder="..."`,
-		"(optional)",
-		`<button class="button is-link" type="submit">Create</button>`,
+		`<div class="buttons is-centered">`,
+		`<button class="button is-success" type="submit">Create</button>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("page does not contain %q", want)
@@ -205,7 +205,7 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 		t.Fatalf("add-entry form is not closed: %s", body[formStart:])
 	}
 	form := body[formStart : formStart+formEnd]
-	if !strings.Contains(form, `<div id="add-entry-error" class="form-error" aria-live="assertive"></div>`) {
+	if !strings.Contains(form, `id="add-entry-error"`) || !strings.Contains(form, `aria-live="assertive"`) {
 		t.Errorf("add-entry error target is not inside the form: %s", form)
 	}
 	for _, want := range []string{
@@ -214,7 +214,7 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 		`name="entry.1.field" value="Count"`,
 		`type="number" name="entry.1.value" value="0" step="any" required`,
 		`name="entry.2.field" value="Enabled"`,
-		`<boolean-toggle data-optional="false" data-allow-unset="true">`,
+		`<boolean-toggle data-optional="false" data-allow-unset="true" expanded="true">`,
 		`<input type="hidden" name="entry.2.value" value="false">`,
 		`<button class="button boolean-toggle has-text-danger" type="button" aria-label="Enabled" aria-pressed="false" title="Enabled: false">✖</button>`,
 	} {
@@ -279,7 +279,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".card-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 12rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", ".file-selector-dialog", ".file-picker-tree", ".file-picker-card", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".card-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 12rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", ".file-selector-dialog", ".file-picker-tree", ".file-picker-card", "boolean-toggle[expanded]", "border-top-left-radius: var(--bulma-radius)", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
 		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `document.querySelectorAll("a.tree-file-link")`, `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},
 		{name: "custom search element", path: "/assets/search-control.js", contains: []string{`customElements.define("cuebook-search"`, `this.input.value = ""`, "updateButtons()", "this.form.insertBefore(this.clearControl, this.inputControl)", "this.clearControl.remove()", "this.input.focus()"}, wantStatus: http.StatusOK},
 		{name: "entry move controller", path: "/assets/entry-move.js", contains: []string{"data-entry-drag-handle", "await window.htmx.ajax(\"POST\", `${routePrefix}/move`, {", "drop-before", "drop-after", "destination", "is-drop-target", "cuebook:move-confirmation-request"}, wantStatus: http.StatusOK},
@@ -441,7 +441,7 @@ func TestWritableDirectoryAppendsEntries(t *testing.T) {
 				wantEntryID := `id="entry-` + strconv.Itoa(beforeLength) + `"`
 				if strings.Contains(body, `<main id="workspace"`) || strings.Contains(body, `entries-grid`) ||
 					!strings.Contains(body, `<article class="entry card cell" `+wantEntryID) ||
-					!strings.Contains(body, `class="buttons entry-actions is-right"`) || !strings.Contains(body, "Added Contact") {
+					!strings.Contains(body, `class="buttons entry-actions is-centered"`) || !strings.Contains(body, "Added Contact") {
 					t.Fatalf("expected the newly-added entry view fragment, got: %s", body)
 				}
 			} else {

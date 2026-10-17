@@ -7,10 +7,10 @@
 <div class="buttons entry-actions is-centered">
   <pre id="entry-cue-{{.Index}}" hidden>{{.CUESource}}</pre>
   <span class="muted" data-entry-copy-status role="status"></span>
-  {{if .CanMove}}
   <button class="button" type="button" data-entry-copy="entry-cue-{{.Index}}" title="Copy entry as CUE">Copy</button>
+  {{if .CanMove}}
   <button class="button" type="button" data-file-picker-open="entry-move-dialog" aria-haspopup="dialog" aria-controls="entry-move-dialog">Move</button>
-  <!--<button class="button" type="button" data-entry-cut="entry-cue-{{.Index}}" data-file="{{.File}}" data-entry-index="{{.Index}}" data-cut-fingerprint="{{.CutFingerprint}}" title="Cut entry as CUE">Cut</button>-->
+  <button class="button" type="button" data-entry-cut="entry-cue-{{.Index}}" data-file="{{.File}}" data-entry-index="{{.Index}}" data-cut-fingerprint="{{.CutFingerprint}}" title="Cut entry as CUE">Cut</button>
   {{end}}
   {{if .CanArchive}}
   <form class="entry-archive-form" action="{{route "/archive"}}" method="post" hx-post="{{route "/archive"}}" hx-target="#workspace" hx-swap="outerHTML">

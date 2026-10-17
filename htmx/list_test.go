@@ -268,7 +268,7 @@ func TestFileFrontmatterView(t *testing.T) {
 					t.Errorf("file breadcrumb or title is missing %q: %s", want, body)
 				}
 			}
-			metadataTitleHeading := `<h1 class="document-title title is-4">` + test.wantMetadataTitle + `</h1>`
+			metadataTitleHeading := `<h1 class="title document-title is-4">` + test.wantMetadataTitle + `</h1>`
 			if test.wantMetadataTitle != "" {
 				metadataTitlePosition := strings.Index(body, metadataTitleHeading)
 				if metadataTitlePosition < 0 {
@@ -276,7 +276,7 @@ func TestFileFrontmatterView(t *testing.T) {
 				} else if breadcrumbPosition := strings.Index(body, `<nav class="breadcrumb" aria-label="File location">`); breadcrumbPosition < 0 || metadataTitlePosition >= breadcrumbPosition {
 					t.Errorf("metadata title should appear above the breadcrumb: %s", body)
 				}
-			} else if strings.Contains(body, `<h1 class="document-title title is-4">`) {
+			} else if strings.Contains(body, `<h1 class="title document-title is-4">`) {
 				t.Errorf("title heading should be absent without metadata: %s", body)
 			}
 			if test.wantVisible != "" && !strings.Contains(body, test.wantVisible) {

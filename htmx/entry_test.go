@@ -112,15 +112,15 @@ func TestEntryViewHidesFileMetadataAndShowsFileBreadcrumb(t *testing.T) {
 				return response.Body.String()
 			}
 			body := get(tt.prefix + entryURL(tt.file, span))
-			start := strings.Index(body, `<div class="document-title-row">`)
+			start := strings.Index(body, `<nav class="breadcrumb" aria-label="File location">`)
 			if start < 0 {
-				t.Fatalf("document title row not found: %s", body)
+				t.Fatalf("file breadcrumb not found: %s", body)
 			}
-			end := strings.Index(body[start:], `</div>`)
+			end := strings.Index(body[start:], `</nav>`)
 			if end < 0 {
-				t.Fatalf("document title row is not closed: %s", body)
+				t.Fatalf("file breadcrumb is not closed: %s", body)
 			}
-			heading := html.UnescapeString(body[start : start+end])
+			heading := html.UnescapeString(body[start : start+end+len(`</nav>`)])
 			wantLabel := tt.file
 			if slash := strings.LastIndex(wantLabel, "/"); slash >= 0 {
 				wantLabel = wantLabel[slash+1:]
@@ -147,7 +147,7 @@ func TestEntryViewHidesFileMetadataAndShowsFileBreadcrumb(t *testing.T) {
 				}
 			}
 			backLink := `<a href="` + wantURL + `" class="button" type="button is-primary" title="Back">Back</a>`
-			if !strings.Contains(body, backLink) {
+			if !strings.Contains(html.UnescapeString(body), backLink) {
 				t.Errorf("entry back link does not point to parent file %q: %s", wantURL, body)
 			}
 			pathParts := strings.Split(tt.file, "/")
@@ -158,7 +158,7 @@ func TestEntryViewHidesFileMetadataAndShowsFileBreadcrumb(t *testing.T) {
 					t.Errorf("file breadcrumb does not link directory %q to its folder view %q: %s", directory, wantDirectoryURL, heading)
 				}
 			}
-			if strings.Contains(body, `<h1 class="document-title title is-4">`) {
+			if strings.Contains(body, `<h1 class="title document-title is-4">`) {
 				t.Errorf("entry view unexpectedly displays file metadata title: %s", body)
 			}
 			if strings.Contains(body, "Metadata description.") {
@@ -166,7 +166,7 @@ func TestEntryViewHidesFileMetadataAndShowsFileBreadcrumb(t *testing.T) {
 			}
 			list := get(wantURL)
 			if tt.fileTitle != "" {
-				metadataHeading := `<h1 class="document-title title is-4">` + tt.fileTitle + `</h1>`
+				metadataHeading := `<h1 class="title document-title is-4">` + tt.fileTitle + `</h1>`
 				if !strings.Contains(list, metadataHeading) || !strings.Contains(list, "Metadata description.") {
 					t.Errorf("file list should display its metadata title and description: %s", list)
 				}
@@ -237,7 +237,7 @@ func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 	} else if articleEndIndex == -1 || archiveFormIndex < articleEndIndex {
 		t.Errorf("archive form is not placed below the entry container: %s", entryBody)
 	}
-	if !strings.Contains(entryBody, `<div class="buttons entry-actions is-right">`) || !strings.Contains(entryBody, `>Archive</button>`) {
+	if !strings.Contains(entryBody, `<div class="buttons entry-actions is-centered">`) || !strings.Contains(entryBody, `>Archive</button>`) {
 		t.Errorf("entry view does not render the archive action group: %s", entryBody)
 	}
 	if !strings.Contains(entryBody, `<remember-details class="add-entry-dock" data-storage-key="add-entry-dock">`) || !strings.Contains(entryBody, `action="/add"`) {

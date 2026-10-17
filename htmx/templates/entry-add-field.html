@@ -6,7 +6,7 @@
         {{- template "field-required.html" . -}}
       {{- end -}}
     </span>
-    <boolean-toggle data-optional="{{.Optional}}" data-allow-unset="true">
+    <boolean-toggle data-optional="{{.Optional}}" data-allow-unset="true" expanded="true">
       <input type="hidden" name="entry.{{.Index}}.value" value="{{.Value}}">
       {{template "boolean-button.html" .}}
     </boolean-toggle>

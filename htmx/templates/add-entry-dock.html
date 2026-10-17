@@ -6,9 +6,10 @@
       <input type="hidden" name="file" value="{{.Selected}}">
       {{range .RequiredAddFields}}{{template "entry-add-field.html" .}}{{end}}
       {{range .OptionalAddFields}}{{template "entry-add-field.html" .}}{{end}}
-      <div id="add-entry-error" class="form-error" aria-live="assertive"></div>
-
-      <button class="button is-link" type="submit">Create</button>
+      <div id="add-entry-error" class="form-error block" aria-live="assertive"></div>
+      <div class="buttons is-centered">
+        <button class="button is-success" type="submit">Create</button>
+      </div>
     </form>
 
   </section>
