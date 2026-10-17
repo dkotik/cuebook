@@ -66,6 +66,7 @@ type fileBreadcrumbItem struct {
 type entryView struct {
 	Index          int
 	File           string
+	FileURL        string
 	EntryURL       string
 	CUESource      string
 	CutFingerprint string
@@ -198,6 +199,7 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 	view := entryView{
 		Index:      index,
 		File:       fileName,
+		FileURL:    fileURL(fileName),
 		EntryURL:   entryURL(fileName, entryRange),
 		Title:      entry.GetTitle(),
 		CanMove:    !readOnly,

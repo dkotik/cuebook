@@ -146,6 +146,10 @@ func TestEntryViewHidesFileMetadataAndShowsFileBreadcrumb(t *testing.T) {
 					t.Errorf("entry title row missing %q: %s", want, heading)
 				}
 			}
+			backLink := `<a href="` + wantURL + `" class="button" type="button is-primary" title="Back">Back</a>`
+			if !strings.Contains(body, backLink) {
+				t.Errorf("entry back link does not point to parent file %q: %s", wantURL, body)
+			}
 			pathParts := strings.Split(tt.file, "/")
 			for index, directory := range pathParts[:len(pathParts)-1] {
 				directoryPath := strings.Join(pathParts[:index+1], "/")
