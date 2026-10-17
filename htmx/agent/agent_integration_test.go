@@ -1,6 +1,4 @@
-//go:build integration
-
-package htmx_test
+package agent_test
 
 import (
 	"context"
@@ -23,6 +21,9 @@ func (integrationGenerator) Generate(_ context.Context, _ []agent.Message, _ int
 }
 
 func TestHTMXMountsAgentUnderPrefixedRoute(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping HTMX agent integration test in short mode")
+	}
 	t.Parallel()
 
 	assistant, err := agent.New(fstest.MapFS{
@@ -72,6 +73,9 @@ func TestHTMXMountsAgentUnderPrefixedRoute(t *testing.T) {
 }
 
 func TestHTMXDoesNotRenderAgentWhenDisabled(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping HTMX agent integration test in short mode")
+	}
 	t.Parallel()
 
 	handler, err := htmx.New(fstest.MapFS{})
