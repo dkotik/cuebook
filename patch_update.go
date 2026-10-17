@@ -163,7 +163,7 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 		label string
 		i     int
 	)
-	for selector, field := range EachField(entry, cue.All()) {
+	for selector, field := range eachField(entry, cue.All()) {
 		label = selector.Unquoted()
 		all[label] = field
 		if field.IsConcrete() {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"sort"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
@@ -43,35 +44,40 @@ func New(source []byte) (book Book, err error) {
 	return book, nil
 }
 
-// TODO: deprecate in favor of cuebook.EachValue
-func (d Book) EachValue() iter.Seq[cue.Value] {
-	next, err := d.Value.List()
-	if err != nil {
-		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
-	}
-
-	return func(yield func(cue.Value) bool) {
-		for next.Next() {
-			if !yield(next.Value()) {
-				break
-			}
-		}
-	}
-}
-
 func (d Book) EachEntry() iter.Seq2[Entry, error] {
 	next, err := d.Value.List()
 	if err != nil {
 		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
 	}
 
+	fieldOrder := make(map[string]int, len(d.Fields))
+	for index, field := range d.Fields {
+		if _, exists := fieldOrder[field.Name]; !exists {
+			fieldOrder[field.Name] = index
+		}
+	}
+
 	return func(yield func(Entry, error) bool) {
 		for next.Next() {
 			entry, err := NewEntry(next.Value())
-			if !yield(entry, errors.Join(
-				err,
-				next.Value().Err(),
-			)) {
+			if err != nil {
+				yield(entry, errors.Join(
+					err,
+					next.Value().Err(),
+				))
+				return
+			}
+
+			sort.SliceStable(entry.Fields, func(i, j int) bool {
+				leftOrder, leftKnown := fieldOrder[entry.Fields[i].Name]
+				rightOrder, rightKnown := fieldOrder[entry.Fields[j].Name]
+				if leftKnown != rightKnown {
+					return leftKnown
+				}
+				return leftKnown && leftOrder < rightOrder
+			})
+
+			if !yield(entry, nil) {
 				break
 			}
 		}

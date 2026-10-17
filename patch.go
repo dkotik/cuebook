@@ -40,7 +40,7 @@ func (r Result) IsEqual(another Result) bool {
 }
 
 func (r Result) BottomChangeIndex(since Result) (i int) {
-	nextOlder, close := iter.Pull[cue.Value](since.Document.EachValue())
+	nextOlder, close := iter.Pull[cue.Value](EachValue(since.Document.Value))
 	defer close()
 	index := -1
 	for entry, err := range r.Document.EachEntry() {

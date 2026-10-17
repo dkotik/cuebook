@@ -118,6 +118,9 @@ func (e Entry) GetFieldByName(name string) (field fieldmodel.Field, ok bool) {
 	return
 }
 
+// EachValue returns an iterator over the elements of a CUE list.
+//
+// It panics if value cannot be iterated as a list.
 func EachValue(value cue.Value) iter.Seq[cue.Value] {
 	next, err := value.List()
 	if err != nil {

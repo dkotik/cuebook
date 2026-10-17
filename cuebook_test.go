@@ -1,6 +1,7 @@
 package cuebook
 
 import (
+	"reflect"
 	"testing"
 
 	"cuelang.org/go/cue"
@@ -70,6 +71,52 @@ func TestNewPopulatesFieldsFromFirstDisjunct(t *testing.T) {
 	}
 }
 
+func TestEachEntryOrdersFieldsByBookFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   [][]string
+	}{
+		{
+			name: "known fields follow book order and unknown fields stay stable",
+			source: `[
+				{ first: "book first", second: "book second" },
+				{ unlistedZ: "z", second: "entry second", unlistedA: "a", first: "entry first" },
+			]`,
+			want: [][]string{
+				{"first", "second"},
+				{"first", "second", "unlistedZ", "unlistedA"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			book, err := New([]byte(tt.source))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got [][]string
+			for entry, err := range book.EachEntry() {
+				if err != nil {
+					t.Fatal(err)
+				}
+				fieldNames := make([]string, len(entry.Fields))
+				for i, field := range entry.Fields {
+					fieldNames[i] = field.Name
+				}
+				got = append(got, fieldNames)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("entry field order = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestValueIterator(t *testing.T) {
 	book, err := New([]byte(`[
 		{ "key": "value" },
@@ -80,7 +127,7 @@ func TestValueIterator(t *testing.T) {
 	}
 
 	var entries []string
-	for entry := range book.EachValue() {
+	for entry := range EachValue(book.Value) {
 		b, err := entry.MarshalJSON()
 		if err != nil {
 			t.Fatal(err)

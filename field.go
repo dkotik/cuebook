@@ -37,7 +37,7 @@ func NewField(name string, value cue.Value) Field {
 	}
 }
 
-func EachField(value cue.Value, options ...cue.Option) iter.Seq2[cue.Selector, cue.Value] {
+func eachField(value cue.Value, options ...cue.Option) iter.Seq2[cue.Selector, cue.Value] {
 	next, err := value.Fields(options...)
 	if err != nil {
 		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))

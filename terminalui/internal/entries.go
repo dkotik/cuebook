@@ -67,7 +67,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		// 	target, err := msg.LastChange.Difference().Match(msg.Source)
 		// 	if err == nil {
 		// 		i := 0
-		// 		for entry := range msg.Document.EachValue() {
+		// 		for entry := range cuebook.EachValue(msg.Document.Value) {
 		// 			i++
 		// 			r, err := cuebook.NewByteRange(entry)
 		// 			if err == nil && r == target {
@@ -82,7 +82,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		// 	target, err := p.Difference().Match(msg.Source)
 		// 	if err == nil {
 		// 		i := 0
-		// 		for entry := range msg.Document.EachValue() {
+		// 		for entry := range cuebook.EachValue(msg.Document.Value) {
 		// 			i++
 		// 			r, err := cuebook.NewByteRange(entry)
 		// 			if err == nil && r == target {
