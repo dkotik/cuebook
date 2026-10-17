@@ -12,7 +12,6 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
-	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 )
 
 // Book holds a list of structured data entries.
@@ -89,7 +88,7 @@ func (d Book) GetValue(atIndex int) (cue.Value, error) {
 	return value, value.Err()
 }
 
-func (d Book) GetField(atIndex, fieldIndex int) (f fieldmodel.Field, err error) {
+func (d Book) GetField(atIndex, fieldIndex int) (f Field, err error) {
 	value, err := d.GetValue(atIndex)
 	if err != nil {
 		return

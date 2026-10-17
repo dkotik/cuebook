@@ -28,7 +28,6 @@ func TestIsDetailAttribute(t *testing.T) {
 }
 
 func TestDefaultAttribute(t *testing.T) {
-	t.Skip("working on another")
 	book, err := cuebook.New([]byte(`[...{
 		key: string | *"default"
 		key2: string | *"1991-03-04" @cuebook(default="date?format=01*02")

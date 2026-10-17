@@ -3,7 +3,6 @@ package htmx
 import (
 	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
-	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
 )
 
@@ -20,7 +19,7 @@ type addFieldView struct {
 }
 
 type entryFieldDefinition struct {
-	Field    fieldmodel.Field
+	Field    cuebook.Field
 	Optional bool
 }
 
@@ -82,7 +81,7 @@ func entryFieldDefinitions(document cuebook.Book) []entryFieldDefinition {
 	entry := document.Value.LookupPath(cue.MakePath(cue.Index(0)))
 	for selector, value := range cuebook.EachFieldDefinition(document.Value) {
 		result = append(result, entryFieldDefinition{
-			Field:    fieldmodel.NewField(selector.Unquoted(), value),
+			Field:    cuebook.NewField(selector.Unquoted(), value),
 			Optional: selector.ConstraintType() == cue.OptionalConstraint || entryFieldOptional(entry, selector.Unquoted()),
 		})
 	}

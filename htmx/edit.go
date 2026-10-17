@@ -13,7 +13,6 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/token"
 	"github.com/dkotik/cuebook"
-	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
 )
 
@@ -304,7 +303,7 @@ func optionalFieldValue(value cue.Value) bool {
 	return false
 }
 
-func makeFieldView(field fieldmodel.Field, fileName string, index int, readOnly, entryView bool) fieldView {
+func makeFieldView(field cuebook.Field, fileName string, index int, readOnly, entryView bool) fieldView {
 	_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
 	booleanOnly := field.Value.IncompleteKind() == cue.BoolKind
 	value := field.String()

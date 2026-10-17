@@ -24,7 +24,7 @@ func (fields AttributeFields) GetFirstOf(key string) (AttributeField, bool) {
 
 func (fields AttributeFields) GetLastOf(key string) (field AttributeField, found bool) {
 	for possible := range fields {
-		if field.Key == key {
+		if possible.Key == key {
 			field = possible
 			found = true
 		}
@@ -81,26 +81,25 @@ func IsMultiLine(v cue.Value) (ok bool) {
 func GetDefaultValue(v cue.Value) (defaultValue string, ok bool) {
 	_, exprs := v.Expr()
 	for _, expr := range exprs {
-		expressionValue, ok := expr.Default()
-		if ok {
+		expressionValue, hasDefault := expr.Default()
+		if hasDefault {
 			defaultValue = strings.TrimSpace(ValueToString(expressionValue))
+			ok = true
 			break
 		}
 	}
 
-	field, ok := GetFieldAttributes(v, "cuebook").GetLastOf("default")
-	if !ok {
-		return
+	field, hasAttributeDefault := GetFieldAttributes(v, "cuebook").GetLastOf("default")
+	if !hasAttributeDefault {
+		return defaultValue, ok
 	}
-	call, ok := AttributeDefaults[field.Key]
-	if !ok {
-		return
+	call, hasDefault := AttributeDefaults[field.Value]
+	if !hasDefault {
+		return "", false
 	}
 
 	defaultValue, err := call(defaultValue, field.Query)
 	if err != nil {
-		// panic(err)
-		// // TODO: handle error?
 		return "", false
 	}
 	return defaultValue, true

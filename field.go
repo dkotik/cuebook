@@ -1,12 +1,15 @@
 package cuebook
 
 import (
+	"bytes"
 	"fmt"
 	"iter"
 	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
+	"cuelang.org/go/cue/literal"
+	"github.com/dkotik/cuebook/metadata"
 )
 
 type Field struct {
@@ -35,6 +38,66 @@ func NewField(name string, value cue.Value) Field {
 		Kind:        value.Kind(),
 		Value:       value,
 	}
+}
+
+// WithValue converts an edited value to a CUE field declaration, applying its metadata.
+func (f Field) WithValue(value string) (*ast.Field, error) {
+	return metadata.FormatFieldValue(f.Name, f.Value, value)
+}
+
+// Default returns the field's default value, if one is defined.
+func (f Field) Default() (string, bool) {
+	return metadata.GetDefaultValue(f.Value)
+}
+
+// String returns a display-friendly representation of the field's value.
+func (f Field) String() string {
+	return metadata.ValueToString(f.Value)
+}
+
+// MarshallText serializes the CUE value as text suitable for editing.
+func (f Field) MarshallText() ([]byte, error) {
+	kind := f.Value.IncompleteKind()
+	switch {
+	case kind&cue.StringKind != 0:
+		value, err := f.Value.String()
+		if err != nil {
+			return nil, err
+		}
+		if metadata.IsMultiLine(f.Value) {
+			return []byte(literal.String.WithOptionalTabIndent(1).Quote(value)), nil
+		}
+		return []byte(literal.String.Quote(value)), nil
+	case kind&cue.BoolKind != 0:
+		value, err := f.Value.Bool()
+		if err != nil {
+			return nil, err
+		}
+		if value {
+			return []byte("true"), nil
+		}
+		return []byte("false"), nil
+	case kind&cue.NumberKind != 0:
+		buffer := &bytes.Buffer{}
+		_, err := fmt.Fprintf(buffer, "%v", f.Value)
+		return buffer.Bytes(), err
+	}
+
+	switch kind := f.Value.Kind(); kind {
+	case cue.BytesKind, cue.ListKind, cue.StructKind:
+		return f.Value.MarshalJSON()
+	case cue.NullKind:
+		return []byte(`null`), nil
+	case cue.BottomKind:
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("unknown data type: %s", kind)
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (f Field) MarshalText() ([]byte, error) {
+	return f.MarshallText()
 }
 
 func eachField(value cue.Value, options ...cue.Option) iter.Seq2[cue.Selector, cue.Value] {
