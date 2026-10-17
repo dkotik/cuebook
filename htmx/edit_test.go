@@ -161,6 +161,7 @@ func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 		`hx-target="#workspace"`,
 		`class="modal-card field-edit-modal-form" role="dialog" aria-modal="true"`,
 		`<section class="modal-card-body">`,
+		`aria-label="Copy field value" title="Copy field value" data-field-edit-copy>⎘</button>`,
 		`name="value" value="`,
 		`data-field-edit-dismiss>Cancel</button>`,
 	} {
@@ -186,6 +187,7 @@ func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 		`role="dialog" aria-modal="true"`,
 		`hx-target="#workspace"`,
 		`name="view" value="entry"`,
+		`aria-label="Copy field value" title="Copy field value" data-field-edit-copy>⎘</button>`,
 		`data-field-edit-dismiss>Cancel</button>`,
 	} {
 		if !strings.Contains(entryFormResponse.Body.String(), want) {

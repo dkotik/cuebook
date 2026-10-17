@@ -16,6 +16,40 @@
     opener = null;
   };
 
+  const copyFieldValue = async (modal) => {
+    if (!modal?.classList.contains("is-active")) {
+      return;
+    }
+    const form = modal.querySelector("form");
+    const value = form?.elements.namedItem("value");
+    const button = modal.querySelector("[data-field-edit-copy]");
+    if (!value || !button || button.disabled) {
+      return;
+    }
+    if (!navigator.clipboard?.writeText) {
+      window.htmx.trigger(document.body, "cuebook:flash", {
+        message: "Clipboard access is unavailable. Use HTTPS or localhost to copy field values.",
+      });
+      return;
+    }
+
+    button.disabled = true;
+    try {
+      // A field copy must not leave an older entry cut pending for paste.
+      localStorage.removeItem("cuebook-cut:" + (document.body?.dataset.routePrefix || "/"));
+      await navigator.clipboard.writeText(value.value);
+      if (modal.querySelector("form") === form) {
+        closeDialog(modal);
+      }
+    } catch (_) {
+      window.htmx.trigger(document.body, "cuebook:flash", {
+        message: "The field value could not be copied. Please allow clipboard access and local storage and try again.",
+      });
+    } finally {
+      button.disabled = false;
+    }
+  };
+
   document.addEventListener("htmx:beforeRequest", (event) => {
     const source = event.detail.elt;
     if (!(source instanceof Element)) {
@@ -61,10 +95,16 @@
 
   document.addEventListener("click", (event) => {
     const target = event.target;
-    if (!(target instanceof Element) || !target.closest("[data-field-edit-dismiss]")) {
+    if (!(target instanceof Element)) {
       return;
     }
-    closeDialog(document.getElementById("field-edit-modal"));
+    const modal = document.getElementById("field-edit-modal");
+    if (target.closest("[data-field-edit-copy]") && target.closest("#field-edit-modal") === modal) {
+      return copyFieldValue(modal);
+    }
+    if (target.closest("[data-field-edit-dismiss]")) {
+      closeDialog(modal);
+    }
   });
 
   document.addEventListener("keydown", (event) => {
@@ -76,6 +116,14 @@
       event.preventDefault();
       closeDialog(modal);
       return;
+    }
+    const focused = document.activeElement;
+    if (event.key.toLowerCase() === "c" && (event.ctrlKey || event.metaKey) &&
+        !event.altKey && !event.shiftKey && !event.repeat && !event.isComposing && !event.defaultPrevented &&
+        !(focused instanceof Element &&
+          (focused.closest("input, textarea, select, button") || focused.isContentEditable))) {
+      event.preventDefault();
+      return copyFieldValue(modal);
     }
     if (event.key !== "Tab") {
       return;
