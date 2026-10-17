@@ -275,6 +275,7 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", contains: []string{"htmx"}, wantStatus: http.StatusOK},
 		{name: "version-pinned Bulma", path: "/assets/bulma.css", contains: []string{"bulma.io v1.0.4", ".grid.is-col-min-16", ".is-gap-2{gap:1rem!important}"}, wantStatus: http.StatusOK},
 		{name: "entry color themes", path: "/assets/theme.css", contains: []string{`:root[data-theme="dark"]`, "--entry-card-background: #181825", `:root[data-theme="light"]`, "--entry-card-header-background: #cdd6f4"}, wantStatus: http.StatusOK},
+		{name: "print stylesheet", path: "/assets/print.css", contains: []string{"@media print", ":root[data-theme]", "color-scheme: light", "--bulma-scheme-main-l: 100%", "--bulma-text-l: 29%", "--entry-card-background: var(--bulma-scheme-main)", "nav,", ".topbar", "display: none !important", "padding-top: 0", "display: block", "background-image: none"}, wantStatus: http.StatusOK},
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
@@ -334,6 +335,7 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 		`<button id="theme-toggle" class="button has-text-info" type="button" aria-label="Toggle color theme" aria-pressed="true">`,
 		`☼`,
 		`<script src="/assets/theme.js"></script>`,
+		`<link rel="stylesheet" href="/assets/print.css" media="print">`,
 		`<script src="/assets/live-reload.js" defer></script>`,
 		`<live-reload data-events-url="/events"></live-reload>`,
 	} {

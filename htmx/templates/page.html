@@ -13,6 +13,7 @@
   {{if .AgentEnabled}}
   <link rel="stylesheet" href="{{.AgentBaseURL}}/assets/agent.css">
   {{end}}
+  <link rel="stylesheet" href="{{route "/assets/print.css"}}" media="print">
   <script src="{{route "/assets/htmx-2.0.4.min.js"}}" defer></script>
   <script src="{{route "/assets/file-tree.js"}}" defer></script>
   <script src="{{route "/assets/entry-move.js"}}" defer></script>

@@ -278,39 +278,15 @@ file-tree-node {
   }
 }
 
-.document-title {
+h1.title.document-title {
   overflow-wrap: anywhere;
-}
-
-.document-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-width: 0;
+  margin-bottom: 0.3rem;
 }
 
 .breadcrumb {
   min-width: 0;
   margin: 0 0 1rem 0;
   white-space: normal;
-}
-
-.document-title-row .breadcrumb ul {
-  flex-wrap: wrap;
-}
-
-.document-title-row .breadcrumb li {
-  /*display: flex;*/
-  /*min-width: 0;*/
-  /*align-items: center;*/
-  /*justify-content: center;*/
-  /*padding: 0 0.75em;*/
-  overflow-wrap: anywhere;
-}
-
-.document-title-row .document-title {
-  margin: 0;
 }
 
 .document-title-row > .button {

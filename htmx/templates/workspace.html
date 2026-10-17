@@ -24,7 +24,7 @@
     {{template "document-title.html" .}}
     {{if not .SelectedEntry}}
       {{- with .FileDescription -}}
-        {{ . }}
+        <div class="content">{{ . }}</div>
       {{- end -}}
     {{end}}
     {{if .ReadOnly}}<p class="muted">Read-only source</p>{{end}}
@@ -49,18 +49,16 @@
 </main>
 
 {{define "document-title.html"}}
-  {{if and .FileTitle (not .SelectedEntry)}}<h1 class="document-title title is-4">{{.FileTitle}}</h1>{{end}}
-  <div class="document-title-row">
-    <nav class="breadcrumb" aria-label="File location">
-      <ul>
-        {{range .FileBreadcrumb}}
-        <li {{if .Current}}class="is-active" aria-current="page"{{end}}>
-          <a href="{{route .URL}}" hx-get="{{route .URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" title="{{$.Selected}}">
-            {{- .Label -}}
-          </a>
-        </li>
-        {{end}}
-      </ul>
-    </nav>
-  </div>
+  {{if and .FileTitle (not .SelectedEntry)}}<h1 class="title document-title is-4">{{.FileTitle}}</h1>{{end}}
+  <nav class="breadcrumb" aria-label="File location">
+    <ul>
+      {{range .FileBreadcrumb}}
+      <li {{if .Current}}class="is-active" aria-current="page"{{end}}>
+        <a href="{{route .URL}}" hx-get="{{route .URL}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" title="{{$.Selected}}">
+          {{- .Label -}}
+        </a>
+      </li>
+      {{end}}
+    </ul>
+  </nav>
 {{end}}
