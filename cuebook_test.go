@@ -1,6 +1,74 @@
 package cuebook
 
-import "testing"
+import (
+	"testing"
+
+	"cuelang.org/go/cue"
+)
+
+func TestNewPopulatesFieldsFromFirstDisjunct(t *testing.T) {
+	tests := []struct {
+		name              string
+		source            string
+		fieldNames        []string
+		fieldKinds        []cue.Kind
+		fieldJSON         []string
+		fieldDescriptions []string
+	}{
+		{
+			name: "first disjunct supplies fields",
+			source: `[*{
+				// First field description.
+				first: "one"
+				count: 1
+			} | { second: true }]`,
+			fieldNames:        []string{"first", "count"},
+			fieldKinds:        []cue.Kind{cue.StringKind, cue.IntKind},
+			fieldJSON:         []string{`"one"`, "1"},
+			fieldDescriptions: []string{"First field description.", ""},
+		},
+		{
+			name:              "ordinary list uses first entry",
+			source:            `[{ first: "one" }, { ignored: true }]`,
+			fieldNames:        []string{"first"},
+			fieldKinds:        []cue.Kind{cue.StringKind},
+			fieldJSON:         []string{`"one"`},
+			fieldDescriptions: []string{""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			book, err := New([]byte(tt.source))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(book.Fields) != len(tt.fieldNames) {
+				t.Fatalf("got %d fields, want %d", len(book.Fields), len(tt.fieldNames))
+			}
+			for i, field := range book.Fields {
+				if field.Name != tt.fieldNames[i] {
+					t.Errorf("field %d name = %q, want %q", i, field.Name, tt.fieldNames[i])
+				}
+				if field.Kind != tt.fieldKinds[i] {
+					t.Errorf("field %q kind = %s, want %s", field.Name, field.Kind, tt.fieldKinds[i])
+				}
+				if field.Description != tt.fieldDescriptions[i] {
+					t.Errorf("field %q description = %q, want %q", field.Name, field.Description, tt.fieldDescriptions[i])
+				}
+				gotJSON, err := field.Value.MarshalJSON()
+				if err != nil {
+					t.Fatalf("marshal field %q: %v", field.Name, err)
+				}
+				if string(gotJSON) != tt.fieldJSON[i] {
+					t.Errorf("field %q value = %s, want %s", field.Name, gotJSON, tt.fieldJSON[i])
+				}
+			}
+		})
+	}
+}
 
 func TestValueIterator(t *testing.T) {
 	book, err := New([]byte(`[

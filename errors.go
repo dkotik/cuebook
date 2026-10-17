@@ -2,6 +2,7 @@ package cuebook
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
@@ -20,6 +21,19 @@ const (
 	ErrNotListOfStructs
 	ErrRootListEndNotFound
 )
+
+// FileNotFoundError reports that a requested CUE file does not exist.
+type FileNotFoundError struct {
+	Path string
+}
+
+func (e *FileNotFoundError) Error() string {
+	return fmt.Sprintf("file not found: path=%s", e.Path)
+}
+
+func (e *FileNotFoundError) HyperTextStatusCode() int {
+	return http.StatusNotFound
+}
 
 // Localizable represents errors that can return localized messages.
 type Localizable interface {

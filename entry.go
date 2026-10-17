@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"cuelang.org/go/cue"
-	"cuelang.org/go/cue/ast"
 	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 	"github.com/dkotik/cuebook/metadata"
 )
@@ -128,42 +127,6 @@ func EachValue(value cue.Value) iter.Seq[cue.Value] {
 	return func(yield func(cue.Value) bool) {
 		for next.Next() {
 			if !yield(next.Value()) {
-				break
-			}
-		}
-	}
-}
-
-func EachField(value cue.Value, options ...cue.Option) iter.Seq2[cue.Selector, cue.Value] {
-	next, err := value.Fields(options...)
-	if err != nil {
-		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
-	}
-
-	return func(yield func(cue.Selector, cue.Value) bool) {
-		for next.Next() {
-			if !yield(next.Selector(), next.Value()) {
-				break
-			}
-		}
-	}
-}
-
-// EachFieldDefinition emits abstract field definitions for structured entries
-// of a Cue list.
-func EachFieldDefinition(value cue.Value) iter.Seq2[cue.Selector, cue.Value] {
-	return func(yield func(_ cue.Selector, value cue.Value) bool) {
-		path := cue.MakePath(cue.Index(0))
-		if length, _ := value.Len().Uint64(); length == 0 {
-			// insert an empty entry, so that field definitions are inheritted
-			// from conjuctions; otherwise field query will return cue.BottomKind
-			// without any way of enumerating the fields
-			value = value.FillPath(path, ast.NewStruct())
-		}
-
-		next, _ := value.LookupPath(path).Fields(cue.All())
-		for next.Next() {
-			if !yield(next.Selector(), next.Value()) {
 				break
 			}
 		}

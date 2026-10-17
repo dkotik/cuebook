@@ -8,52 +8,44 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
-	"net/http"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	fieldmodel "github.com/dkotik/cuebook/htmx/field"
 )
 
-// FileNotFoundError reports that a requested CUE file does not exist.
-type FileNotFoundError struct {
-	Path string
-}
-
-func (e *FileNotFoundError) Error() string {
-	return fmt.Sprintf("file not found: path=%s", e.Path)
-}
-
-func (e *FileNotFoundError) HyperTextStatusCode() int {
-	return http.StatusNotFound
-}
-
 // Book holds a list of structured data entries.
 type Book struct {
-	cue.Value
+	Value  cue.Value
+	Fields []Field
 }
 
 func New(source []byte) (book Book, err error) {
 	book.Value = cuecontext.New().CompileBytes(source)
-	if err = book.Err(); err != nil {
+	if err = book.Value.Err(); err != nil {
 		return book, fmt.Errorf("unable to parse Cue list: %w", err)
 	}
-	if err = book.Validate(
+	if err = book.Value.Validate(
 		cue.Attributes(true),
 		cue.Concrete(true),
 		cue.Definitions(true),
 	); err != nil {
 		return book, fmt.Errorf("unable to validate Cue list: %w", err)
 	}
-	if book.Kind() != cue.ListKind {
-		return book, fmt.Errorf("expected a list structued data, got %s", book.Kind())
+	if book.Value.Kind() != cue.ListKind {
+		return book, fmt.Errorf("expected a list structued data, got %s", book.Value.Kind())
+	}
+
+	fieldSource := firstDisjunct(book.Value)
+	for selector, value := range EachFieldDefinition(fieldSource) {
+		book.Fields = append(book.Fields, NewField(selector.Unquoted(), value))
 	}
 	return book, nil
 }
 
 // TODO: deprecate in favor of cuebook.EachValue
 func (d Book) EachValue() iter.Seq[cue.Value] {
-	next, err := d.List()
+	next, err := d.Value.List()
 	if err != nil {
 		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
 	}
@@ -68,7 +60,7 @@ func (d Book) EachValue() iter.Seq[cue.Value] {
 }
 
 func (d Book) EachEntry() iter.Seq2[Entry, error] {
-	next, err := d.List()
+	next, err := d.Value.List()
 	if err != nil {
 		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
 	}
@@ -87,7 +79,7 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 }
 
 func (d Book) GetValue(atIndex int) (cue.Value, error) {
-	value := d.LookupPath(cue.MakePath(cue.Index(atIndex)))
+	value := d.Value.LookupPath(cue.MakePath(cue.Index(atIndex)))
 	return value, value.Err()
 }
 

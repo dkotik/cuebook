@@ -117,18 +117,18 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case entry.CreateEvent:
 		return l, entry.NewCreateForm(l.book.Source, l.book.Document.Value)
 	case entrySelected:
-		selected, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(int(msg)))))
+		selected, err := cuebook.NewEntry(l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(int(msg)))))
 		if err != nil {
 			return l, func() tea.Msg { return err } // TODO: fails on empty list?
 		}
 		return l, entry.NewForm(selected)
 	case list.SwapOrderEvent:
 		return l, func() tea.Msg {
-			a := l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1)))
+			a := l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1)))
 			if a.Kind() == cue.BottomKind {
 				return nil // does not exist
 			}
-			b := l.book.Document.LookupPath(cue.MakePath(cue.Index(msg.DesiredIndex - 1)))
+			b := l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(msg.DesiredIndex - 1)))
 			if b.Kind() == cue.BottomKind {
 				return nil // does not exist
 			}
@@ -151,7 +151,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			index -= 1
 			l.selected--
 			return l, func() tea.Msg {
-				entry, err := cuebook.NewEntry(l.book.Document.LookupPath(cue.MakePath(cue.Index(index))))
+				entry, err := cuebook.NewEntry(l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(index))))
 				if err != nil {
 					return err
 				}

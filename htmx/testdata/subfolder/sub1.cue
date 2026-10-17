@@ -14,7 +14,7 @@
 		Name:     "aFirst11111aaDD222Dzxa11" @cuebook(title)
 		Email:    "tes44t1@testdo1m1zzzzain.com"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg" @cuebook(detail,trim,argon2id) @cuebook(detail, trim, argon2id)
-		Notes:    "sdf sdfsdf12"                                                                                      @cuebook(detail)
+		Notes:    "sdf sdfsdf12 dfdf"                                                                                 @cuebook(detail)
 	},
   {
 		Name:     "12sdf33zz" @cuebook(title)

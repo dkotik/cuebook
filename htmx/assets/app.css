@@ -58,12 +58,12 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(13rem, 20rem) minmax(0, 1fr);
+  grid-template-columns: minmax(12rem, 34vb) minmax(12rem, 1fr);
   min-height: calc(100vh - var(--bulma-navbar-height));
 }
 
 .file-nav {
-  padding: 1rem 1rem 1rem 4rem;
+  padding: 1rem 0 1rem 1rem;
   overflow-wrap: anywhere;
 
   .menu-label {

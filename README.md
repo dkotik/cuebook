@@ -22,6 +22,7 @@ changes in data to other users and, most importantly, programs.
 ## Development
 
 - [?] the search index keeps accumulating entries
+- [ ] refactor our htmx/field package
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
 - [x] HTMX interface
   - [ ] divide @detail decorated properties from the rest of the properties in cards. They should show only when card is :target?
