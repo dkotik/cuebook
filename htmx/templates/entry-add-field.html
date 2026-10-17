@@ -1,13 +1,23 @@
 <div class="field">
   {{if and .Boolean (not .Secret)}}
-    <span id="add-field-{{.Index}}-label" class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
+    <span id="add-field-{{.Index}}-label" class="field-name label">
+      {{- .Name -}}
+      {{ if not .Optional}}
+        {{- template "field-required.html" . -}}
+      {{- end -}}
+    </span>
     <boolean-toggle data-optional="{{.Optional}}" data-allow-unset="true">
       <input type="hidden" name="entry.{{.Index}}.value" value="{{.Value}}">
       {{template "boolean-button.html" .}}
     </boolean-toggle>
   {{else}}
     <label>
-      <span class="field-name label">{{.Name}}{{if .Optional}} (optional){{end}}</span>
+      <span class="field-name label">
+        {{- .Name -}}
+        {{ if not .Optional}}
+          {{- template "field-required.html" . -}}
+        {{- end -}}
+      </span>
       {{if .Secret}}
         <input class="input" type="password" name="entry.{{.Index}}.value" value="" autocomplete="new-password" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
       {{else if .Numeric}}

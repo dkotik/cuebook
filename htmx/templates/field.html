@@ -28,6 +28,10 @@
 </div>
 {{end}}
 
+{{define "field-required.html" -}}
+  <span class="icon has-text-warning" title="Required field.">✱</span>
+{{- end }}
+
 {{define "field-output.html" -}}
   {{- if and .Boolean (not .Secret) -}}
     {{- if eq .Value "true" -}}<span class="has-text-info">✔</span>

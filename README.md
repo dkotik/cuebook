@@ -21,11 +21,13 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
+- [ ] add entry causes a refresh when it is added
 - [ ] Implement UUID-based patch variants for
   - [ ] insert
   - [ ] delete
   - [ ] update
   - [ ] swap
+- [ ] copy button in the field edit is not styled right
 - [?] the search index keeps accumulating entries
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
 - [x] HTMX interface
