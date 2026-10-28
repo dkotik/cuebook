@@ -15,13 +15,18 @@
     return target instanceof Element ? target.closest(".tree-file-link[data-file]") : null;
   }
 
+  function archiveTargetFromEvent(event) {
+    const target = event.target;
+    return target instanceof Element ? target.closest("[data-archive-drop-target]") : null;
+  }
+
   function clearDropIndicators() {
     for (const card of document.querySelectorAll(
       ".entry.drop-before, .entry.drop-after, .entry.drop-above, .entry.drop-below, .entry.drop-left, .entry.drop-right",
     )) {
       card.classList.remove("drop-before", "drop-after", "drop-above", "drop-below", "drop-left", "drop-right");
     }
-    for (const link of document.querySelectorAll(".tree-file-link.is-drop-target")) {
+    for (const link of document.querySelectorAll(".tree-file-link.is-drop-target, [data-archive-drop-target].is-drop-target")) {
       link.classList.remove("is-drop-target");
     }
   }
@@ -64,6 +69,26 @@
     }
   }
 
+  async function submitArchive(sourceCard, values) {
+    pending = true;
+    document.getElementById("workspace")?.setAttribute("aria-busy", "true");
+    clearDropIndicators();
+    try {
+      await window.htmx.ajax("POST", `${routePrefix}/archive`, {
+        target: "#workspace",
+        swap: "outerHTML",
+        values,
+      });
+    } catch (_) {
+      window.location.reload();
+    } finally {
+      pending = false;
+      document.getElementById("workspace")?.removeAttribute("aria-busy");
+      sourceCard.classList.remove("is-dragging");
+      clearDragState();
+    }
+  }
+
   document.addEventListener("dragstart", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
@@ -86,6 +111,19 @@
 
   document.addEventListener("dragover", (event) => {
     if (!draggedCard || pending) {
+      return;
+    }
+
+    const targetArchive = archiveTargetFromEvent(event);
+    if (targetArchive) {
+      clearDropIndicators();
+      if (draggedCard.dataset.canArchive === "true") {
+        event.preventDefault();
+        targetArchive.classList.add("is-drop-target");
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = "move";
+        }
+      }
       return;
     }
 
@@ -125,6 +163,26 @@
     event.preventDefault();
 
     const sourceCard = draggedCard;
+    const targetArchive = archiveTargetFromEvent(event);
+    if (targetArchive) {
+      if (sourceCard.dataset.canArchive === "true") {
+        const values = {
+          file: sourceCard.dataset.file,
+          entry: sourceCard.dataset.entryIndex,
+        };
+        document.dispatchEvent(new CustomEvent("cuebook:archive-confirmation-request", {
+          cancelable: true,
+          detail: {
+            sourceCard,
+            archiveTarget: targetArchive,
+            confirm: () => submitArchive(sourceCard, values),
+          },
+        }));
+      }
+      clearDragState();
+      return;
+    }
+
     const targetFileLink = fileLinkFromEvent(event);
     if (targetFileLink) {
       const destination = targetFileLink.dataset.file;

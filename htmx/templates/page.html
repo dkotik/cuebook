@@ -67,7 +67,7 @@
   </div>
   <div class="layout">
     <nav class="file-nav menu" aria-label="CUE files">
-      <a href="{{route "/"}}"><h3 class="menu-label">Files</h3></a>
+      <a href="{{route "/"}}" {{if and .FolderView (eq (len .FolderBreadcrumb) 1)}}aria-current="page"{{end}}><h3 class="menu-label">Files</h3></a>
       {{if .Files}}
       <ul class="file-tree">
         {{range .Files}}{{template "file-tree-node.html" .}}{{end}}
@@ -75,7 +75,7 @@
       {{else}}
       <p class="muted">No CUE files found.</p>
       {{end}}
-      <a href="{{route "/?folder=.archive"}}" hx-get="{{route "/?folder=.archive"}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" {{if .ArchiveSelected}}aria-current="page"{{end}}>
+      <a class="archive-drop-target" data-archive-drop-target href="{{route "/?folder=.archive"}}" hx-get="{{route "/?folder=.archive"}}" hx-target="#workspace" hx-swap="outerHTML" hx-push-url="true" {{if .ArchiveSelected}}aria-current="page"{{end}}>
         <h3 class="menu-label">Archive</h3>
       </a>
       {{if .GitEnabled}}

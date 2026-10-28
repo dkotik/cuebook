@@ -67,6 +67,21 @@
         link.removeAttribute("aria-current");
       }
     }
+
+    const currentFolder = currentLocation.searchParams.get("folder") || "";
+    for (const link of document.querySelectorAll(".file-nav > a")) {
+      const linkLocation = new URL(link.href, currentLocation.href);
+      const linkedFolder = linkLocation.searchParams.get("folder");
+      const currentPath = currentFile || currentFolder;
+      const selected = linkedFolder
+        ? currentPath === linkedFolder || currentPath.startsWith(`${linkedFolder}/`)
+        : linkLocation.pathname === currentLocation.pathname && !currentFile && !currentFolder;
+      if (selected) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    }
   }
 
   if (!customElements.get("file-tree-node")) {

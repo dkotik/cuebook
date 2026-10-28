@@ -64,6 +64,8 @@ func TestArchiveArchivesEntries(t *testing.T) {
 				`aria-describedby="archive-confirmation-description"`,
 				`<p class="archive-confirmation-eyebrow">Confirm archive</p>`,
 				`<script src="/assets/archive-confirm.js" defer></script>`,
+				`class="archive-drop-target" data-archive-drop-target`,
+				`data-can-archive="true"`,
 			} {
 				if !strings.Contains(pageResponse.Body.String(), want) {
 					t.Errorf("writable entry page does not contain confirmation markup %q", want)

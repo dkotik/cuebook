@@ -66,8 +66,14 @@ body {
   padding: 1rem 0 1rem 1rem;
   overflow-wrap: anywhere;
 
+  > a {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
   .menu-label {
-    padding-top: 1rem;
+    margin: 0;
   }
 }
 
@@ -94,6 +100,7 @@ file-tree-node {
 
 .tree-node-toggle,
 .tree-file-link,
+.file-nav .menu-label,
 .folder-view-item {
   display: flex;
   align-items: center;
@@ -115,8 +122,14 @@ file-tree-node {
 
 .tree-node-toggle:hover,
 .tree-file-link:hover,
+.file-nav > a:hover .menu-label,
 .folder-view-item:hover {
   background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.file-nav > a:focus-visible .menu-label {
+  outline: 2px solid var(--bulma-link);
+  outline-offset: -2px;
 }
 
 .tree-chevron,
@@ -140,12 +153,14 @@ file-tree-node {
 }
 
 .tree-file-link[aria-current="page"],
+.file-nav > a[aria-current="page"] .menu-label,
 .file-picker-option:has(input:checked) {
   font-weight: 700;
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
-.tree-file-link.is-drop-target {
+.tree-file-link.is-drop-target,
+.file-nav .archive-drop-target.is-drop-target .menu-label {
   outline: 2px dashed currentColor;
   outline-offset: -2px;
   background: color-mix(in srgb, currentColor 18%, transparent);

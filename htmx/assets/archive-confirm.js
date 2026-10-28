@@ -9,6 +9,7 @@
   const cancelButton = modal.querySelector(".archive-confirmation-cancel");
   let pendingForm = null;
   let pendingSubmitter = null;
+  let pendingAction = null;
   let returnFocus = null;
 
   function close(restoreFocus) {
@@ -18,6 +19,7 @@
     const focusTarget = returnFocus;
     pendingForm = null;
     pendingSubmitter = null;
+    pendingAction = null;
     returnFocus = null;
     if (restoreFocus && focusTarget?.isConnected) {
       focusTarget.focus();
@@ -27,8 +29,22 @@
   function open(form, submitter) {
     pendingForm = form;
     pendingSubmitter = submitter instanceof HTMLElement ? submitter : null;
+    pendingAction = null;
     returnFocus = pendingSubmitter;
     const title = form.closest(".entry")?.querySelector(".card-header-title")?.textContent?.trim();
+    show(title);
+  }
+
+  function openDrop(sourceCard, confirm) {
+    pendingForm = null;
+    pendingSubmitter = null;
+    pendingAction = confirm;
+    returnFocus = sourceCard.querySelector("[data-entry-drag-handle]") || document.activeElement;
+    const title = sourceCard.querySelector(".card-header-title")?.textContent?.trim();
+    show(title);
+  }
+
+  function show(title) {
     if (entryLabel) {
       entryLabel.textContent = title ? `“${title}”` : "This entry";
     }
@@ -53,16 +69,36 @@
     open(form, event.submitter);
   }, true);
 
+  document.addEventListener("cuebook:archive-confirmation-request", (event) => {
+    const { sourceCard, archiveTarget, confirm } = event.detail || {};
+    if (!(sourceCard instanceof HTMLElement) || !(archiveTarget instanceof HTMLElement) ||
+      !archiveTarget.matches("[data-archive-drop-target]") || sourceCard.dataset.canArchive !== "true" ||
+      typeof confirm !== "function") {
+      return;
+    }
+
+    event.preventDefault();
+    if (pendingForm || pendingAction) {
+      return;
+    }
+    openDrop(sourceCard, confirm);
+  });
+
   modal.addEventListener("click", (event) => {
     if (event.target instanceof Element && event.target.closest("[data-confirmation-dismiss]")) {
       close(true);
     }
   });
 
-  confirmButton?.addEventListener("click", () => {
+  confirmButton?.addEventListener("click", async () => {
     const form = pendingForm;
     const submitter = pendingSubmitter;
+    const action = pendingAction;
     close(false);
+    if (typeof action === "function") {
+      await action();
+      return;
+    }
     if (!form?.isConnected) {
       return;
     }
