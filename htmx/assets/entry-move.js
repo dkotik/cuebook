@@ -16,12 +16,26 @@
   }
 
   function clearDropIndicators() {
-    for (const card of document.querySelectorAll(".entry.drop-before, .entry.drop-after")) {
-      card.classList.remove("drop-before", "drop-after");
+    for (const card of document.querySelectorAll(
+      ".entry.drop-before, .entry.drop-after, .entry.drop-above, .entry.drop-below, .entry.drop-left, .entry.drop-right",
+    )) {
+      card.classList.remove("drop-before", "drop-after", "drop-above", "drop-below", "drop-left", "drop-right");
     }
     for (const link of document.querySelectorAll(".tree-file-link.is-drop-target")) {
       link.classList.remove("is-drop-target");
     }
+  }
+
+  function dropSide(event, bounds) {
+    const x = Math.min(1, Math.max(0, (event.clientX - bounds.left) / (bounds.width || 1)));
+    const y = Math.min(1, Math.max(0, (event.clientY - bounds.top) / (bounds.height || 1)));
+    const edges = [
+      { side: "drop-left", distance: x },
+      { side: "drop-right", distance: 1 - x },
+      { side: "drop-above", distance: y },
+      { side: "drop-below", distance: 1 - y },
+    ];
+    return edges.reduce((nearest, edge) => edge.distance < nearest.distance ? edge : nearest).side;
   }
 
   function clearDragState() {
@@ -99,8 +113,9 @@
       event.dataTransfer.dropEffect = "move";
     }
     clearDropIndicators();
-    const bounds = targetCard.getBoundingClientRect();
-    targetCard.classList.add(event.clientY < bounds.top + bounds.height / 2 ? "drop-before" : "drop-after");
+    const side = dropSide(event, targetCard.getBoundingClientRect());
+    const before = side === "drop-left" || side === "drop-above";
+    targetCard.classList.add(side, before ? "drop-before" : "drop-after");
   });
 
   document.addEventListener("drop", async (event) => {
@@ -149,8 +164,8 @@
       return;
     }
 
-    const bounds = targetCard.getBoundingClientRect();
-    const before = event.clientY < bounds.top + bounds.height / 2;
+    const side = dropSide(event, targetCard.getBoundingClientRect());
+    const before = side === "drop-left" || side === "drop-above";
     let to = targetIndex + (before ? 0 : 1);
     if (from < to) {
       to -= 1;

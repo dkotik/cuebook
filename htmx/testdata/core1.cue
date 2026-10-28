@@ -21,6 +21,10 @@
 
 [...#contact] & [
   {
+		Name:  "Maria" @cuebook(title)
+		Email: "mr@sfsdf.com"
+	},
+  {
 		Name:  "First11111aa1" @cuebook(title)
 		Email: "test1@testdo1main.com"
 		Notes: """
@@ -44,10 +48,6 @@
 		Email: "test1@doodod.co"
 	},
   {
-		Name:  "23424n33" @cuebook(title)
-		Email: "234234@31234a1.com"
-	},
-  {
 		Name:  "23424n33"
 		Email: "234234@dsf.com"
 	},
@@ -60,16 +60,16 @@
 		Email: "test1@testdomain.com"
 	},
   {
-		Name:  "Maria" @cuebook(title)
-		Email: "mr@sfsdf.com"
-	},
-  {
-		Name:  "Maria" @cuebook(title)
-		Email: "mr@sfsdf.com"
+		Name:  "23424n33" @cuebook(title)
+		Email: "234234@31234a1.com"
 	},
   {
 		Name:  "xcxcx" @cuebook(title)
 		Email: "cvxvxcv@ds1afsd.com"
+	},
+  {
+		Name:  "Maria" @cuebook(title)
+		Email: "mr@sfsdf.com"
 	},
   {
 		Name:  "xcxcx" @cuebook(title)

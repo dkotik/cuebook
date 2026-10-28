@@ -21,17 +21,19 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] add entry causes a refresh when it is added
+- [x] add entry causes a refresh when it is added
 - [ ] Implement UUID-based patch variants for
   - [ ] insert
   - [ ] delete
   - [ ] update
   - [ ] swap
-- [ ] copy button in the field edit is not styled right
-- [?] the search index keeps accumulating entries
+- [x] the search index keeps accumulating entries
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
 - [x] HTMX interface
   - [ ] divide @detail decorated properties from the rest of the properties in cards. They should show only when card is :target?
+- [ ] add transactions methods to FS:
+  - [ ] BeginTransaction(ctx) (tx, error)
+  - [ ] WithTransaction(tx) error
 - [x] Ctrl+J and Ctrl+K entry reordering of entries
 - [ ] Ctrl+J and Ctrl+K entry reordering of fields
 - [ ] add/delete entry button

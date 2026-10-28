@@ -313,7 +313,7 @@ h1.title.document-title {
 
 .entry.card {
   position: relative;
-  margin: 1rem 0;
+  margin: 1rem 0 2rem 0;
   background-color: var(--entry-card-background);
   border: 1px solid var(--entry-card-border-color);
   color: var(--entry-card-color);
@@ -371,22 +371,46 @@ h1.title.document-title {
 }
 
 .entry.drop-before::before,
-.entry.drop-after::after {
+.entry.drop-above::before,
+.entry.drop-after::after,
+.entry.drop-below::after {
   position: absolute;
-  right: 0.75rem;
-  left: 0.75rem;
   z-index: 2;
   border-top: 3px solid currentColor;
   content: "";
   pointer-events: none;
 }
 
-.entry.drop-before::before {
-  top: -0.35rem;
+.entry.drop-before::before,
+.entry.drop-above::before {
+  top: 0.2rem;
+  right: 0.6rem;
+  left: 0.6rem;
 }
 
-.entry.drop-after::after {
-  bottom: -0.35rem;
+.entry.drop-after::after,
+.entry.drop-below::after {
+  right: 0.6rem;
+  bottom: 0.2rem;
+  left: 0.6rem;
+}
+
+.entry.drop-left::before,
+.entry.drop-right::after {
+  top: 0.6rem;
+  bottom: 0.6rem;
+  border-top: 0;
+  border-left: 3px solid currentColor;
+}
+
+.entry.drop-left::before {
+  right: auto;
+  left: 0.2rem;
+}
+
+.entry.drop-right::after {
+  right: 0.2rem;
+  left: auto;
 }
 
 #workspace[aria-busy="true"] .entry-drag-handle {
