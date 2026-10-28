@@ -217,7 +217,7 @@ func TestAddEntryFormUsesCurrentFile(t *testing.T) {
 	}
 }
 
-func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
+func TestAddEntryFormStartsAtTypeZeroValuesAndUnsetBooleans(t *testing.T) {
 	t.Parallel()
 
 	source := []byte(`#entry: {
@@ -264,8 +264,8 @@ func TestAddEntryFormStartsAtTypeZeroValues(t *testing.T) {
 		`type="number" name="entry.1.value" value="0" step="any" required`,
 		`name="entry.2.field" value="Enabled"`,
 		`<boolean-toggle data-optional="false" data-allow-unset="true" expanded="true">`,
-		`<input type="hidden" name="entry.2.value" value="false">`,
-		`<button class="button boolean-toggle has-text-danger" type="button" aria-label="Enabled" aria-pressed="false" title="Enabled: false">✖</button>`,
+		`<input type="hidden" name="entry.2.value" value="not_set">`,
+		`<button class="button boolean-toggle" type="button" aria-label="Enabled" aria-pressed="mixed" title="Enabled: not_set">☐</button>`,
 	} {
 		if !strings.Contains(form, want) {
 			t.Errorf("add-entry form does not contain %q: %s", want, form)

@@ -46,9 +46,6 @@ func makeAddFieldViews(document cuebook.Book) []addFieldView {
 		case kind == cue.BoolKind:
 			view.Boolean = true
 			view.Value = "not_set"
-			if !view.Optional {
-				view.Value = "false"
-			}
 		case kind&cue.ListKind != 0:
 			view.MultiLine = true
 			if !view.Optional {

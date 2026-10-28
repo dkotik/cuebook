@@ -25,8 +25,8 @@ func TestBooleanFormRendering(t *testing.T) {
 		secret      bool
 		selected    string
 	}{
-		{name: "required add starts false", declaration: "Enabled: bool", existing: "true", selected: "false"},
-		{name: "required add ignores true default", declaration: "Enabled: *true | bool", existing: "true", selected: "false"},
+		{name: "required add starts unset", declaration: "Enabled: bool", existing: "true", selected: "not_set"},
+		{name: "required add ignores true default", declaration: "Enabled: *true | bool", existing: "true", selected: "not_set"},
 		{name: "optional add starts unset", declaration: "Enabled?: bool", optional: true, selected: "not_set"},
 		{name: "optional populated add starts unset", declaration: "Enabled?: bool", existing: "true", optional: true, selected: "not_set"},
 		{name: "optional add ignores true default", declaration: "Enabled?: *true | bool", optional: true, selected: "not_set"},

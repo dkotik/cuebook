@@ -141,6 +141,10 @@ function browser({ value = "not_set", optional = "true", allowUnset = "false", n
 }
 
 function assertState(app, state) {
+  if (app.toggle.hasAttribute("expanded")) {
+    assertExpandedState(app, state);
+    return;
+  }
   const symbols = { true: "✔", false: "✖", not_set: "☐" };
   assert.equal(app.input.value, state);
   assert.equal(app.button.textContent, symbols[state]);
@@ -197,46 +201,61 @@ test("boolean toggle cycles through native button clicks", async (t) => {
   }
 });
 
-test("expanded boolean toggle exposes all three state buttons", async (t) => {
-  const cases = [
-    { name: "empty attribute expands true state", expanded: "", value: "true" },
-    { name: "false-valued attribute still expands false state", expanded: "false", value: "false" },
-    { name: "arbitrary attribute value expands unset state", expanded: "anything", value: "not_set" },
-    { name: "required toggle also exposes unset", expanded: "true", optional: "false", value: "not_set" },
-  ];
-  const states = ["true", "false", "not_set"];
-  const symbols = { true: "✔", false: "✖", not_set: "☐" };
-  for (const scenario of cases) {
-    await t.test(scenario.name, () => {
-      const app = browser(scenario);
-      const assertExpandedState = (expected) => {
-        assert.equal(app.input.value, expected);
-        assert.equal(app.toggle.getAttribute("role"), "group");
-        assert.equal(app.toggle.getAttribute("aria-label"), "Enabled");
-        assert.deepEqual(app.buttons.map((button) => button.dataset.booleanState), states);
-        assert.equal(app.buttons.length, 3);
-        for (const button of app.buttons) {
-          const buttonState = button.dataset.booleanState;
-          const selected = buttonState === expected;
-          const label = `Enabled: ${buttonState === "not_set" ? "not set" : buttonState}`;
-          assert.equal(button.textContent, symbols[buttonState]);
-          assert.equal(button.getAttribute("aria-label"), label);
-          assert.equal(button.title, label);
-          assert.equal(button.getAttribute("aria-pressed"), String(selected));
-          assert.equal(button.classList.contains("is-link"), selected && buttonState === "true");
-          assert.equal(button.classList.contains("has-text-info"), selected && buttonState === "true");
-          assert.equal(button.classList.contains("has-text-danger"), selected && buttonState === "false");
-          assert.equal(button.type, "button");
-        }
-      };
+function assertExpandedState(app, expected) {
+  assert.equal(app.input.value, expected);
+  assert.equal(app.toggle.getAttribute("role"), "group");
+  assert.equal(app.toggle.getAttribute("aria-label"), "Enabled");
+  assert.deepEqual(app.buttons.map((button) => button.dataset.booleanState), ["true", "false"]);
+  assert.equal(app.buttons.length, 2);
+  assert.equal(app.buttons[0], app.button, "the original button must be retained");
+  for (const button of app.buttons) {
+    const buttonState = button.dataset.booleanState;
+    const selected = buttonState === expected;
+    const label = `Enabled: ${buttonState}`;
+    assert.equal(button.textContent, buttonState === "true" ? "✔" : "✖");
+    assert.equal(button.getAttribute("aria-label"), label);
+    assert.equal(button.title, label);
+    assert.equal(button.getAttribute("aria-pressed"), String(selected));
+    assert.equal(button.classList.contains("is-link"), selected && buttonState === "true");
+    assert.equal(button.classList.contains("has-text-info"), selected && buttonState === "true");
+    assert.equal(button.classList.contains("has-text-danger"), selected && buttonState === "false");
+    assert.equal(button.type, "button");
+  }
+}
 
-      assertExpandedState(scenario.value);
-      for (const state of states) {
-        app.buttons.find((button) => button.dataset.booleanState === state).click();
-        assertExpandedState(state);
+test("expanded boolean toggle represents three states with two buttons", async (t) => {
+  const cases = [
+    { name: "unset by default", expanded: "true", expected: "not_set" },
+    { name: "empty value defaults to unset", expanded: "true", value: "", expected: "not_set" },
+    { name: "unknown value defaults to unset", expanded: "true", value: "invalid", expected: "not_set" },
+    { name: "empty attribute expands true state", expanded: "", value: "true", expected: "true" },
+    { name: "false-valued attribute still expands false state", expanded: "false", value: "false", expected: "false" },
+    { name: "arbitrary attribute value expands unset state", expanded: "anything", value: "not_set", expected: "not_set" },
+    { name: "required toggle can clear either value", expanded: "true", optional: "false", expected: "not_set" },
+    { name: "required add toggle can clear either value", expanded: "true", optional: "false", allowUnset: "true", expected: "not_set" },
+    { name: "without a form", expanded: "true", withForm: false, expected: "not_set" },
+  ];
+  for (const scenario of cases) {
+    await t.test(scenario.name, async () => {
+      const app = browser(scenario);
+      assertExpandedState(app, scenario.expected);
+      // Repeated clicks clear either value; clicking the other button switches directly.
+      for (const state of ["true", "false"]) {
+        const button = app.buttons.find((button) => button.dataset.booleanState === state);
+        if (app.input.value === state) {
+          button.click();
+          assertExpandedState(app, "not_set");
+        }
+        button.click();
+        assertExpandedState(app, state);
+        button.click();
+        assertExpandedState(app, "not_set");
+        button.click();
+        assertExpandedState(app, state);
       }
-      app.form.reset();
-      return Promise.resolve().then(() => assertExpandedState(scenario.value));
+      app.form?.reset();
+      await Promise.resolve();
+      assertExpandedState(app, app.form ? scenario.expected : "false");
     });
   }
 });
@@ -244,7 +263,7 @@ test("expanded boolean toggle exposes all three state buttons", async (t) => {
 test("expanded boolean toggle responds to attribute changes", async () => {
   const app = browser();
   app.toggle.setAttribute("expanded", "false");
-  assert.equal(app.buttons.length, 3);
+  assert.equal(app.buttons.length, 2);
   app.buttons.find((button) => button.dataset.booleanState === "false").click();
   assert.equal(app.input.value, "false");
 
@@ -255,6 +274,16 @@ test("expanded boolean toggle responds to attribute changes", async () => {
   assert.equal(app.button.getAttribute("aria-label"), "Enabled");
   app.button.click();
   assertState(app, "not_set");
+
+  app.toggle.setAttribute("expanded", "true");
+  assertExpandedState(app, "not_set");
+  const falseButton = app.buttons[1];
+  app.connect();
+  assert.equal(app.buttons[1], falseButton, "reconnecting must reuse the false button");
+  falseButton.click();
+  assertExpandedState(app, "false");
+  falseButton.click();
+  assertExpandedState(app, "not_set");
 });
 
 test("boolean toggle updates serialized hidden values and bubbles native events", async (t) => {
@@ -262,10 +291,13 @@ test("boolean toggle updates serialized hidden values and bubbles native events"
     { name: "entry field", fieldName: "entry.12.value" },
     { name: "standalone value", fieldName: "value" },
     { name: "required add can submit unset for validation", fieldName: "entry.0.value", optional: "false", allowUnset: "true" },
+    { name: "expanded add field", fieldName: "entry.12.value", expanded: "true" },
+    { name: "expanded edit field", fieldName: "value", expanded: "true" },
+    { name: "expanded required field", fieldName: "value", optional: "false", expanded: "true" },
   ];
   for (const scenario of cases) {
     await t.test(scenario.name, () => {
-      const app = browser({ name: scenario.fieldName, optional: scenario.optional, allowUnset: scenario.allowUnset });
+      const app = browser({ ...scenario, name: scenario.fieldName });
       const events = [];
       for (const type of ["input", "change"]) {
         app.form.addEventListener(type, (event) => {
@@ -278,7 +310,8 @@ test("boolean toggle updates serialized hidden values and bubbles native events"
       }
       assert.equal(app.form.serialize(), `${scenario.fieldName}=not_set`);
       for (const state of ["true", "false", "not_set"]) {
-        app.button.click();
+        const button = scenario.expanded && state !== "true" ? app.buttons[1] : app.button;
+        button.click();
         assert.equal(app.form.serialize(), `${scenario.fieldName}=${state}`);
       }
       assert.deepEqual(events, [
@@ -297,6 +330,12 @@ test("boolean toggle resets to its initial hidden value after the reset event", 
     { name: "false default", value: "false", expected: "false" },
     { name: "empty default is normalized", value: "", expected: "not_set" },
     { name: "unknown default is normalized", value: "invalid", expected: "not_set" },
+    { name: "expanded unset default", expanded: "true", expected: "not_set" },
+    { name: "expanded true default", expanded: "true", value: "true", expected: "true" },
+    { name: "expanded false default", expanded: "true", value: "false", expected: "false" },
+    { name: "expanded empty default", expanded: "true", value: "", expected: "not_set" },
+    { name: "expanded canceled reset", expanded: "true", value: "true", canceled: true, expected: "not_set" },
+    { name: "expanded reset after reconnect", expanded: "true", value: "true", reconnect: true, expected: "true" },
     { name: "required default", optional: "false", value: "false", expected: "false" },
     { name: "canceled reset preserves state", value: "false", canceled: true, expected: "not_set" },
     { name: "reset after reconnect preserves original default", value: "true", reconnect: true, expected: "true" },

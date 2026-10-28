@@ -25,10 +25,10 @@ class BooleanToggle extends HTMLElement {
       const clickedButton = event.currentTarget || event.target;
       if (this.hasAttribute("expanded")) {
         const selectedState = clickedButton.dataset.booleanState;
-        if (!["true", "false", "not_set"].includes(selectedState)) {
+        if (!["true", "false"].includes(selectedState)) {
           return;
         }
-        this.input.value = selectedState;
+        this.input.value = this.input.value === selectedState ? "not_set" : selectedState;
       } else {
         const state = this.input.value;
         const allowUnset = this.dataset.optional === "true" || this.dataset.allowUnset === "true";
@@ -77,7 +77,7 @@ class BooleanToggle extends HTMLElement {
       this.setAttribute("aria-label", this.buttonLabel);
       this.button.dataset.booleanState = "true";
       const existing = new Map((this.expandedButtons || []).map((button) => [button.dataset.booleanState, button]));
-      this.expandedButtons = ["false", "not_set"].map((state) => {
+      this.expandedButtons = ["false"].map((state) => {
         const button = existing.get(state) || this.button.cloneNode(false);
         button.dataset.booleanState = state;
         if (button.parentElement !== this) {
@@ -105,7 +105,7 @@ class BooleanToggle extends HTMLElement {
     const state = this.input.value === "true" || this.input.value === "false" ? this.input.value : "not_set";
     this.input.value = state;
     if (this.hasAttribute("expanded")) {
-      const symbols = { true: "✔", false: "✖", not_set: "☐" };
+      const symbols = { true: "✔", false: "✖" };
       for (const button of this.buttons) {
         const buttonState = button.dataset.booleanState;
         const selected = buttonState === state;
@@ -114,7 +114,7 @@ class BooleanToggle extends HTMLElement {
         button.classList.toggle("has-text-danger", selected && buttonState === "false");
         button.textContent = symbols[buttonState];
         button.setAttribute("aria-pressed", String(selected));
-        const label = `${this.buttonLabel}: ${buttonState === "not_set" ? "not set" : buttonState}`;
+        const label = `${this.buttonLabel}: ${buttonState}`;
         button.setAttribute("aria-label", label);
         button.title = label;
       }
