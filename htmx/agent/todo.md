@@ -46,7 +46,7 @@ Implement `github.com/dkotik/cuebook/htmx/agent` as an opt-in, embeddable local 
 - [x] Implement `<cuebook-agent>` with HTMX submission, open/minimize controls, dock selection, pointer dragging, resizing, and persisted position/state.
 - [x] Include narrow-screen layout, keyboard-operable controls, labeled input and live transcript, visible focus, and reduced-motion styling.
 - [x] Add opt-in `htmx.WithAgent` integration that mounts under the parent's route prefix and conditionally renders the component/assets; no agent import is added to the parent package.
-- [x] Expose the integration in `cmd/htmx-demo` with `-agent`, passing the same context filesystem and keeping default demo startup free of model initialization.
+- [x] Expose the integration in `cmd/cuebook serve` with `--agent`, passing the served directory filesystem and keeping default server startup free of model initialization.
 
 ### 5. Tests, documentation, verification — implemented; see validation notes
 

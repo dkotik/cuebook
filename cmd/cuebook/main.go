@@ -10,9 +10,16 @@ import (
 )
 
 func main() {
-	cmd := &cli.Command{
-		Name:  "cuebook",
-		Usage: "edit lists of structured data items",
+	if err := newCLICommand().Run(context.Background(), os.Args); err != nil {
+		panic(err)
+	}
+}
+
+func newCLICommand() *cli.Command {
+	return &cli.Command{
+		Name:     "cuebook",
+		Usage:    "edit lists of structured data items",
+		Commands: []*cli.Command{newServeCommand()},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
 			ui, err := NewTerminalUI(ctx)
 			if err != nil {
@@ -32,9 +39,5 @@ func main() {
 
 			return err
 		},
-	}
-
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		panic(err)
 	}
 }

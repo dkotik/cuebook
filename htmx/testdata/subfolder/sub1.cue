@@ -11,14 +11,8 @@
 
 [...#contact] & [
   {
-		Name:     "12sdf33zz" @cuebook(title)
-		Email:    "sdffsd@perfect.com"
-		Notes:    "65ggh" @cuebook(detail)
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$HIcmGlPcqeg1ARz64fu5Cg$RqThx3got34YXBHH7QyeIQ87Z3wT7CCNwPe/fyZp6cU"
-	},
-  {
 		Name:     "aFirst11111aaDD222Dzxa11" @cuebook(title)
-		Email:    "tes44t1@testdo1m1zzzzain.com"
+		Email:    "tes44taaa1@testdo1m1zzzzain.com"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg" @cuebook(detail,trim,argon2id) @cuebook(detail, trim, argon2id)
 		Notes:    "sdf sdfsdf12 dfdf"                                                                                 @cuebook(detail)
 	},

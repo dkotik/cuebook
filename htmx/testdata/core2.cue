@@ -24,8 +24,8 @@
 		Email: "234234@31234a1.com"
 	},
   {
-		Name:  "First11111aa1"
-		Email: "test1@testdomain.com"
+		Name:  "xcxcx" @cuebook(title)
+		Email: "cvxvxcv@ds1afsd.com"
 	},
   {
 		Name:  "23424n33" @cuebook(title)
@@ -33,11 +33,13 @@
 		Notes: "sdf saf sdfsdf"
 	},
   {
-		Name:  "xcxcx" @cuebook(title)
-		Email: "cvxvxcv@ds1afsd.com"
-	},
-  {
 		Name:  "123"
 		Email: "123@342345.com"
 		Notes: "lsdkfjsldfkj"
+	},
+  {
+		Name:     "12sdf33zz"
+		Email:    "sdffsd@perfect.com"
+		Notes:    "65ggh"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$HIcmGlPcqeg1ARz64fu5Cg$RqThx3got34YXBHH7QyeIQ87Z3wT7CCNwPe/fyZp6cU"
 	}]
