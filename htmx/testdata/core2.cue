@@ -25,9 +25,10 @@
 		Email: "234234@31234a1.com"
 	},
   {
-		Name:  "23424n33" @cuebook(title)
-		Email: "234234@31234a1.com"
-		Notes: "sdf saf sdfsdf"
+		Name:     "23424n33" @cuebook(title)
+		Email:    "234234@31234a1.com"
+		Notes:    ""                                                                                                  @cuebook(detail)
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$rz9uo6bqtm+hvX1eAgHFLg$ukWzs9q95VMjYjlqSVHv/fEsW/eYeb3CPZPu/RGNv8A" @cuebook(detail,trim,argon2id)
 	},
   {
 		Name:  "123"

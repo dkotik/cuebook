@@ -23,6 +23,7 @@
   {
 		Name:  "Maria" @cuebook(title)
 		Email: "mr@sfsdf.com"
+		Notes: "sdf sd fsdf sdfsdf"
 	},
   {
 		Name:  "dsf lsadjl fksjdfl ksjdflkj"
@@ -42,10 +43,6 @@
 		Email: "sdfjkh@sdfs1df.com"
 	},
   {
-		Name:  "new entry"
-		Email: "test1@testdomain.com"
-	},
-  {
 		Name:  "23424n33" @cuebook(title)
 		Email: "234234@31234a1.com"
 	},
@@ -54,12 +51,12 @@
 		Email: "cvxvxcv@ds1afsd.com"
 	},
   {
-		Name:  "Maria" @cuebook(title)
-		Email: "mr@sfsdf.com"
-	},
-  {
 		Name:  "xcxcx" @cuebook(title)
 		Email: "cvxvxcv@ds1afsd.com"
+	},
+  {
+		Name:  "Maria" @cuebook(title)
+		Email: "mr@sfsdf.com"
 	},
   {
 		Name:     "slkdjf"

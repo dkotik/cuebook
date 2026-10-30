@@ -130,21 +130,18 @@ func TestEntryViewHidesFileMetadataAndShowsFileBreadcrumb(t *testing.T) {
 				wantLabel = tt.file
 			}
 			wantURL := tt.prefix + fileURL(tt.file)
-			parentFolder := ""
-			if slash := strings.LastIndex(tt.file, "/"); slash >= 0 {
-				parentFolder = tt.file[:slash]
-			}
-			breadcrumbURL := tt.prefix + folderURL(parentFolder)
 			for _, want := range []string{
 				`<nav class="breadcrumb" aria-label="File location">`,
-				`<li class="is-active" aria-current="page">`,
-				`href="` + breadcrumbURL + `"`, `hx-get="` + breadcrumbURL + `"`,
+				`href="` + wantURL + `"`, `hx-get="` + wantURL + `"`,
 				`title="` + tt.file + `">` + wantLabel + `</a>`,
 				`hx-target="#workspace"`, `hx-swap="outerHTML"`,
 			} {
 				if !strings.Contains(heading, want) {
 					t.Errorf("entry title row missing %q: %s", want, heading)
 				}
+			}
+			if strings.Contains(heading, `<li class="is-active" aria-current="page">`) {
+				t.Errorf("entry breadcrumb marks the file link as the current non-clickable page: %s", heading)
 			}
 			backLink := `<a href="` + wantURL + `" class="button" type="button is-primary" title="Back">Back</a>`
 			if !strings.Contains(html.UnescapeString(body), backLink) {

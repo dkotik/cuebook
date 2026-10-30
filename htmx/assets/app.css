@@ -72,6 +72,10 @@ body {
     text-decoration: none;
   }
 
+  > * + *, li + li {
+    margin-top: 0.3rem;
+  }
+
   .menu-label {
     margin: 0;
   }
@@ -230,7 +234,7 @@ file-tree-node {
   top: 0;
   left: 0;
   z-index: 1;
-  width: min(15.5rem, calc(100vw - 6rem));
+  width: min(16.6rem, calc(100vw - 5rem));
   height: 100vh;
   margin: 0;
   padding: 3rem 0 0 0;
@@ -243,13 +247,13 @@ file-tree-node {
     background-color: var(--entry-add-background);
     border: 1px solid var(--bulma-border);
     position: absolute;
-    bottom: 1rem;
+    bottom: 0.4rem;
     left: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 4rem;
-    padding: 1rem 0.65rem;
+    min-height: 3rem;
+    padding: 1rem 0.45rem 1rem 0.35rem;
     border-left: 0;
     border-radius: 0 0.5rem 0.5rem 0;
     cursor: pointer;
@@ -487,6 +491,9 @@ h1.title.document-title {
   display: flex;
   align-items: flex-start;
   /*gap: 0.5rem;*/
+  &:hover, &:hover .field-edit-button {
+    color: var(--bulma-danger);
+  }
 }
 
 .field-item__value > output,
@@ -530,9 +537,10 @@ h1.title.document-title {
 }
 
 .field-edit-button {
-  flex: 0 0 auto;
-  min-height: 2rem;
-  padding: 0.25rem;
+  color: var(--entry-card-border-color);
+  padding: 0.2rem 0 0 0.4rem;
+  height: 0.6rem;
+  min-height: initial;
 }
 
 .field-edit-button svg {
