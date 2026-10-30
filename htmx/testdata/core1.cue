@@ -14,8 +14,8 @@
 	Name: string @cuebook(title)
 	// Email help text.
 	Email: #email | [...#email]
-	Notes?:    string @cuebook(detail, multiline)
-	Password?: string @cuebook(detail,trim,argon2id)
+	Notes?:    string @cuebook(detail,multiline)
+	Password?: string @cuebook(trim,argon2id,locked)
 	... // allow any additional fields
 }
 
@@ -59,7 +59,7 @@
 		Email: "mr@sfsdf.com"
 	},
   {
-		Name:     "slkdjf"
+		Name:     "12slkdjf"
 		Email:    "sdklfsjad@sdfsadf.com"
 		Notes:    "sdf"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$FyJ1ijloeHPnOzbUd+BKyA$VVG0+6ajCcBQ74S/7sMLBbWz1/P8HuvYr/l99r7FQqE"

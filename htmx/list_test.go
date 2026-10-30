@@ -348,7 +348,7 @@ func TestReadOnlyHandler(t *testing.T) {
 			path:       "/?file=core1.cue",
 			htmx:       true,
 			wantStatus: http.StatusOK,
-			contains:   []string{`<main id="workspace"`, `<nav class="breadcrumb" aria-label="File location">`, `href="/"`, "First11111aa"},
+			contains:   []string{`<main id="workspace"`, `<nav class="breadcrumb" aria-label="File location">`, `href="/"`, "Maria"},
 			omits:      []string{"<!doctype html>", "file-nav"},
 		},
 		{

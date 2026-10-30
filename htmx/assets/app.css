@@ -491,8 +491,13 @@ h1.title.document-title {
   display: flex;
   align-items: flex-start;
   /*gap: 0.5rem;*/
-  &:hover, &:hover .field-edit-button {
+  &:not(.is-locked):hover,
+  &:not(.is-locked):hover .field-edit-button {
     color: var(--bulma-danger);
+  }
+
+  &.is-locked {
+    cursor: not-allowed;
   }
 }
 
@@ -553,8 +558,7 @@ h1.title.document-title {
   gap: 0.5rem;
 }
 
-.field form,
-.field label {
+.field form {
   display: grid;
   gap: 0.35rem;
 }
@@ -602,7 +606,8 @@ boolean-toggle[expanded] > button.boolean-toggle:last-of-type {
 
 .field-name {
   font-size: 0.9rem;
-  font-weight: 650;
+  /*font-weight: 650;*/
+  color: var(--entry-card-border-color);
 }
 
 input,

@@ -136,10 +136,10 @@ func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 			t.Errorf("entry view does not contain %q", want)
 		}
 	}
-	if !strings.Contains(entryResponse.Body.String(), `<span class="field-name label">Name:</span>`) {
+	if !strings.Contains(entryResponse.Body.String(), `<span class="field-name">Name:</span>`) {
 		t.Fatal("entry view should show the title field")
 	}
-	if !strings.Contains(entryResponse.Body.String(), `<span class="field-name label">Email:</span>`) {
+	if !strings.Contains(entryResponse.Body.String(), `<span class="field-name">Email:</span>`) {
 		t.Fatal("entry view should retain labels for non-title fields")
 	}
 	if strings.Contains(pageResponse.Body.String(), `hx-post="/edit"`) {
@@ -161,13 +161,19 @@ func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 		`hx-target="#workspace"`,
 		`class="modal-card field-edit-modal-form" role="dialog" aria-modal="true"`,
 		`<section class="modal-card-body">`,
-		`aria-label="Copy field value" title="Copy field value" data-field-edit-copy>⎘</button>`,
+		`aria-label="Copy field value" title="Copy field value" data-field-edit-copy>Copy</button>`,
 		`name="value" value="`,
 		`data-field-edit-dismiss>Cancel</button>`,
 	} {
 		if !strings.Contains(formResponse.Body.String(), want) {
 			t.Errorf("edit form does not contain %q", want)
 		}
+	}
+	formHTML := formResponse.Body.String()
+	footerStart := strings.Index(formHTML, `<footer class="modal-card-foot is-justify-content-flex-end buttons">`)
+	copyButton := strings.Index(formHTML, `data-field-edit-copy>Copy</button>`)
+	if footerStart < 0 || copyButton < footerStart {
+		t.Fatal("copy button should be in the field dialog footer")
 	}
 	if strings.Contains(formResponse.Body.String(), "<!doctype html>") || strings.Contains(formResponse.Body.String(), `<main id="workspace"`) {
 		t.Fatal("expected a modal field fragment, not a full page")
@@ -187,7 +193,7 @@ func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 		`role="dialog" aria-modal="true"`,
 		`hx-target="#workspace"`,
 		`name="view" value="entry"`,
-		`aria-label="Copy field value" title="Copy field value" data-field-edit-copy>⎘</button>`,
+		`aria-label="Copy field value" title="Copy field value" data-field-edit-copy>Copy</button>`,
 		`data-field-edit-dismiss>Cancel</button>`,
 	} {
 		if !strings.Contains(entryFormResponse.Body.String(), want) {
@@ -238,6 +244,80 @@ func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 	}
 }
 
+func TestLockedFieldsRenderWithoutEditControls(t *testing.T) {
+	t.Parallel()
+
+	const source = `#entry: {
+		Name: string @cuebook(title)
+		Status: string @cuebook(locked)
+		Enabled: bool @cuebook(locked)
+		Editable: string
+	}
+	[...#entry] & [{Name: "Ada", Status: "active", Enabled: true, Editable: "open"}]`
+	files := fstest.MapFS{"locked.cue": &fstest.MapFile{Data: []byte(source)}}
+	handler, err := NewWithCommitter(files, &recordingCommitter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	listRequest := httptest.NewRequest(http.MethodGet, "http://example.test/?file=locked.cue", nil)
+	listResponse := httptest.NewRecorder()
+	handler.ServeHTTP(listResponse, listRequest)
+	if listResponse.Code != http.StatusOK {
+		t.Fatalf("list status = %d, want %d; body: %s", listResponse.Code, http.StatusOK, listResponse.Body.String())
+	}
+	listBody := listResponse.Body.String()
+	linkStart := strings.Index(listBody, `href="/entry?`)
+	if linkStart < 0 {
+		t.Fatal("list entry does not link to its entry view")
+	}
+	hrefStart := linkStart + len(`href="`)
+	hrefEnd := strings.Index(listBody[hrefStart:], `"`)
+	if hrefEnd < 0 {
+		t.Fatal("list entry link is unterminated")
+	}
+	entryURL := html.UnescapeString(listBody[hrefStart : hrefStart+hrefEnd])
+	entryRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+entryURL, nil)
+	entryResponse := httptest.NewRecorder()
+	handler.ServeHTTP(entryResponse, entryRequest)
+	if entryResponse.Code != http.StatusOK {
+		t.Fatalf("entry status = %d, want %d; body: %s", entryResponse.Code, http.StatusOK, entryResponse.Body.String())
+	}
+
+	tests := []struct {
+		name  string
+		field string
+	}{
+		{name: "locked string field", field: "Status"},
+		{name: "locked boolean field", field: "Enabled"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			editLabel := `aria-label="Edit ` + tt.field + ` value"`
+			if strings.Contains(listBody, editLabel) || strings.Contains(entryResponse.Body.String(), editLabel) {
+				t.Errorf("locked field %s still has an edit-dialog link", tt.field)
+			}
+			lockLabel := `aria-label="` + tt.field + ` is locked" title="` + tt.field + ` is locked"`
+			if !strings.Contains(entryResponse.Body.String(), lockLabel) {
+				t.Errorf("entry view does not show a lock icon for %s: %s", tt.field, entryResponse.Body.String())
+			}
+		})
+	}
+	if strings.Contains(entryResponse.Body.String(), `class="boolean-field-form"`) {
+		t.Fatal("locked boolean fields should not render inline edit controls")
+	}
+	if !strings.Contains(entryResponse.Body.String(), `class="field-item__value is-locked"`) {
+		t.Fatal("locked entry fields should use the locked value class")
+	}
+	if !strings.Contains(entryResponse.Body.String(), `aria-label="Edit Editable value"`) {
+		t.Fatal("unlocked fields should retain their edit-dialog link")
+	}
+	if !strings.Contains(entryResponse.Body.String(), `<path d="M8 10V7a4 4 0 0 1 8 0v3"/>`) {
+		t.Fatal("locked fields should render the lock SVG")
+	}
+}
+
 func TestReadOnlySourceRejectsOpeningEditForm(t *testing.T) {
 	handler, err := New(testSource())
 	if err != nil {
@@ -263,7 +343,7 @@ func TestReadOnlyPageShowsStaticFieldsWithoutEditControls(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
 	body := response.Body.String()
-	if !strings.Contains(body, `<output>test1@testdomain.com</output>`) {
+	if !strings.Contains(body, `<output>test1@doodod.co</output>`) {
 		t.Fatal("read-only page should show the static field value")
 	}
 	for _, unwanted := range []string{`field-edit-button`, `field-value-edit`, `hx-get="/edit`, `<form action="/edit"`} {
@@ -554,6 +634,42 @@ func TestEditFailures(t *testing.T) {
 	}
 	if committer.calls != 0 {
 		t.Errorf("committer called %d times for rejected edits, want 0", committer.calls)
+	}
+}
+
+func TestLockedFieldsRejectEdits(t *testing.T) {
+	const source = `[{Name: "Ada", Status: "active" @cuebook(locked), Enabled: true @cuebook(locked)}]`
+	tests := []struct {
+		name  string
+		field string
+		value string
+	}{
+		{name: "locked string field", field: "Status", value: "inactive"},
+		{name: "locked boolean field", field: "Enabled", value: "false"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			files := fstest.MapFS{"people.cue": &fstest.MapFile{Data: []byte(source)}}
+			committer := &recordingCommitter{}
+			handler, err := NewWithCommitter(files, committer)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response := submitEdit(t, handler, false, editValues("people.cue", "0", tt.field, tt.value))
+			if response.Code != http.StatusNoContent {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusNoContent, response.Body.String())
+			}
+			wantNotice := "The field " + tt.field + " is locked and cannot be changed."
+			if got := response.Header().Get("HX-Trigger"); !strings.Contains(got, wantNotice) {
+				t.Errorf("HX-Trigger = %q, want notice %q", got, wantNotice)
+			}
+			if committer.calls != 0 {
+				t.Errorf("committer calls = %d, want 0 for a locked field", committer.calls)
+			}
+		})
 	}
 }
 

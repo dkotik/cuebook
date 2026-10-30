@@ -16,6 +16,7 @@ type addFieldView struct {
 	Numeric     bool
 	Boolean     bool
 	Optional    bool
+	Locked      bool
 }
 
 type entryFieldDefinition struct {
@@ -36,6 +37,7 @@ func makeAddFieldViews(document cuebook.Book) []addFieldView {
 			MultiLine:   metadata.IsMultiLine(field.Value),
 			Secret:      secret,
 			Optional:    definition.Optional,
+			Locked:      metadata.IsLockedField(field.Value),
 		}
 		switch {
 		case kind&cue.NumberKind != 0:

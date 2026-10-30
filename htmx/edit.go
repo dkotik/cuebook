@@ -143,6 +143,9 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 	if !ok || fieldName == "" {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
+	if metadata.IsLockedField(field.Value) {
+		return editResponse{}, errors.New("The field " + fieldName + " is locked and cannot be changed.")
+	}
 	if isSecretField(field.Value) && value == "" && field.String() != "" {
 		return a.renderEditResponse(request, entryIndex)
 	}
@@ -265,6 +268,7 @@ type fieldView struct {
 	Boolean      bool
 	Optional     bool
 	Secret       bool
+	Locked       bool
 	ReadOnly     bool
 	Editing      bool
 	EntryView    bool
@@ -336,6 +340,7 @@ func makeFieldView(field cuebook.Field, fileName string, index int, readOnly, en
 		MultiLine:    metadata.IsMultiLine(field.Value),
 		Boolean:      booleanOnly,
 		Secret:       secret,
+		Locked:       metadata.IsLockedField(field.Value),
 		ReadOnly:     readOnly,
 		ShowEditIcon: true,
 	}

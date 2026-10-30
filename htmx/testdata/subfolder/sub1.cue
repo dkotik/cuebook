@@ -33,8 +33,9 @@
 		Email: "test1@testdomain.com"
 	},
   {
-		Name:  "new entry"
-		Email: "test1@testdomain.com"
+		Name:       "new entry" @cuebook(title)
+		Email:      "test1@testdomain.com"
+		Introduced: false
 	},
   {
 		Name:  "23424n33" @cuebook(title)

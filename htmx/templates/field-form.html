@@ -5,9 +5,6 @@
     <p id="field-edit-modal-title" class="modal-card-title">Edit {{.Name}}</p>
     <div class="field has-addons">
       <p class="control">
-        <button class="button" type="button" aria-label="Copy field value" title="Copy field value" data-field-edit-copy>⎘</button>
-      </p>
-      <p class="control">
         <button class="button has-text-danger" type="button" aria-label="Close edit dialog" data-field-edit-dismiss>×</button>
       </p>
     </div>
@@ -16,6 +13,7 @@
     {{template "field-form-input.html" .}}
   </section>
   <footer class="modal-card-foot is-justify-content-flex-end buttons">
+    <button class="button" type="button" aria-label="Copy field value" title="Copy field value" data-field-edit-copy>Copy</button>
     <button class="button is-light" type="button" data-field-edit-dismiss>Cancel</button>
     <button class="button is-link" type="submit">Update</button>
   </footer>

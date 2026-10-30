@@ -73,6 +73,11 @@ func IsDetailField(v cue.Value) (ok bool) {
 	return
 }
 
+func IsLockedField(v cue.Value) (ok bool) {
+	_, ok = GetFieldAttributes(v, "cuebook").GetFirstOf("locked")
+	return
+}
+
 func IsMultiLine(v cue.Value) (ok bool) {
 	_, ok = GetFieldAttributes(v, "cuebook").GetFirstOf("multiline")
 	return
