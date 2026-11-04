@@ -97,6 +97,26 @@ func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
 func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	w.logger.Debug(fmt.Sprintf("%T", msg), slog.Any("payload", msg))
 
+	// Raw terminal mode turns these shortcuts into key events, not OS signals.
+	// Handle them before busy filtering or child models can consume them.
+	if key, ok := msg.(tea.KeyMsg); ok && key.Key().Mod == tea.ModCtrl {
+		var command tea.Cmd
+		switch key.Key().Code {
+		case 'c', '\\':
+			command = tea.Quit
+		case 'z':
+			command = tea.Suspend
+		case 'l':
+			command = tea.ClearScreen
+		}
+		if command != nil {
+			if _, pressed := msg.(tea.KeyPressMsg); pressed {
+				return w, command
+			}
+			return w, nil
+		}
+	}
+
 	switch msg := msg.(type) {
 	case error:
 		w.current, cmd = w.current.Update(msg)

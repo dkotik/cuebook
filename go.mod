@@ -16,7 +16,6 @@ require (
 	github.com/charmbracelet/x/exp/teatest/v2 v2.0.0-20250128152640-d9da2a4aec3d
 	github.com/dkotik/htadaptor v0.2.4
 	github.com/matthewhartstonge/argon2 v1.1.1
-	github.com/mattn/go-runewidth v0.0.16
 	github.com/muesli/reflow v0.3.0
 	github.com/nicksnyder/go-i18n/v2 v2.4.1
 	github.com/rivo/uniseg v0.4.7
@@ -119,6 +118,7 @@ require (
 	github.com/klauspost/compress v1.20.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
@@ -137,7 +137,7 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.8.2 // indirect
 	github.com/ulikunitz/xz v0.5.17 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	github.com/yuin/goldmark v1.7.8 // indirect
+	github.com/yuin/goldmark v1.7.17 // indirect
 	github.com/yuin/goldmark-emoji v1.0.3 // indirect
 	go.etcd.io/bbolt v1.4.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

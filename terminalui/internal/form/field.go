@@ -5,8 +5,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
-	"github.com/dkotik/cuebook/terminalui/list"
-	ta "github.com/dkotik/cuebook/terminalui/textarea"
+	"github.com/dkotik/cuebook/terminalui/internal/list"
+	ta "github.com/dkotik/cuebook/terminalui/internal/textarea"
 	"github.com/muesli/reflow/wrap"
 )
 

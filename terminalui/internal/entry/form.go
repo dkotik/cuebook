@@ -8,9 +8,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/event"
-	listForm "github.com/dkotik/cuebook/terminalui/form"
-	"github.com/dkotik/cuebook/terminalui/list"
-	"github.com/dkotik/cuebook/terminalui/textarea"
+	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
+	"github.com/dkotik/cuebook/terminalui/internal/list"
+	"github.com/dkotik/cuebook/terminalui/internal/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
@@ -106,7 +106,7 @@ func (f form) Init() (tea.Model, tea.Cmd) {
 		buildInit tea.Cmd
 	)
 
-	f.Model, listInit = listForm.New().Init()
+	f.Model, listInit = listForm.New(listForm.Configuration{}).Init()
 	f.Changes = make(map[string]string)
 	fieldsInit := event.PropagateInit(f.Fields)
 	buttonsInit := event.PropagateInit(f.Buttons)
@@ -205,7 +205,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		)
 	case fieldListCards:
 		f.KnownFields = msg.KnownFieldNames
-		f.Model, cmd = listForm.New().Init()
+		f.Model, cmd = listForm.New(listForm.Configuration{}).Init()
 		initCmd := event.PropagateInit(msg.Cards)
 		var setCmd tea.Cmd
 		f.Model, setCmd = f.Model.Update(list.SetItems(msg.Cards...)())
@@ -282,10 +282,10 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 
 func displayFieldForm(source []byte, entry cuebook.Entry, field cuebook.Field) tea.Cmd {
 	return func() tea.Msg {
-		form, err := textarea.New(
-			textarea.WithLabel(field.Name),
-			textarea.WithValue(field.String()),
-			textarea.WithOnSubmitCommand(func(value string) tea.Cmd {
+		form, err := textarea.New(textarea.Configuration{
+			Label: field.Name,
+			Value: field.String(),
+			OnSubmit: func(value string) tea.Cmd {
 				return func() tea.Msg {
 					p, err := cuebook.UpdateFieldValue(source, entry.Value, field.Value, value)
 					if err != nil {
@@ -296,8 +296,8 @@ func displayFieldForm(source []byte, entry cuebook.Entry, field cuebook.Field) t
 						Entry: entry,
 					}
 				}
-			}),
-		)
+			},
+		})
 		if err != nil {
 			return err
 		}

@@ -5,7 +5,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/terminalui/file"
+	"github.com/dkotik/cuebook/terminalui"
 	"github.com/urfave/cli/v3"
 )
 
@@ -21,6 +21,9 @@ func newCLICommand() *cli.Command {
 		Usage:    "edit lists of structured data items",
 		Commands: []*cli.Command{newServeCommand()},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+
 			ui, err := NewTerminalUI(ctx)
 			if err != nil {
 				return err
@@ -33,7 +36,7 @@ func newCLICommand() *cli.Command {
 				tea.WithMouseCellMotion(),
 			)
 			go func() {
-				p.Send(file.LoadEvent("test/testdata/simple.cue"))
+				p.Send(terminalui.LoadFileEvent("test/testdata/simple.cue"))
 			}()
 			_, err = p.Run()
 

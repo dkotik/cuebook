@@ -1,8 +1,8 @@
-+++
-title = 'Data model and annotations'
-description = 'Reference for Book, Entry, Field, and the Cuebook CUE attributes.'
-weight = 30
-+++
+---
+title: 'Data model and annotations'
+description: 'Reference for Book, Entry, Field, and the Cuebook CUE attributes.'
+weight: 30
+---
 
 The root package models a CUE list as a `Book`. Entries are CUE structs, and their concrete fields are exposed as `Field` values.
 

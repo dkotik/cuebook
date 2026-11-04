@@ -6,9 +6,9 @@ import (
 	"cuelang.org/go/cue/cuecontext"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
-	listForm "github.com/dkotik/cuebook/terminalui/form"
+	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
-	"github.com/dkotik/cuebook/terminalui/list"
+	"github.com/dkotik/cuebook/terminalui/internal/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
@@ -67,7 +67,7 @@ func NewCreateForm(source []byte, value cue.Value) tea.Cmd {
 }
 
 func (f createForm) Init() (_ tea.Model, cmd tea.Cmd) {
-	f.Model, cmd = listForm.New().Init()
+	f.Model, cmd = listForm.New(listForm.Configuration{}).Init()
 	return f, cmd
 }
 

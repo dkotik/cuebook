@@ -3,7 +3,7 @@ package internal
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
-	"github.com/dkotik/cuebook/terminalui/file"
+	"github.com/dkotik/cuebook/terminalui/internal/file"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )

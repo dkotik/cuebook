@@ -7,9 +7,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/charmbracelet/bubbles/v2/filepicker"
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/charmbracelet/lipgloss/v2"
 )
 
 type Command func(filePath string) tea.Cmd
@@ -21,30 +23,38 @@ type file struct {
 	// Path     string
 }
 
-func New(withOptions ...Option) (_ tea.Model, err error) {
-	o := &options{}
-	for _, option := range append(
-		withOptions,
-		func(o *options) error {
-			if len(o.AllowedExtensions) == 0 {
-				return errors.New("no file extensions provided")
+// Configuration controls file selection and appearance. Unset style properties
+// inherit the [filepicker.DefaultStyles]. A nil OnSelect emits a [LoadEvent].
+type Configuration struct {
+	AllowedExtensions []string
+	OnSelect          Command
+
+	CursorStyle           lipgloss.Style
+	DisabledCursorStyle   lipgloss.Style
+	DirectoryStyle        lipgloss.Style
+	SymlinkStyle          lipgloss.Style
+	FileStyle             lipgloss.Style
+	DisabledFileStyle     lipgloss.Style
+	SelectedStyle         lipgloss.Style
+	DisabledSelectedStyle lipgloss.Style
+	EmptyDirectoryStyle   lipgloss.Style
+}
+
+func New(c Configuration) (_ tea.Model, err error) {
+	if err = c.validateAllowedExtensions(); err != nil {
+		return nil, fmt.Errorf("cannot create file browser: %w", err)
+	}
+	if c.OnSelect == nil {
+		c.OnSelect = func(filePath string) tea.Cmd {
+			return func() tea.Msg {
+				return LoadEvent(filePath)
 			}
-			if o.OnSelect == nil {
-				o.OnSelect = func(filePath string) tea.Cmd {
-					return func() tea.Msg {
-						return LoadEvent(filePath)
-					}
-				}
-			}
-			return nil
-		},
-	) {
-		if err = option(o); err != nil {
-			return nil, fmt.Errorf("cannot create file browser: %w", err)
 		}
 	}
+
 	fp := filepicker.New()
-	fp.AllowedTypes = o.AllowedExtensions
+	fp.AllowedTypes = c.AllowedExtensions
+	fp.Styles = c.styles()
 	// fp.CurrentDirectory, _ = os.Getwd()
 	fp.AutoHeight = true
 	fp.DirAllowed = false
@@ -54,8 +64,50 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 	fp.ShowHidden = true
 	return file{
 		Model:    fp,
-		OnSelect: o.OnSelect,
+		OnSelect: c.OnSelect,
 	}, nil
+}
+
+func (c *Configuration) validateAllowedExtensions() error {
+	if len(c.AllowedExtensions) == 0 {
+		return errors.New("no file extensions provided")
+	}
+	unique := make([]string, 0, len(c.AllowedExtensions))
+	for _, ext := range c.AllowedExtensions {
+		if ext == "" {
+			return errors.New("empty file extension provided")
+		}
+		if ext[0] != '.' {
+			return errors.New("a file extension must begin with a dot")
+		}
+		if !slices.Contains(unique, ext) {
+			unique = append(unique, ext)
+		}
+	}
+	c.AllowedExtensions = unique
+	return nil
+}
+
+func (c Configuration) styles() filepicker.Styles {
+	d := filepicker.DefaultStyles()
+	d.Cursor = c.CursorStyle.Inherit(d.Cursor)
+	d.DisabledCursor = c.DisabledCursorStyle.Inherit(d.DisabledCursor)
+	d.Directory = c.DirectoryStyle.Inherit(d.Directory)
+	d.Symlink = c.SymlinkStyle.Inherit(d.Symlink)
+	d.File = c.FileStyle.Inherit(d.File)
+	d.DisabledFile = c.DisabledFileStyle.Inherit(d.DisabledFile)
+	d.Selected = c.SelectedStyle.Inherit(d.Selected)
+	d.DisabledSelected = c.DisabledSelectedStyle.Inherit(d.DisabledSelected)
+	// Inherit skips padding and the message text, so restore them unless set.
+	empty := c.EmptyDirectoryStyle.Inherit(d.EmptyDirectory)
+	if c.EmptyDirectoryStyle.GetPaddingLeft() == 0 {
+		empty = empty.PaddingLeft(d.EmptyDirectory.GetPaddingLeft())
+	}
+	if c.EmptyDirectoryStyle.Value() == "" {
+		empty = empty.SetString(d.EmptyDirectory.Value())
+	}
+	d.EmptyDirectory = empty
+	return d
 }
 
 func (f file) Load() (tea.Model, tea.Cmd) {

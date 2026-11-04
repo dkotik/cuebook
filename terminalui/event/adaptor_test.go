@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/event"
+	"github.com/dkotik/cuebook/terminalui/internal/card"
 )
 
 func TestUpdateAdaptor(t *testing.T) {
 	type testEvent string
 
-	card := card.New("title")
+	card := card.New(card.Configuration{Title: "title"})
 	adapted := event.NewAdaptor(func(m tea.Model, e testEvent) (tea.Model, tea.Cmd) {
 		return m, func() tea.Msg {
 			return 7

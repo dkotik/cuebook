@@ -11,15 +11,33 @@ import (
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
-func New() (_ tea.Model, err error) {
+// Configuration controls the status bar content and appearance. Unset style
+// properties inherit the defaults: a blue spinner and the dark help styles.
+type Configuration struct {
+	KeyBindings []key.Binding
+
+	SpinnerStyle     lipgloss.Style
+	KeyStyle         lipgloss.Style
+	DescriptionStyle lipgloss.Style
+	SeparatorStyle   lipgloss.Style
+	EllipsisStyle    lipgloss.Style
+}
+
+func New(c Configuration) tea.Model {
+	h := help.New()
+	d := h.Styles
+	h.Styles.ShortKey = c.KeyStyle.Inherit(d.ShortKey)
+	h.Styles.ShortDesc = c.DescriptionStyle.Inherit(d.ShortDesc)
+	h.Styles.ShortSeparator = c.SeparatorStyle.Inherit(d.ShortSeparator)
+	h.Styles.Ellipsis = c.EllipsisStyle.Inherit(d.Ellipsis)
 	return model{
-		// KeyBindings: bindings,
+		KeyBindings: c.KeyBindings,
 		Spinner: spinner.New(
 			spinner.WithSpinner(spinner.MiniDot),
-			spinner.WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("4"))),
+			spinner.WithStyle(c.SpinnerStyle.Inherit(lipgloss.NewStyle().Foreground(lipgloss.Color("4")))),
 		),
-		Help: help.New(),
-	}, nil
+		Help: h,
+	}
 }
 
 type model struct {

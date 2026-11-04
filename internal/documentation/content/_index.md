@@ -1,7 +1,7 @@
-+++
-title = 'Cuebook Go package'
-description = 'A Go library for parsing and working with structured CUE lists.'
-+++
+---
+title: 'Cuebook Go package'
+description: 'A Go library for parsing and working with structured CUE lists.'
+---
 
 Cuebook is a Go package for reading structured entries from [CUE](https://cuelang.org/) documents. It compiles and validates a CUE source, then exposes its list entries and fields as Go values while retaining their connection to the original source.
 

@@ -15,3 +15,19 @@ uglyURLs = true
     name = 'Overview'
     pageRef = '/'
     weight = 10
+  [[menu.main]]
+    name = 'Getting started'
+    pageRef = '/getting-started'
+    weight = 20
+  [[menu.main]]
+    name = 'Data model'
+    pageRef = '/data-model'
+    weight = 30
+  [[menu.main]]
+    name = 'Source byte ranges'
+    pageRef = '/source-ranges'
+    weight = 40
+  [[menu.main]]
+    name = 'Terminal UI'
+    pageRef = '/terminalui'
+    weight = 50

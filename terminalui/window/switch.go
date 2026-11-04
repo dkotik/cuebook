@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/dkotik/cuebook/terminalui/line"
+
 	"github.com/muesli/reflow/truncate"
 )
 
@@ -83,7 +83,7 @@ func (s slideSwitch) View() string {
 	w := strings.Builder{}
 	for i := range s.Size.Height {
 		if i < len(left) {
-			_, _ = w.WriteString(line.TruncateLeft(left[i], int(boundary), ""))
+			_, _ = w.WriteString(truncateLeft(left[i], int(boundary), ""))
 		} else {
 			_, _ = w.WriteString(strings.Repeat(" ", s.Size.Width-int(boundary)-1))
 		}

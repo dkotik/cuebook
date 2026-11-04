@@ -9,10 +9,10 @@ import (
 	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
-	"github.com/dkotik/cuebook/terminalui/card"
 	"github.com/dkotik/cuebook/terminalui/event"
+	"github.com/dkotik/cuebook/terminalui/internal/card"
 	"github.com/dkotik/cuebook/terminalui/internal/entry"
-	"github.com/dkotik/cuebook/terminalui/list"
+	"github.com/dkotik/cuebook/terminalui/internal/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
@@ -31,7 +31,7 @@ type EntryList struct {
 }
 
 func (l EntryList) Init() (_ tea.Model, cmd tea.Cmd) {
-	l.Model = list.New()
+	l.Model = list.New(list.Configuration{})
 	l.selected = -1
 	return l, nil
 }
@@ -245,7 +245,10 @@ func LoadEntries(r cuebook.Result, selectionIndex int) tea.Cmd {
 			result.Cards = append(
 				result.Cards,
 				Entry{
-					Model: card.New(entry.GetTitle(), entry.GetDescription()...),
+					Model: card.New(card.Configuration{
+						Title:       entry.GetTitle(),
+						Description: entry.GetDescription(),
+					}),
 					Index: index,
 				},
 			)

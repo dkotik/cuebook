@@ -3,9 +3,9 @@ package entry
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
-	listForm "github.com/dkotik/cuebook/terminalui/form"
+	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
-	"github.com/dkotik/cuebook/terminalui/list"
+	"github.com/dkotik/cuebook/terminalui/internal/list"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 

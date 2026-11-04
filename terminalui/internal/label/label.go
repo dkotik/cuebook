@@ -3,7 +3,7 @@ package label
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/dkotik/cuebook/terminalui/list"
+	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
 
 // DefaultInactiveColor is the foreground color for unselected labels.

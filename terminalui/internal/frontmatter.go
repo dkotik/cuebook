@@ -7,9 +7,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
-	"github.com/dkotik/cuebook/terminalui/list"
-	"github.com/dkotik/cuebook/terminalui/markdown"
-	"github.com/dkotik/cuebook/terminalui/textarea"
+	"github.com/dkotik/cuebook/terminalui/internal/list"
+	"github.com/dkotik/cuebook/terminalui/internal/markdown"
+	"github.com/dkotik/cuebook/terminalui/internal/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
@@ -30,7 +30,7 @@ type FrontMatterView struct {
 }
 
 func (v FrontMatterView) Init() (_ tea.Model, cmd tea.Cmd) {
-	v.Model = list.New()
+	v.Model = list.New(list.Configuration{})
 	return v, nil
 }
 
@@ -51,8 +51,12 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				return window.TranslatableFunc(func(lc *i18n.Localizer) tea.Cmd {
 					return func() tea.Msg {
 						md := metadata.NewFrontmatter(msg.Source, metadata.NewParser())
+						description, err := markdown.New(markdown.Configuration{Text: string(md.Source)})
+						if err != nil {
+							return err
+						}
 						return frontMatterListItems{
-							markdown.New(string(md.Source)),
+							description,
 							list.NewButton(&i18n.LocalizeConfig{
 								DefaultMessage: &i18n.Message{
 									ID:    "bookMetadataUpdateDescription",
@@ -71,10 +75,10 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		source := v.state.Source
 		return v, func() tea.Msg {
 			md := metadata.NewFrontmatter(source, metadata.NewParser())
-			form, err := textarea.New(
-				textarea.WithLabel("Description"),
-				textarea.WithValue(string(md.Source)),
-				textarea.WithOnSubmitCommand(func(value string) tea.Cmd {
+			form, err := textarea.New(textarea.Configuration{
+				Label: "Description",
+				Value: string(md.Source),
+				OnSubmit: func(value string) tea.Cmd {
 					return func() tea.Msg {
 						b := &bytes.Buffer{}
 						for _, line := range strings.Split(strings.TrimSpace(value), "\n") {
@@ -92,8 +96,8 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 						}
 						return frontMatterPatch{Patch: p}
 					}
-				}),
-			)
+				},
+			})
 			if err != nil {
 				return err
 			}

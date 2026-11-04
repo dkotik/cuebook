@@ -31,8 +31,8 @@ func NewCancelKey(lc *i18n.Localizer) key.Binding {
 
 func NewQuitKey(lc *i18n.Localizer) key.Binding {
 	return key.NewBinding(
-		key.WithKeys("escape"),
-		key.WithHelp("esc", lc.MustLocalize(&i18n.LocalizeConfig{
+		key.WithKeys("ctrl+c", "ctrl+\\", "escape"),
+		key.WithHelp("ctrl+c", lc.MustLocalize(&i18n.LocalizeConfig{
 			DefaultMessage: &i18n.Message{
 				ID:    "cuebook.keyBinding.quit",
 				Other: "quit",

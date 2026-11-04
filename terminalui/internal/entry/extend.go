@@ -3,8 +3,8 @@ package entry
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
-	"github.com/dkotik/cuebook/terminalui/list"
-	"github.com/dkotik/cuebook/terminalui/textarea"
+	"github.com/dkotik/cuebook/terminalui/internal/list"
+	"github.com/dkotik/cuebook/terminalui/internal/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
@@ -22,16 +22,16 @@ func NewExtendButton() tea.Model {
 			},
 		},
 		func() tea.Msg {
-			ta, err := textarea.New(
-				textarea.WithLabel("Add a Custom Field"), // TODO: localize
-				textarea.WithOnSubmitCommand(func(value string) tea.Cmd {
+			ta, err := textarea.New(textarea.Configuration{
+				Label: "Add a Custom Field", // TODO: localize
+				OnSubmit: func(value string) tea.Cmd {
 					return func() tea.Msg {
 						return extendEvent{
 							Name: value,
 						}
 					}
-				}),
-			)
+				},
+			})
 			if err != nil {
 				return err
 			}

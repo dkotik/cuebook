@@ -1,8 +1,8 @@
-+++
-title = 'Source byte ranges'
-description = 'Locate CUE values in source and re-identify their content after edits.'
-weight = 40
-+++
+---
+title: 'Source byte ranges'
+description: 'Locate CUE values in source and re-identify their content after edits.'
+weight: 40
+---
 
 Cuebook keeps each entry connected to the CUE syntax node from which it was compiled. The package's byte-range helpers expose that source location for applications that need to target an entry when making edits.
 

@@ -1,8 +1,8 @@
-+++
-title = 'Getting started'
-description = 'Parse and inspect a CUE list with the Cuebook Go package.'
-weight = 20
-+++
+---
+title: 'Getting started'
+description: 'Parse and inspect a CUE list with the Cuebook Go package.'
+weight: 20
+---
 
 ## Install
 

@@ -6,8 +6,13 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/dkotik/cuebook/terminalui/line"
 )
+
+func splitLines(s string) []string {
+	// normalize line endings
+	normalized := strings.ReplaceAll(s, "\r\n", "\n")
+	return strings.Split(normalized, "\n")
+}
 
 func (l List) cardSeparator() string {
 	return strings.Repeat(" ", l.Size.Width)
@@ -20,7 +25,7 @@ func (l List) forwardLineIterator() iter.Seq[string] {
 			if !yield(separator) {
 				return
 			}
-			for _, line := range line.SplitLines(card.View()) {
+			for _, line := range splitLines(card.View()) {
 				if !yield(line) {
 					return
 				}
@@ -36,7 +41,7 @@ func (l List) reverseLineIterator() iter.Seq[string] {
 			if !yield(separator) {
 				return
 			}
-			lines := line.SplitLines(l.Items[i].View())
+			lines := splitLines(l.Items[i].View())
 			for j := len(lines) - 1; j >= 0; j-- {
 				if !yield(lines[j]) {
 					return
@@ -50,7 +55,7 @@ func (l List) reverseLineIterator() iter.Seq[string] {
 		// if !yield(separator) {
 		// 	return
 		// }
-		// title := line.SplitLines(
+		// title := splitLines(
 		// 	lipgloss.NewStyle().
 		// 		// AlignHorizontal(lipgloss.Left).
 		// 		// AlignVertical(lipgloss.Center).
@@ -126,7 +131,7 @@ func (l List) View() string {
 
 		// if space > 0 && l.Title != "" {
 		// 	// there is place for title
-		// 	title := line.SplitLines(
+		// 	title := splitLines(
 		// 		lipgloss.NewStyle().
 		// 			// AlignHorizontal(lipgloss.Left).
 		// 			AlignVertical(lipgloss.Center).
@@ -144,11 +149,8 @@ func (l List) View() string {
 		view = lipgloss.JoinVertical(lipgloss.Left, lines...)
 	}
 
-	return lipgloss.NewStyle().
-		// AlignHorizontal(lipgloss.Left).
-		AlignVertical(lipgloss.Center).
+	return l.Style.
 		Height(l.Size.Height).
 		MarginLeft(l.Size.Width / 4).
-		// MarginRight(l.Size.Width / 3).
 		Render(view)
 }

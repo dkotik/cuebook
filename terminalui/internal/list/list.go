@@ -7,11 +7,19 @@ import (
 	"github.com/dkotik/cuebook/terminalui/event"
 )
 
-func New(items ...tea.Model) tea.Model {
+// Configuration controls list content and appearance. Unset Style properties
+// inherit the default vertical centering. The list manages its own height and
+// left margin to fit the window.
+type Configuration struct {
+	Items []tea.Model
+	Style lipgloss.Style
+}
+
+func New(c Configuration) tea.Model {
 	fs := viewport.New()
 	return List{
-		Items: items,
-		// SelectedIndex: -1,
+		Items:          c.Items,
+		Style:          c.Style.Inherit(lipgloss.NewStyle().AlignVertical(lipgloss.Center)),
 		fullScreenView: &fs,
 	}
 }
@@ -21,6 +29,7 @@ type List struct {
 	SelectedIndex int
 	Items         []tea.Model
 	Size          tea.WindowSizeMsg
+	Style         lipgloss.Style
 
 	fullScreenView *viewport.Model
 }

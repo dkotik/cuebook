@@ -1,48 +1,19 @@
-package line
+package window
 
 import (
 	"bytes"
-	"strings"
 
 	"github.com/charmbracelet/x/ansi/parser"
-	"github.com/mattn/go-runewidth"
 	"github.com/rivo/uniseg"
 )
 
-const (
-	bullet   = "•"
-	ellipsis = "…"
-)
-
-func SplitLines(s string) []string {
-	// normalize line endings
-	normalized := strings.ReplaceAll(s, "\r\n", "\n")
-	return strings.Split(normalized, "\n")
-}
-
-func PadLine(s string, w int) string {
-	length := runewidth.StringWidth(s)
-	if length > w {
-		return runewidth.Truncate(s, w-1, ellipsis)
-	}
-	count := w - length
-	if count > 0 {
-		b := make([]byte, count)
-		for i := range b {
-			b[i] = ':'
-		}
-		return s + string(b)
-	}
-	return s
-}
-
-// TruncateLeft truncates a string from the left side to a given length, adding
+// truncateLeft truncates a string from the left side to a given length, adding
 // a prefix to the beginning if the string is longer than the given length.
 // This function is aware of ANSI escape codes and will not break them, and
 // accounts for wide-characters (such as East Asians and emojis).
 //
 // Copied from: github.com/charmbracelet/x/blob/ansi/v0.6.0/ansi/truncate.go#L113
-func TruncateLeft(s string, length int, prefix string) string {
+func truncateLeft(s string, length int, prefix string) string {
 	if length == 0 {
 		return ""
 	}

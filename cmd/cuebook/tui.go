@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui"
 	"github.com/dkotik/cuebook/terminalui/event"
-	"github.com/dkotik/cuebook/terminalui/file"
+
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
@@ -27,7 +27,9 @@ func NewTerminalUI(ctx context.Context) (tea.Model, error) {
 	logger := slog.NewTextHandler(logFile, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	})
-	picker, err := file.New(file.WithAllowedFileExtensions(".cue"))
+	picker, err := terminalui.NewFilePicker(terminalui.FilePickerConfiguration{
+		AllowedExtensions: []string{".cue"},
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/v2/key"
 	"github.com/charmbracelet/bubbles/v2/textarea"
@@ -14,57 +15,55 @@ import (
 	"golang.org/x/text/language"
 )
 
-type Textarea struct {
-	Name     string
-	Label    string
-	OnSubmit Command
-	// Required bool
+type Command func(string) tea.Cmd
 
-	saveKey key.Binding
-	// escapeKey key.Binding
+// Configuration controls textarea content and appearance. Label is required.
+// A nil OnSubmit does nothing. Unset style properties inherit the defaults: a
+// purple frame around a bordered input and an unstyled label.
+type Configuration struct {
+	Label    string
+	Value    string
+	OnSubmit Command
+
+	LabelStyle lipgloss.Style
+	FrameStyle lipgloss.Style
+	TextStyle  lipgloss.Style
+}
+
+type Textarea struct {
+	Configuration
+
+	saveKey  key.Binding
 	textarea textarea.Model
 }
 
-func New(withOptions ...Option) (_ tea.Model, err error) {
-	o := &options{}
-	for _, option := range append(withOptions, func(o *options) error {
-		if o.OnSubmit == nil {
-			o.OnSubmit = func(string) tea.Cmd { return nil }
-		}
-		if o.Label == "" {
-			return errors.New("label is required")
-		}
-		return nil
-	}) {
-		if err = option(o); err != nil {
-			return nil, fmt.Errorf("invalid textarea options: %w", err)
-		}
+func New(c Configuration) (_ tea.Model, err error) {
+	if strings.TrimSpace(c.Label) == "" {
+		return nil, fmt.Errorf("invalid textarea configuration: %w", errors.New("label is required"))
 	}
+	if c.OnSubmit == nil {
+		c.OnSubmit = func(string) tea.Cmd { return nil }
+	}
+	c.FrameStyle = c.FrameStyle.Inherit(lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("55")))
 
 	m := Textarea{
-		Label:    o.Label,
-		OnSubmit: o.OnSubmit,
-		// Required: required,
-		textarea: textarea.New(),
+		Configuration: c,
+		textarea:      textarea.New(),
 	}
-	if o.Value != "" {
-		m.textarea.SetValue(o.Value)
+	if c.Value != "" {
+		m.textarea.SetValue(c.Value)
 	}
-	// ta.Prompt = lipgloss.NewStyle().
-	// 	Foreground(lipgloss.Color("243")).
-	// 	Render(lipgloss.NormalBorder().Left + " ")
 	m.textarea.Prompt = "  "
 	m.textarea.Placeholder = "..."
 	m.textarea.ShowLineNumbers = false
 	m.textarea.CharLimit = 1 << 20 // 1mb
-	// ta.KeyMap.InsertNewline.SetEnabled(false)
-	// 	// Remove cursor line styling
-	// ta.Styles.Focused.CursorLine = lipgloss.NewStyle()
-	m.textarea.Styles.Focused.Text = m.textarea.Styles.Focused.Text.Border(lipgloss.NormalBorder(), true, true, true, true)
+	focused := m.textarea.Styles.Focused.Text.Border(lipgloss.NormalBorder(), true, true, true, true)
+	m.textarea.Styles.Focused.Text = c.TextStyle.Inherit(focused)
 
 	lc := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
 	m.saveKey = window.NewSaveKey(lc)
-	// m.escapeKey = window.NewCancelKey(lc)
 	return m, nil
 }
 
@@ -87,6 +86,12 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var textareaCmd tea.Cmd
 	t.textarea, textareaCmd = t.textarea.Update(msg)
 	return t, textareaCmd
+}
+
+func (t Textarea) View() string {
+	return lipgloss.JoinVertical(lipgloss.Left,
+		t.LabelStyle.Render(" "+t.Label+":"),
+		t.FrameStyle.Render(t.textarea.View()))
 }
 
 func (t Textarea) LogValue() slog.Value {
