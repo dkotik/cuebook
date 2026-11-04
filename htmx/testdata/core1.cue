@@ -24,14 +24,35 @@
 		Name:  "Maria12" @cuebook(title)
 		Email: "mr@sfsdf.com"
 		Notes: """
+			# laskdjasldkj asd
+
+			sdlfkjsdflkj
+
+
+
 			sdf sd fsdf 
 
-			* 1
-			* **2**
+			dsfsdf
+
+
+
+			> sdfs dlfkjsdflksajdfsljdfk
+
+
+
+			- 1
+			- **2**
 
 			# testing test
 
 			sdfsdf
+
+
+
+			- \\[ \\] sdfsadfsdf
+			- \\[ \\] sdfsdf
+
+
 			""" @cuebook(detail,multiline)
 	},
   {

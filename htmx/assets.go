@@ -5,11 +5,11 @@ import "net/http"
 func serveAsset(w http.ResponseWriter, r *http.Request) {
 	var contentType string
 	switch name := r.PathValue("name"); name {
-	case "app.css", "bulma.css", "theme.css", "print.css", "easymde-2.21.0.min.css":
+	case "app.css", "bulma.css", "theme.css", "print.css":
 		contentType = "text/css; charset=utf-8"
-	case "theme.js", "file-tree.js", "entry-move.js", "remember-details.js", "archive-confirm.js", "move-confirm.js", "search-control.js", "live-reload.js", "entry-paste.js", "entry-copy.js", "flash.js", "field-edit-dialog.js", "file-picker.js", "boolean-toggle.js", "markdown-editor.js", "dompurify-3.4.17.min.js", "easymde-2.21.0.min.js":
+	case "theme.js", "file-tree.js", "entry-move.js", "remember-details.js", "archive-confirm.js", "move-confirm.js", "search-control.js", "live-reload.js", "entry-paste.js", "entry-copy.js", "flash.js", "field-edit-dialog.js", "file-picker.js", "boolean-toggle.js", "markdown-editor.js", "tiptap-markdown-3.32.2.min.js":
 		contentType = "text/javascript; charset=utf-8"
-	case "bulma-LICENSE.txt", "htmx-LICENSE.txt", "easymde-LICENSE.txt", "dompurify-LICENSE.txt":
+	case "bulma-LICENSE.txt", "htmx-LICENSE.txt", "tiptap-LICENSE.txt":
 		contentType = "text/plain; charset=utf-8"
 	case "htmx-2.0.4.min.js":
 		contentType = "text/javascript; charset=utf-8"

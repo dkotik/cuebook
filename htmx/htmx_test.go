@@ -323,19 +323,18 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", contains: []string{"htmx"}, wantStatus: http.StatusOK},
-		{name: "version-pinned EasyMDE", path: "/assets/easymde-2.21.0.min.js", contains: []string{"EasyMDE"}, wantStatus: http.StatusOK},
-		{name: "EasyMDE stylesheet", path: "/assets/easymde-2.21.0.min.css", contains: []string{".EasyMDEContainer"}, wantStatus: http.StatusOK},
-		{name: "version-pinned DOMPurify", path: "/assets/dompurify-3.4.17.min.js", contains: []string{"DOMPurify"}, wantStatus: http.StatusOK},
-		{name: "Markdown editor initializer", path: "/assets/markdown-editor.js", contains: []string{"data-markdown-editor", "sanitizerFunction", "htmx:afterSwap", "htmx:beforeCleanupElement"}, wantStatus: http.StatusOK},
-		{name: "EasyMDE license", path: "/assets/easymde-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
-		{name: "DOMPurify license", path: "/assets/dompurify-LICENSE.txt", contains: []string{"Apache License", "Version 2.0"}, wantStatus: http.StatusOK},
+		{name: "version-pinned Tiptap Markdown bundle", path: "/assets/tiptap-markdown-3.32.2.min.js", contains: []string{"CuebookTiptap"}, wantStatus: http.StatusOK},
+		{name: "Markdown editor initializer", path: "/assets/markdown-editor.js", contains: []string{"data-markdown-editor", "CuebookTiptap", `contentType: "markdown"`, "getMarkdown()", "htmx:afterSwap", "htmx:beforeCleanupElement"}, wantStatus: http.StatusOK},
+		{name: "Tiptap licenses", path: "/assets/tiptap-LICENSE.txt", contains: []string{"@tiptap/markdown 3.32.2", "prosemirror-view", "MIT"}, wantStatus: http.StatusOK},
+		{name: "removed EasyMDE bundle", path: "/assets/easymde-2.21.0.min.js", wantStatus: http.StatusNotFound},
+		{name: "removed DOMPurify bundle", path: "/assets/dompurify-3.4.17.min.js", wantStatus: http.StatusNotFound},
 		{name: "version-pinned Bulma", path: "/assets/bulma.css", contains: []string{"bulma.io v1.0.4", ".grid.is-col-min-16", ".is-gap-2{gap:1rem!important}"}, wantStatus: http.StatusOK},
 		{name: "entry color themes", path: "/assets/theme.css", contains: []string{`:root[data-theme="dark"]`, "--entry-card-background: #181825", `:root[data-theme="light"]`, "--entry-card-header-background: #cdd6f4"}, wantStatus: http.StatusOK},
 		{name: "print stylesheet", path: "/assets/print.css", contains: []string{"@media print", ":root[data-theme]", "color-scheme: light", "--bulma-scheme-main-l: 100%", "--bulma-text-l: 29%", "--entry-card-background: var(--bulma-scheme-main)", "nav,", ".topbar", "display: none !important", "padding-top: 0", "display: block", "background-image: none"}, wantStatus: http.StatusOK},
 		{name: "Bulma license", path: "/assets/bulma-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
 		{name: "SVG book favicon", path: "/assets/favicon.svg", contains: []string{"<svg", `fill="#22c55e"`, `fill="#3b82f6"`}, wantStatus: http.StatusOK},
 		{name: "htmx license", path: "/assets/htmx-LICENSE.txt", contains: []string{"Zero-Clause BSD"}, wantStatus: http.StatusOK},
-		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".card-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 12rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", ".entry.drop-above::before", ".entry.drop-below::after", ".entry.drop-left::before", ".entry.drop-right::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", ".archive-drop-target.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", ".file-selector-dialog", ".file-picker-tree", ".file-picker-card", "boolean-toggle[expanded]", "border-top-left-radius: var(--bulma-radius)", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
+		{name: "stylesheet", path: "/assets/app.css", contains: []string{"grid-template-columns", "grid-template-columns: subgrid", ".card-content {", ".entries-grid", ".entries-grid .entry.card", "--bulma-grid-column-min: min(100%, 12rem)", "max-width: 40rem", "justify-self: center", "width: 100%", "text-align: right", "text-decoration: underline dotted", ".entry.drop-before::before", ".entry.drop-after::after", ".entry.drop-above::before", ".entry.drop-below::after", ".entry.drop-left::before", ".entry.drop-right::after", "file-tree-node", ".tree-chevron", ".tree-file-link.is-drop-target", ".archive-drop-target.is-drop-target", "remember-details > summary", "remember-details > [data-details-content][hidden]", ".add-entry-dock:not([open])", ".add-entry-dock > summary::before", ".tree-children[hidden]", ".archive-confirmation-card", ".move-confirmation-card", ".file-selector-dialog", ".file-picker-tree", ".file-picker-card", "boolean-toggle[expanded]", "textarea[data-markdown-editor][hidden]", "border-top-left-radius: var(--bulma-radius)", "prefers-reduced-motion"}, wantStatus: http.StatusOK},
 		{name: "file tree component", path: "/assets/file-tree.js", contains: []string{"cuebook-file-tree-folded", `customElements.define("file-tree-node"`, "readFoldedPaths", "writeFoldedPaths", `setAttribute("aria-expanded"`, "syncCurrentFile", `document.querySelectorAll("a.tree-file-link")`, `htmx:pushedIntoHistory`}, wantStatus: http.StatusOK},
 		{name: "custom search element", path: "/assets/search-control.js", contains: []string{`customElements.define("cuebook-search"`, `this.input.value = ""`, "updateButtons()", "this.form.insertBefore(this.clearControl, this.inputControl)", "this.clearControl.remove()", "this.input.focus()"}, wantStatus: http.StatusOK},
 		{name: "entry move controller", path: "/assets/entry-move.js", contains: []string{"data-entry-drag-handle", "await window.htmx.ajax(\"POST\", `${routePrefix}/move`, {", "drop-before", "drop-after", "drop-above", "drop-below", "drop-left", "drop-right", "destination", "is-drop-target", "cuebook:move-confirmation-request", "data-archive-drop-target", "cuebook:archive-confirmation-request", "`${routePrefix}/archive`"}, wantStatus: http.StatusOK},
@@ -391,9 +390,7 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 		`<button id="theme-toggle" class="button has-text-info" type="button" aria-label="Toggle color theme" aria-pressed="true">`,
 		`☼`,
 		`<script src="/assets/theme.js"></script>`,
-		`<link rel="stylesheet" href="/assets/easymde-2.21.0.min.css">`,
-		`<script src="/assets/dompurify-3.4.17.min.js" defer></script>`,
-		`<script src="/assets/easymde-2.21.0.min.js" defer></script>`,
+		`<script src="/assets/tiptap-markdown-3.32.2.min.js" defer></script>`,
 		`<script src="/assets/markdown-editor.js" defer></script>`,
 		`<link rel="stylesheet" href="/assets/print.css" media="print">`,
 		`<script src="/assets/live-reload.js" defer></script>`,
@@ -404,11 +401,10 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 		}
 	}
 
-	dompurifyScript := strings.Index(page, `<script src="/assets/dompurify-3.4.17.min.js" defer></script>`)
-	easyMDEScript := strings.Index(page, `<script src="/assets/easymde-2.21.0.min.js" defer></script>`)
+	tiptapScript := strings.Index(page, `<script src="/assets/tiptap-markdown-3.32.2.min.js" defer></script>`)
 	markdownEditorScript := strings.Index(page, `<script src="/assets/markdown-editor.js" defer></script>`)
 	fieldEditScript := strings.Index(page, `<script src="/assets/field-edit-dialog.js" defer></script>`)
-	if !(dompurifyScript >= 0 && dompurifyScript < easyMDEScript && easyMDEScript < markdownEditorScript && markdownEditorScript < fieldEditScript) {
+	if !(tiptapScript >= 0 && tiptapScript < markdownEditorScript && markdownEditorScript < fieldEditScript) {
 		t.Error("Markdown editor dependencies and initializer should load before the field dialog controller")
 	}
 

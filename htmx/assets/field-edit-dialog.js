@@ -91,7 +91,7 @@
     target.classList.add("is-active");
     target.setAttribute("aria-hidden", "false");
     document.documentElement.classList.add("is-clipped");
-    (target.querySelector(".EasyMDEContainer .CodeMirror") || target.querySelector('input:not([type="hidden"]), textarea, select, button'))?.focus();
+    (target.querySelector(".markdown-editor-content") || target.querySelector('input:not([type="hidden"]), textarea, select, button'))?.focus();
   });
 
   document.addEventListener("click", (event) => {

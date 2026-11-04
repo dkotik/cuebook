@@ -123,7 +123,7 @@ func TestMultilineFieldViewRendersSafeMarkdown(t *testing.T) {
 	}{
 		{
 			name:     "renders Markdown blocks and links",
-			contains: []string{`<div class="field-markdown"><h1>Heading</h1>`, `<a href="https://example.test">Cuebook</a>`},
+			contains: []string{`<div class="field-markdown content"><h1>Heading</h1>`, `<a href="https://example.test">Cuebook</a>`},
 		},
 		{
 			name:  "does not render raw HTML from field values",

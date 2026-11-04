@@ -737,39 +737,76 @@ remember-details > [data-details-content][hidden] {
   margin: 0;
 }
 
-.EasyMDEContainer {
-  width: 100%;
+textarea[data-markdown-editor][hidden] {
+  display: none !important;
 }
 
-.EasyMDEContainer .CodeMirror,
-.EasyMDEContainer .editor-preview,
-.EasyMDEContainer .editor-preview-side {
+.markdown-editor {
+  width: 100%;
+  border: 1px solid var(--bulma-border);
+  border-radius: var(--bulma-radius);
+  overflow: hidden;
   color: var(--bulma-text);
   background-color: var(--bulma-scheme-main);
 }
 
-.EasyMDEContainer .CodeMirror {
-  min-height: 8lh;
-  border-color: var(--bulma-border);
-}
-
-.EasyMDEContainer .editor-toolbar {
-  border-color: var(--bulma-border);
-  color: var(--bulma-text);
-}
-
-.EasyMDEContainer .editor-toolbar a {
-  color: inherit;
-}
-
-.EasyMDEContainer .editor-toolbar a:hover,
-.EasyMDEContainer .editor-toolbar a.active {
+.markdown-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  padding: 0.35rem;
+  border-bottom: 1px solid var(--bulma-border);
   background-color: var(--bulma-scheme-main-ter);
-  border-color: var(--bulma-border);
 }
 
-.EasyMDEContainer .editor-statusbar {
-  color: var(--bulma-text);
+.markdown-editor-button {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.markdown-editor-button:hover {
+  border-color: var(--bulma-border);
+  background-color: var(--bulma-scheme-main);
+}
+
+.markdown-editor-button:focus-visible {
+  outline: 2px solid var(--bulma-link);
+  outline-offset: 1px;
+}
+
+.markdown-editor-content {
+  min-height: 8lh;
+  padding: 0.55rem;
+  outline: 0;
+  overflow-wrap: anywhere;
+}
+
+.markdown-editor-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-editor-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-editor-content pre {
+  padding: 0.65rem;
+  overflow-x: auto;
+  border-radius: 0.25rem;
+  background-color: var(--bulma-scheme-main-ter);
+}
+
+.markdown-editor-content blockquote {
+  margin-left: 0;
+  padding-left: 0.75rem;
+  border-left: 0.25rem solid var(--bulma-border);
 }
 
 .field-edit-modal-form .modal-card-title {
