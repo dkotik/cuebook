@@ -514,6 +514,25 @@ h1.title.document-title {
   flex: 1;
 }
 
+.field-markdown {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.field-markdown > :first-child {
+  margin-top: 0;
+}
+
+.field-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.field-markdown pre {
+  white-space: pre-wrap;
+}
+
 .field-value-edit {
   flex: 0 1 auto;
   max-width: 100%;
@@ -716,6 +735,41 @@ remember-details > [data-details-content][hidden] {
 
 #field-edit-modal > .modal-card {
   margin: 0;
+}
+
+.EasyMDEContainer {
+  width: 100%;
+}
+
+.EasyMDEContainer .CodeMirror,
+.EasyMDEContainer .editor-preview,
+.EasyMDEContainer .editor-preview-side {
+  color: var(--bulma-text);
+  background-color: var(--bulma-scheme-main);
+}
+
+.EasyMDEContainer .CodeMirror {
+  min-height: 8lh;
+  border-color: var(--bulma-border);
+}
+
+.EasyMDEContainer .editor-toolbar {
+  border-color: var(--bulma-border);
+  color: var(--bulma-text);
+}
+
+.EasyMDEContainer .editor-toolbar a {
+  color: inherit;
+}
+
+.EasyMDEContainer .editor-toolbar a:hover,
+.EasyMDEContainer .editor-toolbar a.active {
+  background-color: var(--bulma-scheme-main-ter);
+  border-color: var(--bulma-border);
+}
+
+.EasyMDEContainer .editor-statusbar {
+  color: var(--bulma-text);
 }
 
 .field-edit-modal-form .modal-card-title {

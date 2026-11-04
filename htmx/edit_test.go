@@ -75,6 +75,94 @@ func TestEditFormRendersFieldDocumentationBelowInput(t *testing.T) {
 	}
 }
 
+func TestMultilineFieldEditUsesMarkdownEditor(t *testing.T) {
+	t.Parallel()
+
+	handler, err := NewWithCommitter(testSource(), &recordingCommitter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := url.Values{"entry": {"0"}, "field": {"Notes"}, "file": {"core1.cue"}}
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/edit?"+query.Encode(), nil)
+	request.Header.Set("HX-Request", "true")
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `<textarea class="textarea" data-markdown-editor name="value" rows="3">`) {
+		t.Errorf("multiline edit field does not opt into Markdown editing: %s", response.Body.String())
+	}
+}
+
+func TestMultilineFieldViewRendersSafeMarkdown(t *testing.T) {
+	t.Parallel()
+
+	const source = `#entry: {
+	Name: string @cuebook(title)
+	Notes: string @cuebook(multiline)
+	Password: string @cuebook(multiline, argon2id)
+	Summary: string
+}
+[...#entry] & [{
+	Name: "Ada"
+	Notes: """
+		# Heading
+
+		[Cuebook](https://example.test)
+		<script>alert("unsafe")</script>
+		"""
+	Password: "secret value"
+	Summary: "**Literal Markdown**"
+}]`
+
+	tests := []struct {
+		name     string
+		contains []string
+		omits    []string
+	}{
+		{
+			name:     "renders Markdown blocks and links",
+			contains: []string{`<div class="field-markdown"><h1>Heading</h1>`, `<a href="https://example.test">Cuebook</a>`},
+		},
+		{
+			name:  "does not render raw HTML from field values",
+			omits: []string{`<script>`, `alert(&#34;unsafe&#34;)`},
+		},
+		{
+			name:     "leaves single-line and secret values on their existing display paths",
+			contains: []string{`**Literal Markdown**`, `••••••••`},
+			omits:    []string{`<strong>Literal Markdown</strong>`, `secret value`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			handler, err := New(fstest.MapFS{"notes.cue": {Data: []byte(source)}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "http://example.test/?file=notes.cue", nil))
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+			body := response.Body.String()
+			for _, want := range tt.contains {
+				if !strings.Contains(body, want) {
+					t.Errorf("page does not contain %q: %s", want, body)
+				}
+			}
+			for _, unwanted := range tt.omits {
+				if strings.Contains(body, unwanted) {
+					t.Errorf("page unexpectedly contains %q: %s", unwanted, body)
+				}
+			}
+		})
+	}
+}
+
 func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 	t.Parallel()
 

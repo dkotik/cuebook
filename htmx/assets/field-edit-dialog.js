@@ -9,6 +9,7 @@
     modal.classList.remove("is-active");
     modal.setAttribute("aria-hidden", "true");
     document.documentElement.classList.remove("is-clipped");
+    window.CuebookMarkdownEditor?.destroyWithin(modal);
     modal.innerHTML = "";
     if (opener?.isConnected) {
       opener.focus();
@@ -90,7 +91,7 @@
     target.classList.add("is-active");
     target.setAttribute("aria-hidden", "false");
     document.documentElement.classList.add("is-clipped");
-    target.querySelector('input:not([type="hidden"]), textarea, select, button')?.focus();
+    (target.querySelector(".EasyMDEContainer .CodeMirror") || target.querySelector('input:not([type="hidden"]), textarea, select, button'))?.focus();
   });
 
   document.addEventListener("click", (event) => {

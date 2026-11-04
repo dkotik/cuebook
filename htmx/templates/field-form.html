@@ -40,7 +40,7 @@
         {{if .Secret}}
           <input class="input" type="password" name="value" value="{{if .Editing}}{{.Value}}{{end}}" autocomplete="new-password" placeholder="Leave blank to keep current value">
         {{else if .MultiLine}}
-          <textarea class="textarea" name="value" rows="3">{{.Value}}</textarea>
+          <textarea class="textarea" data-markdown-editor name="value" rows="3">{{.Value}}</textarea>
         {{else}}
           <input class="input" type="text" name="value" value="{{.Value}}">
         {{end}}

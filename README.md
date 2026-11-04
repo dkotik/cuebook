@@ -7,7 +7,7 @@ by including intuitive and flexible structure and validation definitions in the 
 it centralizes authority over data consistency in the best possible place, together with the data itself. Consequently, the data
 becomes an execution context with contractual enforcement that can be shared reliably by different people and programs.
 
-**Cue Book** empowers the user to edit structured data without having to learn new syntax and to communicate with exact precision
+Edit structured data without having to learn new syntax and to communicate with exact precision
 changes in data to other users and, most importantly, programs.
 
 ## Use Cases
@@ -21,7 +21,6 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [x] add entry causes a refresh when it is added
 - [ ] Implement UUID-based patch variants for
   - [ ] insert
   - [ ] delete
@@ -29,6 +28,7 @@ changes in data to other users and, most importantly, programs.
   - [ ] swap
 - [x] the search index keeps accumulating entries
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
+- [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
 - [ ] add transactions methods to FS:
   - [ ] BeginTransaction(ctx) (tx, error)
   - [ ] WithTransaction(tx) error
@@ -43,12 +43,10 @@ changes in data to other users and, most importantly, programs.
     - [x] after patch, check if item at current index has the same byte signature as the last change
     - [x] count potential preceding duplicates
     - [x] locate the entry with identical byte content as the last change, taking duplicates into account
-- [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
-- [x] Add `@cuebook(secret=argon2id)` attribute that hashes and salts input when saved
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute
 - [ ] turn replace patch into insert patch, if the original entry disappeared, but not without letting the user choose
-- [ ] rewrite documentation
 - [ ] remove security headers from htmx package. The slop machine keeps putting it back in.
+- [ ] rewrite documentation
 
 ## Entry Latching
 

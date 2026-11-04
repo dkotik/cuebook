@@ -112,6 +112,7 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 		`name="entry.0.field" value="Name"`,
 		`name="entry.1.field" value="Email"`,
 		`name="entry.2.field" value="Notes"`,
+		`<textarea class="textarea" data-markdown-editor name="entry.2.value" rows="3" placeholder="...">`,
 		`name="entry.3.field" value="Password"`,
 		`placeholder="..."`,
 		`<div class="buttons is-centered">`,
@@ -322,6 +323,12 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", contains: []string{"htmx"}, wantStatus: http.StatusOK},
+		{name: "version-pinned EasyMDE", path: "/assets/easymde-2.21.0.min.js", contains: []string{"EasyMDE"}, wantStatus: http.StatusOK},
+		{name: "EasyMDE stylesheet", path: "/assets/easymde-2.21.0.min.css", contains: []string{".EasyMDEContainer"}, wantStatus: http.StatusOK},
+		{name: "version-pinned DOMPurify", path: "/assets/dompurify-3.4.17.min.js", contains: []string{"DOMPurify"}, wantStatus: http.StatusOK},
+		{name: "Markdown editor initializer", path: "/assets/markdown-editor.js", contains: []string{"data-markdown-editor", "sanitizerFunction", "htmx:afterSwap", "htmx:beforeCleanupElement"}, wantStatus: http.StatusOK},
+		{name: "EasyMDE license", path: "/assets/easymde-LICENSE.txt", contains: []string{"The MIT License"}, wantStatus: http.StatusOK},
+		{name: "DOMPurify license", path: "/assets/dompurify-LICENSE.txt", contains: []string{"Apache License", "Version 2.0"}, wantStatus: http.StatusOK},
 		{name: "version-pinned Bulma", path: "/assets/bulma.css", contains: []string{"bulma.io v1.0.4", ".grid.is-col-min-16", ".is-gap-2{gap:1rem!important}"}, wantStatus: http.StatusOK},
 		{name: "entry color themes", path: "/assets/theme.css", contains: []string{`:root[data-theme="dark"]`, "--entry-card-background: #181825", `:root[data-theme="light"]`, "--entry-card-header-background: #cdd6f4"}, wantStatus: http.StatusOK},
 		{name: "print stylesheet", path: "/assets/print.css", contains: []string{"@media print", ":root[data-theme]", "color-scheme: light", "--bulma-scheme-main-l: 100%", "--bulma-text-l: 29%", "--entry-card-background: var(--bulma-scheme-main)", "nav,", ".topbar", "display: none !important", "padding-top: 0", "display: block", "background-image: none"}, wantStatus: http.StatusOK},
@@ -384,6 +391,10 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 		`<button id="theme-toggle" class="button has-text-info" type="button" aria-label="Toggle color theme" aria-pressed="true">`,
 		`☼`,
 		`<script src="/assets/theme.js"></script>`,
+		`<link rel="stylesheet" href="/assets/easymde-2.21.0.min.css">`,
+		`<script src="/assets/dompurify-3.4.17.min.js" defer></script>`,
+		`<script src="/assets/easymde-2.21.0.min.js" defer></script>`,
+		`<script src="/assets/markdown-editor.js" defer></script>`,
 		`<link rel="stylesheet" href="/assets/print.css" media="print">`,
 		`<script src="/assets/live-reload.js" defer></script>`,
 		`<live-reload data-events-url="/events"></live-reload>`,
@@ -391,6 +402,14 @@ func TestPageIncludesFixedTopNavbarAndLiveReloadComponent(t *testing.T) {
 		if !strings.Contains(page, want) {
 			t.Errorf("page does not contain %q", want)
 		}
+	}
+
+	dompurifyScript := strings.Index(page, `<script src="/assets/dompurify-3.4.17.min.js" defer></script>`)
+	easyMDEScript := strings.Index(page, `<script src="/assets/easymde-2.21.0.min.js" defer></script>`)
+	markdownEditorScript := strings.Index(page, `<script src="/assets/markdown-editor.js" defer></script>`)
+	fieldEditScript := strings.Index(page, `<script src="/assets/field-edit-dialog.js" defer></script>`)
+	if !(dompurifyScript >= 0 && dompurifyScript < easyMDEScript && easyMDEScript < markdownEditorScript && markdownEditorScript < fieldEditScript) {
+		t.Error("Markdown editor dependencies and initializer should load before the field dialog controller")
 	}
 
 	brandStart := strings.Index(page, `<div class="navbar-brand">`)

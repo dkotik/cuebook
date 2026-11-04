@@ -23,7 +23,16 @@
   {
 		Name:  "Maria12" @cuebook(title)
 		Email: "mr@sfsdf.com"
-		Notes: "sdf sd fsdf sdfsdf" @cuebook(detail,multiline)
+		Notes: """
+			sdf sd fsdf 
+
+			* 1
+			* **2**
+
+			# testing test
+
+			sdfsdf
+			""" @cuebook(detail,multiline)
 	},
   {
 		Name:  "dsf lsadjl fksjdfl ksjdflkj"

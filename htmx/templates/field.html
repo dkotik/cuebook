@@ -5,9 +5,9 @@
   {{if not .HideLabel}}<span class="field-name">{{.Name}}:</span>{{end}}
   <div class="field-item__value{{if .Locked}} is-locked{{end}}">
     {{if .ReadOnly}}
-      <output>{{template "field-output.html" .}}</output>
+      {{template "field-display.html" .}}
     {{else if .Locked}}
-      <output>{{template "field-output.html" .}}</output>
+      {{template "field-display.html" .}}
       {{if .ShowEditIcon}}
       <span class="field-edit-button field-lock-icon" role="img" aria-label="{{.Name}} is locked" title="{{.Name}} is locked">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -25,9 +25,13 @@
         </boolean-toggle>
       </form>
     {{else}}
-      <button class="field-value-edit" type="button" aria-label="Edit {{.Name}} value" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger hx-get="{{route .EditURL}}" hx-target="#field-edit-modal" hx-swap="innerHTML">
-        <output>{{template "field-output.html" .}}</output>
-      </button>
+      {{if .Markdown}}
+        {{template "field-display.html" .}}
+      {{else}}
+        <button class="field-value-edit" type="button" aria-label="Edit {{.Name}} value" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger hx-get="{{route .EditURL}}" hx-target="#field-edit-modal" hx-swap="innerHTML">
+          <output>{{template "field-output.html" .}}</output>
+        </button>
+      {{end}}
       {{if .ShowEditIcon}}
       <button class="field-edit-button" type="button" aria-label="Edit {{.Name}}" title="Edit {{.Name}}" aria-haspopup="dialog" aria-controls="field-edit-modal" data-field-edit-trigger hx-get="{{route .EditURL}}" hx-target="#field-edit-modal" hx-swap="innerHTML">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -44,6 +48,14 @@
 {{define "field-required.html" -}}
   <span class="icon has-text-warning" title="Required field.">✱</span>
 {{- end }}
+
+{{define "field-display.html" -}}
+  {{- if .Markdown -}}
+    <div class="field-markdown content">{{.Markdown}}</div>
+  {{- else -}}
+    <output>{{template "field-output.html" .}}</output>
+  {{- end -}}
+{{- end}}
 
 {{define "field-output.html" -}}
   {{- if and .Boolean (not .Secret) -}}

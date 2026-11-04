@@ -3,6 +3,7 @@ package htmx
 import (
 	"context"
 	"errors"
+	"html/template"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -274,6 +275,7 @@ type fieldView struct {
 	EntryView    bool
 	ShowEditIcon bool
 	HideLabel    bool
+	Markdown     template.HTML
 }
 
 func fieldEditURL(fileName string, entryIndex int, fieldName string, view, entryView bool) string {
@@ -327,6 +329,10 @@ func makeFieldView(field cuebook.Field, fileName string, index int, readOnly, en
 			value = "not_set"
 		}
 	}
+	var markdown template.HTML
+	if metadata.IsMultiLine(field.Value) && !secret && !empty {
+		markdown = renderFieldMarkdown(value)
+	}
 	return fieldView{
 		File:         fileName,
 		Index:        index,
@@ -343,5 +349,6 @@ func makeFieldView(field cuebook.Field, fileName string, index int, readOnly, en
 		Locked:       metadata.IsLockedField(field.Value),
 		ReadOnly:     readOnly,
 		ShowEditIcon: true,
+		Markdown:     markdown,
 	}
 }

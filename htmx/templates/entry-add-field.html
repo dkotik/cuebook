@@ -23,7 +23,7 @@
       {{else if .Numeric}}
         <input class="input" type="number" name="entry.{{.Index}}.value" value="{{.Value}}" step="any" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
       {{else if .MultiLine}}
-        <textarea class="textarea" name="entry.{{.Index}}.value" rows="3" {{if .Optional}}placeholder="..."{{else}}required{{end}}>{{.Value}}</textarea>
+        <textarea class="textarea" data-markdown-editor name="entry.{{.Index}}.value" rows="3" {{if .Optional}}placeholder="..."{{else}}required{{end}}>{{.Value}}</textarea>
       {{else}}
         <input class="input" type="text" name="entry.{{.Index}}.value" value="{{.Value}}" {{if .Optional}}placeholder="..."{{else}}required{{end}}>
       {{end}}

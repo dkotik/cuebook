@@ -1,9 +1,14 @@
 package htmx
 
 import (
+	"bytes"
+	"html/template"
+
 	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
+	"github.com/yuin/goldmark/v2/parser"
+	markdownhtml "github.com/yuin/goldmark/v2/renderer/html"
 )
 
 type addFieldView struct {
@@ -22,6 +27,18 @@ type addFieldView struct {
 type entryFieldDefinition struct {
 	Field    cuebook.Field
 	Optional bool
+}
+
+// renderFieldMarkdown converts a field value to safe HTML. Goldmark disables
+// raw HTML by default, so source HTML is not included in the returned trusted
+// HTML.
+func renderFieldMarkdown(value string) template.HTML {
+	source := []byte(value)
+	var rendered bytes.Buffer
+	if err := markdownhtml.New().Render(&rendered, source, parser.New().Parse(source)); err != nil {
+		return template.HTML(template.HTMLEscapeString(value))
+	}
+	return template.HTML(rendered.String())
 }
 
 func makeAddFieldViews(document cuebook.Book) []addFieldView {
