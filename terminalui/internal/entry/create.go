@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	listForm "github.com/dkotik/cuebook/terminalui/form"
+	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -114,7 +115,7 @@ var createButtonText = &i18n.LocalizeConfig{
 type CreateEvent struct{}
 
 func NewCreateButton() tea.Model {
-	return listForm.NewBlankResponsiveLabel(window.NewTranslatableModel(createButton{}))
+	return label.New(window.NewTranslatableModel(createButton{}), nil)
 }
 
 type createButton struct {

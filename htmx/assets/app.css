@@ -93,6 +93,7 @@ body {
 }
 
 .tree-children {
+  margin-top: 0.2rem;
   margin-left: 0.85rem;
   padding-left: 0.45rem;
   border-left: 1px solid color-mix(in srgb, currentColor 25%, transparent);

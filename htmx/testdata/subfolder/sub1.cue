@@ -3,7 +3,7 @@
 	// current definition scanner cannot detect abstract definitions yet
 	Name: string @cuebook(title)
 	Email: #email | [...#email]
-	Introduced?: bool
+	Introduced?: bool @cuebook()
 	Notes?:    string @cuebook(detail)
 	Password?: string @cuebook(detail, trim, argon2id)
 	... // allow any additional fields

@@ -2,7 +2,7 @@ package entry
 
 import (
 	tea "github.com/charmbracelet/bubbletea/v2"
-	listForm "github.com/dkotik/cuebook/terminalui/form"
+	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/list"
 	"github.com/dkotik/cuebook/terminalui/textarea"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -14,7 +14,7 @@ type extendEvent struct {
 }
 
 func NewExtendButton() tea.Model {
-	return listForm.NewBlankResponsiveLabel(list.NewButton(
+	return label.New(list.NewButton(
 		&i18n.LocalizeConfig{
 			DefaultMessage: &i18n.Message{
 				ID:    "bookEntryExtend",
@@ -37,5 +37,5 @@ func NewExtendButton() tea.Model {
 			}
 			return window.SwitchTo(ta)
 		},
-	))
+	), nil)
 }

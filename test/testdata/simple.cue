@@ -55,8 +55,10 @@
 
 [...#contact] & [
 	{
-		Name:  "First11111aa"
-		Email: "test1@testdomain.com"
+		Name:     "First11111aa" @cuebook(title)
+		Email:    "test1@testdomain.com"
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$eX5uU6jwvU2SFVHmLNNf7A$BAqT9OPgRy3zDAfqRv0tJIwSN1aYm7aObipqmYmSl0s" @cuebook(detail,trim,argon2id)
+		Notes:    "sdfkjskdfjsdf"
 	},
 	{
 		Name: "Second sdk;lfjsdakj skfjlskdjksdjf;sdjf ksdjflk sdfnbsdjfhskjdhf sdjh kjsdh ljsdhksdhf kjlsdhf jhsd ::::::::::::::::::::::::: ::::::::"
@@ -83,8 +85,12 @@
 			""" @cuebook(detail)
 	},
 	{
-		Name:  "33333"
+		Name:  "33333" @cuebook(title)
 		Email: "test@testdomain.com"
+		Notes: """
+			sdhkjhf
+			sfkjsdfh
+			"""
 	},
 	{
 		Name:  "4"

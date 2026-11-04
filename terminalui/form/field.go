@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/v2/textarea"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
+	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/list"
 	ta "github.com/dkotik/cuebook/terminalui/textarea"
 	"github.com/muesli/reflow/wrap"
@@ -22,14 +23,11 @@ func NewField(name, value string, onChange func(string) tea.Cmd) tea.Model {
 	input := textarea.New()
 	input.ShowLineNumbers = false
 	input.SetValue(value)
-	return horizontalLabel{
-		Text: name,
-		Model: field{
-			Value:    value,
-			Input:    input,
-			OnChange: onChange,
-		},
-	}
+	return label.New(field{
+		Value:    value,
+		Input:    input,
+		OnChange: onChange,
+	}, &label.Configuration{Text: name})
 }
 
 func (f field) Init() (tea.Model, tea.Cmd) {

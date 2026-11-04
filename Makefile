@@ -5,5 +5,7 @@ default:
 serve:
 	lsof -tiTCP:$(PORT) -sTCP:LISTEN | while read -r pid; do kill "$$pid"; done
 	@reflex -r '\.(go|md|js|css|html)$$' -s -- go run ./cmd/cuebook serve htmx/testdata --port=$(PORT)
+tui:
+	go run ./cmd/cuebook htmx/testdata/core1.cue
 agent:
 	@reflex -r '\.(go|md|js|css|html)$$' -s -- go run -tags=kronk ./cmd/cuebook serve htmx/testdata --port=$(PORT) --agent

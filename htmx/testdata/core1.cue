@@ -21,9 +21,9 @@
 
 [...#contact] & [
   {
-		Name:  "Maria" @cuebook(title)
+		Name:  "Maria12" @cuebook(title)
 		Email: "mr@sfsdf.com"
-		Notes: "sdf sd fsdf sdfsdf"
+		Notes: "sdf sd fsdf sdfsdf" @cuebook(detail,multiline)
 	},
   {
 		Name:  "dsf lsadjl fksjdfl ksjdflkj"
