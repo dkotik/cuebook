@@ -31,15 +31,15 @@
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$rz9uo6bqtm+hvX1eAgHFLg$ukWzs9q95VMjYjlqSVHv/fEsW/eYeb3CPZPu/RGNv8A" @cuebook(detail,trim,argon2id)
 	},
   {
-		Name:  "123"
-		Email: "123@342345.com"
-		Notes: "lsdkfjsldfkj"
-	},
-  {
 		Name:     "12sdf33zz"
 		Email:    "sdffsd@perfect.com"
 		Notes:    "65ggh"
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$HIcmGlPcqeg1ARz64fu5Cg$RqThx3got34YXBHH7QyeIQ87Z3wT7CCNwPe/fyZp6cU"
+	},
+  {
+		Name:  "123"
+		Email: "123@342345.com"
+		Notes: "lsdkfjsldfkj"
 	},
   {
 		Name:  "First11111aa1"

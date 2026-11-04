@@ -16,11 +16,13 @@ const (
 // Configuration controls form layout and appearance. Labels sit beside their
 // fields when the label column, sized as a ratio of the window width, is at
 // least the minimum width; otherwise they move above their fields. Zero or
-// negative values use the defaults. Style is passed to the underlying list.
+// negative values use the defaults. Style and OnSwapOrder are passed to the
+// underlying list.
 type Configuration struct {
 	LabelMinimumHorizontalWidth  int
 	LabelWidthRatioToWindowWidth float32
 	Style                        lipgloss.Style
+	OnSwapOrder                  func(list.SwapOrderEvent) tea.Msg
 }
 
 type formLayoutIsHorizontalEvent bool
@@ -35,7 +37,10 @@ func New(c Configuration) tea.Model {
 		c.LabelWidthRatioToWindowWidth = DefaultLabelWidthRatioToWindowWidth
 	}
 	return form{
-		Model:                        list.New(list.Configuration{Style: c.Style}),
+		Model: list.New(list.Configuration{
+			Style:       c.Style,
+			OnSwapOrder: c.OnSwapOrder,
+		}),
 		LabelMinimumHorizontalWidth:  c.LabelMinimumHorizontalWidth,
 		LabelWidthRatioToWindowWidth: c.LabelWidthRatioToWindowWidth,
 	}

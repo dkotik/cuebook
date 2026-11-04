@@ -18,16 +18,10 @@ func (l List) navigate(msg tea.KeyMsg) (_ tea.Model, cmd tea.Cmd) {
 		}
 	case tea.KeyDown, 'j':
 		if msg.Key().Mod == tea.ModCtrl {
-			maximum := len(l.Items) - 1
-			return l, func() tea.Msg {
-				if l.SelectedIndex >= maximum {
-					return nil
-				}
-				return SwapOrderEvent{
-					CurrentIndex: l.SelectedIndex,
-					DesiredIndex: l.SelectedIndex + 1,
-				}
+			if l.SelectedIndex >= len(l.Items)-1 {
+				return l, nil
 			}
+			return l, l.swapOrder(l.SelectedIndex + 1)
 		}
 
 		l, cmd = l.UpdateSelected(msg)
@@ -65,15 +59,10 @@ func (l List) navigate(msg tea.KeyMsg) (_ tea.Model, cmd tea.Cmd) {
 		return l, cmd
 	case tea.KeyUp, 'k':
 		if msg.Key().Mod == tea.ModCtrl {
-			return l, func() tea.Msg {
-				if l.SelectedIndex <= 1 {
-					return nil
-				}
-				return SwapOrderEvent{
-					CurrentIndex: l.SelectedIndex,
-					DesiredIndex: l.SelectedIndex - 1,
-				}
+			if l.SelectedIndex <= 0 {
+				return l, nil
 			}
+			return l, l.swapOrder(l.SelectedIndex - 1)
 		}
 
 		l, cmd = l.UpdateSelected(msg)
@@ -111,4 +100,15 @@ func (l List) navigate(msg tea.KeyMsg) (_ tea.Model, cmd tea.Cmd) {
 		return l, cmd
 	}
 	return l.UpdateSelected(msg)
+}
+
+// swapOrder asks the owner to move the selected item. Owners validate the
+// indexes, because only they know which items can be reordered.
+func (l List) swapOrder(desired int) tea.Cmd {
+	swap := SwapOrderEvent{CurrentIndex: l.SelectedIndex, DesiredIndex: desired}
+	onSwapOrder := l.onSwapOrder
+	if onSwapOrder == nil {
+		onSwapOrder = func(e SwapOrderEvent) tea.Msg { return e }
+	}
+	return func() tea.Msg { return onSwapOrder(swap) }
 }

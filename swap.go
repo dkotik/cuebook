@@ -4,6 +4,8 @@ import (
 	"bytes"
 
 	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
+	"cuelang.org/go/cue/parser"
 )
 
 type swapPatch struct {
@@ -66,6 +68,57 @@ func SwapEntries(source []byte, a, b cue.Value) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
+	return swapByteRanges(source, aRange, bRange)
+}
+
+// SwapFields exchanges two field declarations, including their labels and
+// attributes, inside one struct entry. Separators and comments stay in place.
+func SwapFields(source []byte, entry cue.Value, a, b string) (Patch, error) {
+	entryRange, err := NewByteRange(entry)
+	if err != nil {
+		return nil, err
+	}
+	if !validByteRange(entryRange, source) {
+		return nil, ErrByteRangeNotFound
+	}
+	expression, err := parser.ParseExpr("", source[entryRange.Head:entryRange.Tail])
+	if err != nil {
+		return nil, err
+	}
+	fields, ok := expression.(*ast.StructLit)
+	if !ok {
+		return nil, ErrEntryNotStruct
+	}
+	aRange, err := fieldByteRange(fields, a, entryRange.Head)
+	if err != nil {
+		return nil, err
+	}
+	bRange, err := fieldByteRange(fields, b, entryRange.Head)
+	if err != nil {
+		return nil, err
+	}
+	return swapByteRanges(source, aRange, bRange)
+}
+
+func fieldByteRange(fields *ast.StructLit, label string, offset int) (ByteRange, error) {
+	for _, element := range fields.Elts {
+		field, ok := element.(*ast.Field)
+		if !ok {
+			continue
+		}
+		name, _, err := ast.LabelName(field.Label)
+		if err != nil || name != label {
+			continue
+		}
+		return ByteRange{
+			Head: offset + field.Pos().Offset(),
+			Tail: offset + field.End().Offset(),
+		}, nil
+	}
+	return ByteRange{}, ErrTargetFieldNotStructField
+}
+
+func swapByteRanges(source []byte, aRange, bRange ByteRange) (Patch, error) {
 	if !validByteRange(aRange, source) || !validByteRange(bRange, source) {
 		return nil, ErrByteRangeNotFound
 	}

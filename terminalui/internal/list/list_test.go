@@ -106,6 +106,53 @@ func TestListHighlightsSelectedItem(t *testing.T) {
 	}
 }
 
+func TestListSwapOrder(t *testing.T) {
+	t.Parallel()
+
+	type customSwap list.SwapOrderEvent
+	ctrlJ := tea.KeyPressMsg{Code: 'j', Mod: tea.ModCtrl}
+	ctrlK := tea.KeyPressMsg{Code: 'k', Mod: tea.ModCtrl}
+	tests := []struct {
+		name        string
+		onSwapOrder func(list.SwapOrderEvent) tea.Msg
+		selected    int
+		key         tea.KeyPressMsg
+		want        tea.Msg // nil when the key must not request a swap
+	}{
+		{name: "ctrl+j requests moving down", selected: 1, key: ctrlJ, want: list.SwapOrderEvent{CurrentIndex: 1, DesiredIndex: 2}},
+		{name: "ctrl+k requests moving up", selected: 1, key: ctrlK, want: list.SwapOrderEvent{CurrentIndex: 1, DesiredIndex: 0}},
+		{name: "ctrl+down requests moving down", key: tea.KeyPressMsg{Code: tea.KeyDown, Mod: tea.ModCtrl}, want: list.SwapOrderEvent{CurrentIndex: 0, DesiredIndex: 1}},
+		{name: "ctrl+up requests moving up", selected: 2, key: tea.KeyPressMsg{Code: tea.KeyUp, Mod: tea.ModCtrl}, want: list.SwapOrderEvent{CurrentIndex: 2, DesiredIndex: 1}},
+		{name: "ctrl+k on the first item does nothing", key: ctrlK},
+		{name: "ctrl+j on the last item does nothing", selected: 2, key: ctrlJ},
+		{
+			name:        "custom swap message",
+			onSwapOrder: func(e list.SwapOrderEvent) tea.Msg { return customSwap(e) },
+			key:         ctrlJ,
+			want:        customSwap{CurrentIndex: 0, DesiredIndex: 1},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			model := list.New(list.Configuration{
+				Items:       []tea.Model{item("a"), item("b"), item("c")},
+				OnSwapOrder: tt.onSwapOrder,
+			})
+			model, _ = model.Init()
+			model, _ = model.Update(list.ApplySelection(tt.selected)())
+			_, cmd := model.Update(tt.key)
+			var got tea.Msg
+			if cmd != nil {
+				got = cmd()
+			}
+			if got != tt.want {
+				t.Errorf("message = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
+
 type item string
 
 func (i item) Init() (tea.Model, tea.Cmd)          { return i, nil }

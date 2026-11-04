@@ -10,17 +10,25 @@ import (
 // Configuration controls list content and appearance. Unset Style properties
 // inherit the default vertical centering. The list manages its own height and
 // left margin to fit the window.
+//
+// OnSwapOrder converts a Ctrl+J or Ctrl+K reordering request into the message
+// the list emits. It defaults to emitting the [SwapOrderEvent] unchanged.
 type Configuration struct {
-	Items []tea.Model
-	Style lipgloss.Style
+	Items       []tea.Model
+	Style       lipgloss.Style
+	OnSwapOrder func(SwapOrderEvent) tea.Msg
 }
 
 func New(c Configuration) tea.Model {
+	if c.OnSwapOrder == nil {
+		c.OnSwapOrder = func(e SwapOrderEvent) tea.Msg { return e }
+	}
 	fs := viewport.New()
 	return List{
 		Items:          c.Items,
 		Style:          c.Style.Inherit(lipgloss.NewStyle().AlignVertical(lipgloss.Center)),
 		fullScreenView: &fs,
+		onSwapOrder:    c.OnSwapOrder,
 	}
 }
 
@@ -32,6 +40,7 @@ type List struct {
 	Style         lipgloss.Style
 
 	fullScreenView *viewport.Model
+	onSwapOrder    func(SwapOrderEvent) tea.Msg
 }
 
 func (l List) Init() (m tea.Model, cmd tea.Cmd) {

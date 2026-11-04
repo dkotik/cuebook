@@ -123,6 +123,9 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 		return l, entry.NewForm(selected)
 	case list.SwapOrderEvent:
+		if msg.CurrentIndex < 1 || msg.DesiredIndex < 1 {
+			return l, nil // the title card at index 0 is not an entry
+		}
 		return l, func() tea.Msg {
 			a := l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1)))
 			if a.Kind() == cue.BottomKind {
