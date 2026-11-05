@@ -47,6 +47,46 @@ type fileSystem struct {
 
 var _ FileSystem = fileSystem{}
 
+// FileSystemConfig configures [NewFileSystem].
+type FileSystemConfig struct {
+	// Root is the operating system directory that holds the files. Required.
+	Root string
+
+	// Swap creates a writable temporary file for a target path and returns
+	// the temporary file's path. The file must be on the same filesystem as
+	// the target so that [os.Rename] replaces the target atomically.
+	// Defaults to creating the temporary file next to the target.
+	Swap func(targetPath string) (string, fs.File, error)
+}
+
+// NewFileSystem returns a [FileSystem] that reads and writes files under
+// config.Root. Files are replaced atomically: each write goes to a temporary file that is then moved
+// over the original with [os.Rename].
+func NewFileSystem(config FileSystemConfig) (FileSystem, error) {
+	if config.Root == "" {
+		return nil, errors.New("file system root is empty")
+	}
+	root, err := filepath.Abs(config.Root)
+	if err != nil {
+		return nil, fmt.Errorf("unable to resolve file system root: %w", err)
+	}
+	info, err := os.Stat(root)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open file system root: %w", err)
+	}
+	if !info.IsDir() {
+		return nil, &fs.PathError{Op: "open", Path: root, Err: errors.New("not a directory")}
+	}
+	if config.Swap == nil {
+		config.Swap = defaultSwapFileStrategy
+	}
+	return fileSystem{
+		Directory: os.DirFS(root),
+		Root:      root,
+		Swap:      config.Swap,
+	}, nil
+}
+
 // BeginTransaction starts recording original file contents so that
 // [Transaction.Close] can restore them. Bind it with [fileSystem.WithTransaction].
 func (f fileSystem) BeginTransaction(context.Context) Transaction {
@@ -89,16 +129,20 @@ func (f fileSystem) WriteFile(ctx context.Context, name string, content []byte) 
 	}
 	targetPath := filepath.Join(f.Root, filepath.FromSlash(name))
 
-	original, mode, existed, err := f.snapshot(name)
-	if err != nil {
-		return err
-	}
+	// The lock is held before the snapshot so that a concurrent write in the
+	// same transaction cannot be recorded as the original content.
 	if tx := f.transaction; tx != nil {
 		tx.mu.Lock()
 		defer tx.mu.Unlock()
 		if tx.closed {
 			return ErrTransactionClosed
 		}
+	}
+	original, mode, existed, err := f.snapshot(name)
+	if err != nil {
+		return err
+	}
+	if tx := f.transaction; tx != nil {
 		if _, ok := tx.seen[targetPath]; !ok {
 			tx.seen[targetPath] = struct{}{}
 			tx.undo = append(tx.undo, func() error {

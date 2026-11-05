@@ -173,6 +173,56 @@ func TestFileSystemTransaction(t *testing.T) {
 	}
 }
 
+func TestNewFileSystem(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "book.cue"), []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	swapCalls := 0
+	countingSwap := func(target string) (string, fs.File, error) {
+		swapCalls++
+		return defaultSwapFileStrategy(target)
+	}
+	tests := []struct {
+		name      string
+		config    FileSystemConfig
+		wantErr   bool
+		wantSwaps int
+	}{
+		{name: "defaults swap strategy", config: FileSystemConfig{Root: root}},
+		{name: "uses configured swap strategy", config: FileSystemConfig{Root: root, Swap: countingSwap}, wantSwaps: 1},
+
+		{name: "rejects empty root", config: FileSystemConfig{}, wantErr: true},
+		{name: "rejects missing root", config: FileSystemConfig{Root: filepath.Join(root, "missing")}, wantErr: true},
+		{name: "rejects file root", config: FileSystemConfig{Root: filepath.Join(root, "book.cue")}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Not parallel: cases share root and the swap call counter.
+			swapCalls = 0
+			fsys, err := NewFileSystem(tt.config)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("NewFileSystem error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			ctx := context.Background()
+			if err := fsys.WriteFile(ctx, "book.cue", []byte(tt.name)); err != nil {
+				t.Fatal(err)
+			}
+			got, err := fsys.ReadFile(ctx, "book.cue")
+			if err != nil || string(got) != tt.name {
+				t.Errorf("ReadFile = %q, %v; want %q", got, err, tt.name)
+			}
+			if swapCalls != tt.wantSwaps {
+				t.Errorf("swap calls = %d, want %d", swapCalls, tt.wantSwaps)
+			}
+		})
+	}
+}
+
 type foreignTransaction struct{}
 
 func (foreignTransaction) Close(*error) {}
