@@ -145,54 +145,6 @@ func Commit(targetPath, swapPath string, p Patch) (r Result, err error) {
 	return r, nil
 }
 
-func replaceFileAtomically(
-	targetPath string,
-	swapPath string,
-	content []byte,
-	mode os.FileMode,
-	rename func(oldPath, newPath string) error,
-) (err error) {
-	tempFile, err := os.CreateTemp(swapPath, "."+filepath.Base(targetPath)+"-*.tmp")
-	if err != nil {
-		return err
-	}
-	tempPath := tempFile.Name()
-	tempExists := true
-	fileClosed := false
-	defer func() {
-		if !fileClosed {
-			_ = tempFile.Close()
-		}
-		if tempExists {
-			_ = os.Remove(tempPath)
-		}
-	}()
-
-	written, writeErr := tempFile.Write(content)
-	if writeErr == nil && written != len(content) {
-		writeErr = io.ErrShortWrite
-	}
-	if writeErr != nil {
-		return fmt.Errorf("unable to write patch result: %w", writeErr)
-	}
-	if err = tempFile.Chmod(mode); err != nil {
-		return fmt.Errorf("unable to preserve target permissions: %w", err)
-	}
-	if err = tempFile.Sync(); err != nil {
-		return fmt.Errorf("unable to sync patch result: %w", err)
-	}
-	if err = tempFile.Close(); err != nil {
-		fileClosed = true
-		return fmt.Errorf("unable to close patch result: %w", err)
-	}
-	fileClosed = true
-	if err = rename(tempPath, targetPath); err != nil {
-		return err
-	}
-	tempExists = false
-	return nil
-}
-
 type nothingPatch struct {
 	A, B ByteAnchor
 }
