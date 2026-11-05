@@ -1,15 +1,14 @@
 /*
 Package htmx provides an embeddable HTML interface to Cuebook documents.
 
-New creates a read-only handler for any fs.FS. NewWithCommitter adds editing
-through an explicit commit implementation, and NewDirectory provides a
-filesystem-backed handler that commits edits atomically through cuebook.Commit.
+New creates a read-only handler for any fs.FS. NewWithFileSystem adds editing:
+changes are applied with cuebook.Commit and written through a
+cuebook.FileSystem, such as one from cuebook.NewFileSystem, which replaces
+files atomically.
 
 The handler recursively discovers `.cue` files and displays their validated
 entries in a navigable file tree. It supports creating entries and editing
 fields, rendering full pages for browsers and fragments for HTMX requests.
-`New` provides read-only browsing; `NewWithCommitter` and `NewDirectory` enable
-writes through the patch workflow.
 */
 package htmx
 
@@ -35,16 +34,10 @@ var templateFiles embed.FS
 //go:embed assets/*.css assets/*.js assets/*.txt assets/*.svg
 var assetFiles embed.FS
 
-// Committer applies a prepared Cuebook patch to a named source file.
-// Implementations should apply patches to fresh source and commit atomically.
-type Committer interface {
-	Commit(name string, change cuebook.Patch) error
-}
-
 type handler struct {
 	source        fs.FS
 	gitSource     fs.FS
-	committer     Committer
+	files         cuebook.FileSystem // nil for read-only handlers
 	templates     *template.Template
 	searchFS      search.SearchFS
 	gitFileLinker gitview.FileLinker
@@ -59,18 +52,18 @@ func New(source fs.FS, opts ...Option) (http.Handler, error) {
 	return newHandler(source, nil, opts...)
 }
 
-// NewWithCommitter returns an HTTP handler that can save edits using committer.
-// The source and committer must refer to the same logical files. To enable
-// archiving entries, committer must also implement FileCreator. opts configure
-// route registration and mounting.
-func NewWithCommitter(source fs.FS, committer Committer, opts ...Option) (http.Handler, error) {
-	if committer == nil {
-		return nil, errors.New("htmx: committer is nil")
+// NewWithFileSystem returns an HTTP handler that browses source and saves edits
+// to files. source and files must refer to the same logical files; for a
+// directory, pass [os.DirFS] and [cuebook.NewFileSystem] of the same root. opts
+// configure route registration and mounting.
+func NewWithFileSystem(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Handler, error) {
+	if files == nil {
+		return nil, errors.New("htmx: file system is nil")
 	}
-	return newHandler(source, committer, opts...)
+	return newHandler(source, files, opts...)
 }
 
-func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler, error) {
+func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Handler, error) {
 	if source == nil {
 		return nil, errors.New("htmx: source filesystem is nil")
 	}
@@ -95,7 +88,7 @@ func newHandler(source fs.FS, committer Committer, opts ...Option) (http.Handler
 	app := &handler{
 		source:        searchableSource,
 		gitSource:     source,
-		committer:     committer,
+		files:         files,
 		templates:     templates,
 		searchFS:      searchableSource,
 		gitFileLinker: config.GitFileLinker,

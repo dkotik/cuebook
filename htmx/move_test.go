@@ -37,7 +37,7 @@ func TestWritableDirectoryMovesEntries(t *testing.T) {
 	if err := os.WriteFile(filePath, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	handler, err := NewDirectory(directory)
+	handler, err := newDirectoryHandler(directory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,8 +100,8 @@ func TestMoveRejectsReadOnlyAndInvalidIndexes(t *testing.T) {
 		t.Fatalf("read-only status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
 
-	committer := &recordingCommitter{}
-	writable, err := NewWithCommitter(testSource(), committer)
+	storage := &recordingFileSystem{}
+	writable, err := newTestHandler(testSource(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,16 +119,16 @@ func TestMoveRejectsReadOnlyAndInvalidIndexes(t *testing.T) {
 	if !strings.Contains(response.Body.String(), "file not found: path=missing.cue") {
 		t.Fatalf("missing source response does not identify the missing file: %s", response.Body.String())
 	}
-	if committer.calls != 0 {
-		t.Fatalf("committer calls = %d, want 0", committer.calls)
+	if storage.calls != 0 {
+		t.Fatalf("write calls = %d, want 0", storage.calls)
 	}
 
 	response = submitMove(t, writable, "core1.cue", 0, 1, "http://attacker.test", true)
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "Cross-origin edits are not allowed.") {
 		t.Fatalf("cross-origin status/body = %d/%q; want forbidden response", response.Code, response.Body.String())
 	}
-	if committer.calls != 0 {
-		t.Fatalf("committer calls = %d after cross-origin request, want 0", committer.calls)
+	if storage.calls != 0 {
+		t.Fatalf("write calls = %d after cross-origin request, want 0", storage.calls)
 	}
 }
 
@@ -136,10 +136,10 @@ func TestMoveRejectsInvalidReorderedDocument(t *testing.T) {
 	t.Parallel()
 
 	source := []byte(`[ {Name: "one"}, {Name: "two"} ] & [ {Name: "one"}, {Name: "two"} ]`)
-	committer := &recordingCommitter{}
-	handler, err := NewWithCommitter(fstest.MapFS{
+	storage := &recordingFileSystem{}
+	handler, err := newTestHandler(fstest.MapFS{
 		"ordered.cue": &fstest.MapFile{Data: source},
-	}, committer)
+	}, storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,8 +150,8 @@ func TestMoveRejectsInvalidReorderedDocument(t *testing.T) {
 	if !strings.Contains(response.Body.String(), "does not satisfy the CUE constraints") {
 		t.Fatalf("validation error missing from response: %s", response.Body.String())
 	}
-	if committer.calls != 0 {
-		t.Fatalf("committer calls = %d for invalid reorder, want 0", committer.calls)
+	if storage.calls != 0 {
+		t.Fatalf("write calls = %d for invalid reorder, want 0", storage.calls)
 	}
 }
 
@@ -220,8 +220,8 @@ func TestMoveTransfersEntriesBetweenFiles(t *testing.T) {
 	t.Parallel()
 
 	documents := transferTestDocuments()
-	committer := &transferCommitter{files: transferSourceFS(documents)}
-	handler, err := NewWithCommitter(committer.files, committer)
+	storage := &transferFileSystem{files: transferSourceFS(documents)}
+	handler, err := newTestHandler(storage.files, storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,11 +240,11 @@ func TestMoveTransfersEntriesBetweenFiles(t *testing.T) {
 		t.Fatalf("transferred entry was not appended after existing destination entries: %s", body)
 	}
 
-	if want := []string{"destination.cue", "source.cue"}; !equalStrings(committer.calls, want) {
-		t.Fatalf("commit order = %v, want %v", committer.calls, want)
+	if want := []string{"destination.cue", "source.cue"}; !equalStrings(storage.calls, want) {
+		t.Fatalf("commit order = %v, want %v", storage.calls, want)
 	}
-	assertEntryTitles(t, committer.files["source.cue"].Data, []string{"Keep me", "Third source"})
-	assertEntryTitles(t, committer.files["destination.cue"].Data, []string{"Existing destination", "Move me"})
+	assertEntryTitles(t, storage.files["source.cue"].Data, []string{"Keep me", "Third source"})
+	assertEntryTitles(t, storage.files["destination.cue"].Data, []string{"Existing destination", "Move me"})
 }
 
 func TestMoveTransferFailures(t *testing.T) {
@@ -319,13 +319,13 @@ func TestMoveTransferFailures(t *testing.T) {
 			t.Parallel()
 			files := transferSourceFS(test.documents)
 			var handler http.Handler
-			var committer *transferCommitter
+			var storage *transferFileSystem
 			var err error
 			if test.readOnly {
 				handler, err = New(files)
 			} else {
-				committer = &transferCommitter{files: files, failCalls: test.failCalls}
-				handler, err = NewWithCommitter(files, committer)
+				storage = &transferFileSystem{files: files, failCalls: test.failCalls}
+				handler, err = newTestHandler(files, storage)
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -340,8 +340,8 @@ func TestMoveTransferFailures(t *testing.T) {
 			if !strings.Contains(response.Body.String(), test.wantNotice) {
 				t.Errorf("response missing notice %q: %s", test.wantNotice, response.Body.String())
 			}
-			if committer != nil && !equalStrings(committer.calls, test.wantCalls) {
-				t.Errorf("commit calls = %v, want %v", committer.calls, test.wantCalls)
+			if storage != nil && !equalStrings(storage.calls, test.wantCalls) {
+				t.Errorf("write calls = %v, want %v", storage.calls, test.wantCalls)
 			}
 			if !bytes.Equal(files["source.cue"].Data, originalSource) {
 				t.Errorf("source file changed after rejected transfer:\n%s", files["source.cue"].Data)
@@ -370,32 +370,6 @@ func transferSourceFS(documents map[string][]byte) fstest.MapFS {
 		files[name] = &fstest.MapFile{Data: append([]byte(nil), content...)}
 	}
 	return files
-}
-
-type transferCommitter struct {
-	files     fstest.MapFS
-	calls     []string
-	failCalls map[int]error
-}
-
-func (c *transferCommitter) Commit(name string, change cuebook.Patch) error {
-	c.calls = append(c.calls, name)
-	if err := c.failCalls[len(c.calls)]; err != nil {
-		return err
-	}
-	file, ok := c.files[name]
-	if !ok {
-		return os.ErrNotExist
-	}
-	updated, err := change.ApplyToCueSource(file.Data)
-	if err != nil {
-		return err
-	}
-	if _, err := cuebook.New(updated); err != nil {
-		return err
-	}
-	file.Data = updated
-	return nil
 }
 
 func submitTransfer(t *testing.T, handler http.Handler, file string, from int, destination string, htmx bool) *httptest.ResponseRecorder {

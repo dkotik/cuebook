@@ -93,7 +93,7 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 			return entryResponse{}, errors.New("Unable to locate this entry in the CUE file.")
 		}
 		if (requestedIndex >= 0 && index == requestedIndex) || (requestedIndex < 0 && entryRange == requestedRange) {
-			view := makeEntryView(entry, filePath, index, entryRange, a.committer == nil, true)
+			view := makeEntryView(entry, filePath, index, entryRange, a.files == nil, true)
 			source, err := entryCUESource(entry.Value)
 			if err != nil {
 				return entryResponse{}, fmt.Errorf("Unable to format this entry as CUE: %w", err)

@@ -44,9 +44,9 @@ func TestEditFormRendersFieldDocumentationBelowInput(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			handler, err := NewWithCommitter(fstest.MapFS{
+			handler, err := newTestHandler(fstest.MapFS{
 				"people.cue": &fstest.MapFile{Data: []byte(test.source)},
-			}, &recordingCommitter{})
+			}, &recordingFileSystem{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -78,7 +78,7 @@ func TestEditFormRendersFieldDocumentationBelowInput(t *testing.T) {
 func TestMultilineFieldEditUsesMarkdownEditor(t *testing.T) {
 	t.Parallel()
 
-	handler, err := NewWithCommitter(testSource(), &recordingCommitter{})
+	handler, err := newTestHandler(testSource(), &recordingFileSystem{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestMultilineFieldViewRendersSafeMarkdown(t *testing.T) {
 func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 	t.Parallel()
 
-	handler, err := NewWithCommitter(testSource(), &recordingCommitter{})
+	handler, err := newTestHandler(testSource(), &recordingFileSystem{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +343,7 @@ func TestLockedFieldsRenderWithoutEditControls(t *testing.T) {
 	}
 	[...#entry] & [{Name: "Ada", Status: "active", Enabled: true, Editable: "open"}]`
 	files := fstest.MapFS{"locked.cue": &fstest.MapFile{Data: []byte(source)}}
-	handler, err := NewWithCommitter(files, &recordingCommitter{})
+	handler, err := newTestHandler(files, &recordingFileSystem{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -459,7 +459,7 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(directory, "contacts.cue"), source, 0o600); err != nil {
 				t.Fatal(err)
 			}
-			handler, err := NewDirectory(directory)
+			handler, err := newDirectoryHandler(directory)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -522,7 +522,7 @@ func TestEditCanUpdateDetailFieldsWithoutRemovingTheirMetadata(t *testing.T) {
 	if err := os.WriteFile(filePath, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	handler, err := NewDirectory(directory)
+	handler, err := newDirectoryHandler(directory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -574,7 +574,7 @@ func TestEditCanPopulateAbsentOptionalDetailFields(t *testing.T) {
 	if err := os.WriteFile(filePath, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	handler, err := NewDirectory(directory)
+	handler, err := newDirectoryHandler(directory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -610,7 +610,7 @@ func TestEditCanPopulateAbsentOptionalDetailFields(t *testing.T) {
 }
 
 func TestEditURLReplacementUsesMountedRoutePrefix(t *testing.T) {
-	handler, err := NewWithCommitter(testSource(), &recordingCommitter{}, WithServeMuxPrefix("/catalog"))
+	handler, err := newTestHandler(testSource(), &recordingFileSystem{}, WithServeMuxPrefix("/catalog"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -638,8 +638,8 @@ func TestEditURLReplacementUsesMountedRoutePrefix(t *testing.T) {
 }
 
 func TestEditFailures(t *testing.T) {
-	committer := &recordingCommitter{err: errors.New("private disk error")}
-	handler, err := NewWithCommitter(testSource(), committer)
+	storage := &recordingFileSystem{err: errors.New("private disk error")}
+	handler, err := newTestHandler(testSource(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -720,8 +720,8 @@ func TestEditFailures(t *testing.T) {
 
 		})
 	}
-	if committer.calls != 0 {
-		t.Errorf("committer called %d times for rejected edits, want 0", committer.calls)
+	if storage.calls != 0 {
+		t.Errorf("storage wrote %d times for rejected edits, want 0", storage.calls)
 	}
 }
 
@@ -740,8 +740,8 @@ func TestLockedFieldsRejectEdits(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			files := fstest.MapFS{"people.cue": &fstest.MapFile{Data: []byte(source)}}
-			committer := &recordingCommitter{}
-			handler, err := NewWithCommitter(files, committer)
+			storage := &recordingFileSystem{}
+			handler, err := newTestHandler(files, storage)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -754,8 +754,8 @@ func TestLockedFieldsRejectEdits(t *testing.T) {
 			if got := response.Header().Get("HX-Trigger"); !strings.Contains(got, wantNotice) {
 				t.Errorf("HX-Trigger = %q, want notice %q", got, wantNotice)
 			}
-			if committer.calls != 0 {
-				t.Errorf("committer calls = %d, want 0 for a locked field", committer.calls)
+			if storage.calls != 0 {
+				t.Errorf("write calls = %d, want 0 for a locked field", storage.calls)
 			}
 		})
 	}
@@ -776,8 +776,8 @@ func TestReadOnlySourceRejectsEdits(t *testing.T) {
 }
 
 func TestCommitFailureDoesNotExposeStorageError(t *testing.T) {
-	committer := &recordingCommitter{err: errors.New("private disk error")}
-	handler, err := NewWithCommitter(testSource(), committer)
+	storage := &recordingFileSystem{err: errors.New("private disk error")}
+	handler, err := newTestHandler(testSource(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -791,8 +791,8 @@ func TestCommitFailureDoesNotExposeStorageError(t *testing.T) {
 	if !strings.Contains(response.Header().Get("HX-Trigger"), "The edit could not be saved.") {
 		t.Fatal("expected safe storage error message")
 	}
-	if committer.calls != 1 {
-		t.Fatalf("committer calls = %d, want 1", committer.calls)
+	if storage.calls != 1 {
+		t.Fatalf("write calls = %d, want 1", storage.calls)
 	}
 }
 

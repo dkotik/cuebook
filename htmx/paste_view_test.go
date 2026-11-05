@@ -51,7 +51,7 @@ func TestPasteAvailableOnlyInWritableListView(t *testing.T) {
 			if tt.readOnly {
 				handler, err = New(files, WithServeMuxPrefix(tt.prefix))
 			} else {
-				handler, err = NewWithCommitter(files, &recordingCommitter{}, WithServeMuxPrefix(tt.prefix))
+				handler, err = newTestHandler(files, &recordingFileSystem{}, WithServeMuxPrefix(tt.prefix))
 			}
 			if err != nil {
 				t.Fatal(err)

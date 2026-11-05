@@ -28,8 +28,8 @@ type addResponse struct {
 	pageData
 }
 
-func (a *handler) add(_ context.Context, request *addRequest) (addResponse, error) {
-	if a.committer == nil {
+func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, error) {
+	if a.files == nil {
 		return addResponse{}, errors.New("This source is read-only.")
 	}
 
@@ -109,7 +109,7 @@ func (a *handler) add(_ context.Context, request *addRequest) (addResponse, erro
 	if err != nil {
 		return addResponse{}, errors.New("Unable to determine where to add the entry.")
 	}
-	if err := a.appendEntry(fileName, raw, entry); err != nil {
+	if err := a.appendEntry(ctx, fileName, raw, entry); err != nil {
 		return addResponse{}, err
 	}
 	addedEntry, err := a.loadEntryPage(fileName, cuebook.ByteRange{}, entryIndex)
@@ -119,7 +119,7 @@ func (a *handler) add(_ context.Context, request *addRequest) (addResponse, erro
 	return addResponse{pageData: addedEntry.pageData}, nil
 }
 
-func (a *handler) appendEntry(fileName string, raw []byte, entry cue.Value) error {
+func (a *handler) appendEntry(ctx context.Context, fileName string, raw []byte, entry cue.Value) error {
 	change, err := cuebook.AppendToStructList(raw, entry)
 	if err != nil {
 		return errors.New("The entry could not be added to this CUE document.")
@@ -131,7 +131,7 @@ func (a *handler) appendEntry(fileName string, raw []byte, entry cue.Value) erro
 	if _, err := cuebook.New(candidate); err != nil {
 		return errors.New("The submitted entry does not satisfy the CUE constraints: " + err.Error())
 	}
-	if err := a.commitFile(fileName, change); err != nil {
+	if err := a.commitFile(ctx, fileName, change); err != nil {
 		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return errors.New("The document changed before the entry could be added. Reload and try again.")
 		}

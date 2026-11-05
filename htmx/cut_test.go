@@ -62,16 +62,16 @@ func TestCutPasteUsesMoveWorkflow(t *testing.T) {
 				documents["destination.cue"] = []byte("#entry: {Name: \"Existing\"}\n[...#entry] & [{Name: \"Existing\"}]")
 			}
 			files := transferSourceFS(documents)
-			committer := &transferCommitter{files: files}
+			storage := &transferFileSystem{files: files}
 			if tt.failCommit {
-				committer.failCalls = map[int]error{2: errors.New("storage failure")}
+				storage.failCalls = map[int]error{2: errors.New("storage failure")}
 			}
 			var handler http.Handler
 			var err error
 			if tt.readOnly {
 				handler, err = New(files, WithServeMuxPrefix(tt.prefix))
 			} else {
-				handler, err = NewWithCommitter(files, committer, WithServeMuxPrefix(tt.prefix))
+				handler, err = newTestHandler(files, storage, WithServeMuxPrefix(tt.prefix))
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -156,8 +156,8 @@ func TestCutPasteUsesMoveWorkflow(t *testing.T) {
 			}
 			assertEntryTitles(t, files["source.cue"].Data, tt.wantSource)
 			assertEntryTitles(t, files["destination.cue"].Data, tt.wantTarget)
-			if tt.failCommit && !equalStrings(committer.calls, []string{"destination.cue", "source.cue", "destination.cue"}) {
-				t.Errorf("rollback commit order = %v", committer.calls)
+			if tt.failCommit && !equalStrings(storage.calls, []string{"destination.cue", "source.cue", "destination.cue"}) {
+				t.Errorf("rollback commit order = %v", storage.calls)
 			}
 			if tt.wantStatus == http.StatusOK && tt.clipboard != `{Name: "External copy"}` && !tt.sameFile {
 				repeated := submitPaste(handler, tt.prefix+"/paste", values)

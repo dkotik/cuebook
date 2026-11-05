@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -115,6 +116,117 @@ func TestFileSystemWriteFile(t *testing.T) {
 				if err != nil || string(read) != tt.content {
 					t.Errorf("ReadFile = %q, %v; want %q", read, err, tt.content)
 				}
+			}
+		})
+	}
+}
+
+func TestFileSystemWriteFileResolvesPathsInsideRoot(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("creating symbolic links needs extra privileges on Windows")
+	}
+	tests := []struct {
+		name    string
+		setup   func(t *testing.T, root, outside string)
+		write   string
+		wantErr error
+	}{
+		{
+			name:  "creates missing parent directories",
+			write: ".archive/2026/book.cue",
+		},
+		{
+			name: "writes through existing parent directories",
+			setup: func(t *testing.T, root, _ string) {
+				if err := os.Mkdir(filepath.Join(root, "nested"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			},
+			write: "nested/book.cue",
+		},
+		{
+			name: "refuses a symlinked parent directory",
+			setup: func(t *testing.T, root, outside string) {
+				if err := os.Symlink(outside, filepath.Join(root, "linked")); err != nil {
+					t.Fatal(err)
+				}
+			},
+			write:   "linked/book.cue",
+			wantErr: fs.ErrPermission,
+		},
+		{
+			name: "refuses a symlinked target file",
+			setup: func(t *testing.T, root, outside string) {
+				target := filepath.Join(outside, "book.cue")
+				if err := os.WriteFile(target, []byte("outside"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(target, filepath.Join(root, "book.cue")); err != nil {
+					t.Fatal(err)
+				}
+			},
+			write:   "book.cue",
+			wantErr: fs.ErrPermission,
+		},
+		{
+			name: "refuses a parent that is a file",
+			setup: func(t *testing.T, root, _ string) {
+				if err := os.WriteFile(filepath.Join(root, "plain"), nil, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			},
+			write:   "plain/book.cue",
+			wantErr: fs.ErrPermission,
+		},
+		{
+			name: "refuses a directory target",
+			setup: func(t *testing.T, root, _ string) {
+				if err := os.Mkdir(filepath.Join(root, "book.cue"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			},
+			write:   "book.cue",
+			wantErr: fs.ErrPermission,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			root, outside := t.TempDir(), t.TempDir()
+			if tt.setup != nil {
+				tt.setup(t, root, outside)
+			}
+			fsys, err := NewFileSystem(FileSystemConfig{Root: root})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = fsys.WriteFile(context.Background(), tt.write, []byte("new"))
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("WriteFile error = %v, want %v", err, tt.wantErr)
+				}
+				entries, err := os.ReadDir(outside)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, entry := range entries {
+					if entry.Name() != "book.cue" {
+						t.Errorf("write escaped the root: %s", entry.Name())
+					}
+				}
+				if got, err := os.ReadFile(filepath.Join(outside, "book.cue")); err == nil && string(got) != "outside" {
+					t.Errorf("file outside the root changed to %q", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("WriteFile: %v", err)
+			}
+			got, err := fsys.ReadFile(context.Background(), tt.write)
+			if err != nil || string(got) != "new" {
+				t.Errorf("ReadFile = %q, %v; want %q", got, err, "new")
 			}
 		})
 	}

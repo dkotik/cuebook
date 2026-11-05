@@ -2,6 +2,7 @@ package htmx
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,14 +13,15 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
-type booleanUnsetCommitter struct {
-	mapFileCommitter
+// booleanUnsetFileSystem counts writes applied to an in-memory file system.
+type booleanUnsetFileSystem struct {
+	mapFileSystem
 	calls int
 }
 
-func (c *booleanUnsetCommitter) Commit(name string, change cuebook.Patch) error {
+func (c *booleanUnsetFileSystem) WriteFile(ctx context.Context, name string, content []byte) error {
 	c.calls++
-	return c.mapFileCommitter.Commit(name, change)
+	return c.mapFileSystem.WriteFile(ctx, name, content)
 }
 
 func TestEditBooleanUnset(t *testing.T) {
@@ -55,8 +57,8 @@ func TestEditBooleanUnset(t *testing.T) {
 			}
 			source := []byte("#entry: {Name: string @cuebook(title), Other: bool, Secret: string @cuebook(argon2id), Missing?: *true | bool, " + tt.declaration + "}\n[...#entry] & [{" + item + "}]")
 			files := fstest.MapFS{"booleans.cue": &fstest.MapFile{Data: bytes.Clone(source)}}
-			committer := &booleanUnsetCommitter{mapFileCommitter: mapFileCommitter{files: files}}
-			handler, err := NewWithCommitter(files, committer)
+			storage := &booleanUnsetFileSystem{mapFileSystem: mapFileSystem{files: files}}
+			handler, err := newTestHandler(files, storage)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -95,8 +97,8 @@ func TestEditBooleanUnset(t *testing.T) {
 					}
 				}
 			}
-			if committer.calls != tt.wantCalls {
-				t.Fatalf("commit calls = %d, want %d", committer.calls, tt.wantCalls)
+			if storage.calls != tt.wantCalls {
+				t.Fatalf("write calls = %d, want %d", storage.calls, tt.wantCalls)
 			}
 			if tt.wantCalls == 0 && !bytes.Equal(files["booleans.cue"].Data, source) {
 				t.Fatal("no-op or rejection changed source")
@@ -152,8 +154,8 @@ func TestAddBooleanUnset(t *testing.T) {
 			t.Parallel()
 			source := []byte("#entry: {Name: string @cuebook(title), " + tt.declaration + "}\n[...#entry]" + tt.listConstraint + " & [" + tt.initial + "]")
 			files := fstest.MapFS{"booleans.cue": &fstest.MapFile{Data: bytes.Clone(source)}}
-			committer := &booleanUnsetCommitter{mapFileCommitter: mapFileCommitter{files: files}}
-			handler, err := NewWithCommitter(files, committer)
+			storage := &booleanUnsetFileSystem{mapFileSystem: mapFileSystem{files: files}}
+			handler, err := newTestHandler(files, storage)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -162,7 +164,7 @@ func TestAddBooleanUnset(t *testing.T) {
 				if response.Code != http.StatusInternalServerError || !strings.Contains(response.Body.String(), "required boolean field Enabled cannot be unset") {
 					t.Fatalf("status = %d, body = %q", response.Code, response.Body.String())
 				}
-				if committer.calls != 0 || !bytes.Equal(files["booleans.cue"].Data, source) {
+				if storage.calls != 0 || !bytes.Equal(files["booleans.cue"].Data, source) {
 					t.Fatal("rejected add changed source")
 				}
 				return
@@ -182,8 +184,8 @@ func TestAddBooleanUnset(t *testing.T) {
 			if tt.initial != "" {
 				wantLength++
 			}
-			if length != wantLength || committer.calls != 1 {
-				t.Fatalf("length = %d, commits = %d; want %d, 1", length, committer.calls, wantLength)
+			if length != wantLength || storage.calls != 1 {
+				t.Fatalf("length = %d, commits = %d; want %d, 1", length, storage.calls, wantLength)
 			}
 			entry, err := book.GetValue(length - 1)
 			if err != nil {
@@ -282,7 +284,7 @@ func TestLiteralNotSetBooleanUnset(t *testing.T) {
 				initial = ""
 			}
 			files := fstest.MapFS{"booleans.cue": &fstest.MapFile{Data: []byte("#entry: {Name: string @cuebook(title), " + tt.declaration + "}\n[...#entry] & [" + initial + "]")}}
-			handler, err := NewWithCommitter(files, mapFileCommitter{files: files})
+			handler, err := newTestHandler(files, mapFileSystem{files: files})
 			if err != nil {
 				t.Fatal(err)
 			}

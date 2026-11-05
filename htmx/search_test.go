@@ -160,7 +160,7 @@ func TestSearchIndexRefreshesAfterCommittedEdit(t *testing.T) {
 			Data: []byte(`[{Name: "Target entry", Text: "oldtoken"}]`),
 		},
 	}
-	handler, err := NewWithCommitter(files, mapFileCommitter{files: files})
+	handler, err := newTestHandler(files, mapFileSystem{files: files})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,23 +190,6 @@ func TestSearchIndexRefreshesAfterCommittedEdit(t *testing.T) {
 	if !strings.Contains(newResults.Body.String(), "Target entry") {
 		t.Errorf("updated search result missing after edit: %s", newResults.Body.String())
 	}
-}
-
-type mapFileCommitter struct {
-	files fstest.MapFS
-}
-
-func (c mapFileCommitter) Commit(name string, change cuebook.Patch) error {
-	file, ok := c.files[name]
-	if !ok {
-		return fs.ErrNotExist
-	}
-	updated, err := change.ApplyToCueSource(file.Data)
-	if err != nil {
-		return err
-	}
-	file.Data = updated
-	return nil
 }
 
 func waitForSearchResponse(t *testing.T, handler http.Handler, query string) *httptest.ResponseRecorder {
@@ -255,7 +238,7 @@ func TestSearchResultsExposeDraggableSourceEntries(t *testing.T) {
 			var handler http.Handler
 			var err error
 			if test.writable {
-				handler, err = NewWithCommitter(files, mapFileCommitter{files: files})
+				handler, err = newTestHandler(files, mapFileSystem{files: files})
 			} else {
 				handler, err = New(files)
 			}

@@ -24,8 +24,8 @@ type moveResponse struct {
 	pageData
 }
 
-func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, error) {
-	if a.committer == nil {
+func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse, error) {
+	if a.files == nil {
 		return moveResponse{}, errors.New("This source is read-only.")
 	}
 
@@ -51,7 +51,7 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 		return moveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 	if request.Destination != "" {
-		data, err := a.transferEntry(fileName, request.Destination, raw, document, from, fileNames)
+		data, err := a.transferEntry(ctx, fileName, request.Destination, raw, document, from, fileNames)
 		return moveResponse{pageData: data}, err
 	}
 
@@ -81,7 +81,7 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 	if _, err := cuebook.New(candidate); err != nil {
 		return moveResponse{}, errors.New("The reordered document does not satisfy the CUE constraints.")
 	}
-	if err := a.commitFile(fileName, change); err != nil {
+	if err := a.commitFile(ctx, fileName, change); err != nil {
 		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return moveResponse{}, errors.New("The document changed before the entries could be reordered. Reload and try again.")
 		}
@@ -91,7 +91,7 @@ func (a *handler) move(_ context.Context, request *moveRequest) (moveResponse, e
 	return moveResponse{pageData: data}, err
 }
 
-func (a *handler) transferEntry(sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Book, from int, fileNames []string) (pageData, error) {
+func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName string, sourceRaw []byte, sourceDocument cuebook.Book, from int, fileNames []string) (pageData, error) {
 	if sourceName == destinationName {
 		return a.renderEditedFile(sourceName)
 	}
@@ -133,14 +133,16 @@ func (a *handler) transferEntry(sourceName, destinationName string, sourceRaw []
 		return pageData{}, errors.New("Removing the entry does not satisfy the source file's CUE constraints.")
 	}
 
-	if err := a.commitFile(destinationName, cuebook.Validated(appendChange)); err != nil {
+	if err := a.commitFile(ctx, destinationName, cuebook.Validated(appendChange)); err != nil {
 		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return pageData{}, errors.New("The destination file changed before the entry could be added. Reload and try again.")
 		}
 		return pageData{}, errors.New("The entry could not be added to the destination file.")
 	}
-	if err := a.commitFile(sourceName, cuebook.Validated(deleteChange)); err != nil {
-		rollbackErr := a.commitFile(destinationName, cuebook.Validated(appendChange.Invert()))
+	if err := a.commitFile(ctx, sourceName, cuebook.Validated(deleteChange)); err != nil {
+		// Roll back even if the request was canceled; ctx no longer matters once
+		// the destination has been changed.
+		rollbackErr := a.commitFile(context.WithoutCancel(ctx), destinationName, cuebook.Validated(appendChange.Invert()))
 		if rollbackErr != nil {
 			return pageData{}, errors.New("The entry was added to the destination, but the source could not be updated and the destination change could not be rolled back. It may now exist in both files.")
 		}

@@ -130,7 +130,7 @@ func (a *handler) loadFolderPage(folder, notice string) (pageData, int) {
 
 func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 	data := pageData{
-		ReadOnly:     a.committer == nil,
+		ReadOnly:     a.files == nil,
 		Error:        notice,
 		AgentEnabled: a.agentEnabled,
 		AgentBaseURL: a.agentBaseURL,
@@ -358,7 +358,7 @@ func (a *handler) basePage(fileNames []string, selected, notice string) pageData
 		AgentEnabled:    a.agentEnabled,
 		AgentBaseURL:    a.agentBaseURL,
 		GitEnabled:      a.gitFileLinker != nil,
-		ReadOnly:        a.committer == nil,
+		ReadOnly:        a.files == nil,
 		Error:           notice,
 		Files:           makeSidebarTree(fileNames, selected),
 		ArchiveSelected: selected == archiveFolder || strings.HasPrefix(selected, archiveDirectory),

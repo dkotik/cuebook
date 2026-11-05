@@ -22,7 +22,7 @@
 [...#contact] & [
   {
 		Name:  "Maria12" @cuebook(title)
-		Email: "mr@sfsdf.com"
+		Email: "mr1@sfsdf.com"
 		Notes: """
 			# laskdjasldkj asd
 
@@ -97,5 +97,11 @@
   {
 		Name:  "sdfjlsdf"
 		Email: "lksjdfljsd@sdf"
+	},
+  {
+		Name:       "1 really great21"
+		Email:      "1dfjd@kekeke.kekeke1"
+		Notes:      "dfgdf"
+		Introduced: true
 	}
 ]

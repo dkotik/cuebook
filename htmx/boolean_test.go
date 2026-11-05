@@ -50,7 +50,7 @@ func TestBooleanFormRendering(t *testing.T) {
 			}
 			source := "#entry: {\nName: string @cuebook(title)\n" + tt.declaration + "\n}\n[...#entry] & [{" + entry + "}]"
 			files := fstest.MapFS{"booleans.cue": &fstest.MapFile{Data: []byte(source)}}
-			handler, err := NewWithCommitter(files, &recordingCommitter{})
+			handler, err := newTestHandler(files, &recordingFileSystem{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -155,7 +155,7 @@ func TestBooleanEditSubmission(t *testing.T) {
 			t.Parallel()
 			source := "#entry: {Name: string @cuebook(title), Enabled: bool}\n[...#entry] & [{Name: \"Existing\", Enabled: " + tt.existing + "}]"
 			files := fstest.MapFS{"booleans.cue": &fstest.MapFile{Data: []byte(source)}}
-			handler, err := NewWithCommitter(files, mapFileCommitter{files: files})
+			handler, err := newTestHandler(files, mapFileSystem{files: files})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -200,7 +200,7 @@ func TestBooleanAddSubmission(t *testing.T) {
 			t.Parallel()
 			source := "#entry: {\nName: string @cuebook(title)\n" + tt.declaration + "\n}\n[...#entry] & []"
 			files := fstest.MapFS{"booleans.cue": &fstest.MapFile{Data: []byte(source)}}
-			handler, err := NewWithCommitter(files, mapFileCommitter{files: files})
+			handler, err := newTestHandler(files, mapFileSystem{files: files})
 			if err != nil {
 				t.Fatal(err)
 			}

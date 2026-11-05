@@ -12,16 +12,10 @@
 [...#contact] & [
   {
 		Name:       "aFirst11111aaDD222Dzxa11" @cuebook(title)
-		Email:      "tes44taaa1@testdo1m1zzzzain.com"
+		Email:      "tes44taaa1@testdo1zzzzain.com"
 		Password:   "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg" @cuebook(detail,trim,argon2id) @cuebook(detail, trim, argon2id)
 		Notes:      "sdf sdfsdf12 dfdf"                                                                                 @cuebook(detail)
-		Introduced: true
-	},
-  {
-		Name:       "1 really great21" @cuebook(title)
-		Email:      "1dfjd@kekeke.kekeke1"
-		Notes:      "dfgdf" @cuebook(detail)
-		Introduced: true
+		Introduced: true                                                                                                @cuebook()
 	},
   {
 		Name:  "Maria" @cuebook(title)

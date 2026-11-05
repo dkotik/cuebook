@@ -59,7 +59,7 @@ func TestInlineBooleanRendering(t *testing.T) {
 			if tt.readOnly {
 				handler, err = New(files, WithServeMuxPrefix(tt.prefix))
 			} else {
-				handler, err = NewWithCommitter(files, mapFileCommitter{files: files}, WithServeMuxPrefix(tt.prefix))
+				handler, err = newTestHandler(files, mapFileSystem{files: files}, WithServeMuxPrefix(tt.prefix))
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -177,7 +177,7 @@ func TestListBooleanLabels(t *testing.T) {
 			if tt.readOnly {
 				handler, err = New(files)
 			} else {
-				handler, err = NewWithCommitter(files, mapFileCommitter{files: files})
+				handler, err = newTestHandler(files, mapFileSystem{files: files})
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -232,7 +232,7 @@ func TestInlineBooleanSubmission(t *testing.T) {
 			}
 			source := "#entry: {\nName: string @cuebook(title)\n" + tt.declaration + "\n}\n[...#entry] & [{Name: \"Unrelated entry\", Enabled: false}, {" + entry + "}]"
 			files := fstest.MapFS{"booleans.cue": &fstest.MapFile{Data: []byte(source)}}
-			handler, err := NewWithCommitter(files, mapFileCommitter{files: files}, WithServeMuxPrefix(tt.prefix))
+			handler, err := newTestHandler(files, mapFileSystem{files: files}, WithServeMuxPrefix(tt.prefix))
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -24,9 +24,9 @@ func TestAddEntryFormRendersFieldDocumentationAsHelp(t *testing.T) {
 	Active: bool
 }
 [...#person] & []`)
-	handler, err := NewWithCommitter(fstest.MapFS{
+	handler, err := newTestHandler(fstest.MapFS{
 		"people.cue": &fstest.MapFile{Data: source},
-	}, &recordingCommitter{})
+	}, &recordingFileSystem{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestEntryViewHidesFileMetadataAndShowsFileBreadcrumb(t *testing.T) {
 			if tt.readOnly {
 				handler, err = New(files, WithServeMuxPrefix(tt.prefix))
 			} else {
-				handler, err = NewWithCommitter(files, &recordingCommitter{}, WithServeMuxPrefix(tt.prefix))
+				handler, err = newTestHandler(files, &recordingFileSystem{}, WithServeMuxPrefix(tt.prefix))
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -199,9 +199,9 @@ func TestListAndEntryUseSeparateEntryTemplates(t *testing.T) {
 		break
 	}
 
-	handler, err := NewWithCommitter(fstest.MapFS{
+	handler, err := newTestHandler(fstest.MapFS{
 		filePath: &fstest.MapFile{Data: source},
-	}, &recordingCommitter{})
+	}, &recordingFileSystem{})
 	if err != nil {
 		t.Fatal(err)
 	}

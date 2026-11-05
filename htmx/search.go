@@ -100,9 +100,23 @@ func (a *handler) applyFileChange(filePath string, change func() error) error {
 	return a.searchFS.ApplyFileChange(filePath, change)
 }
 
-func (a *handler) commitFile(filePath string, change cuebook.Patch) error {
+func (a *handler) commitFile(ctx context.Context, filePath string, change cuebook.Patch) error {
 	return a.applyFileChange(filePath, func() error {
-		return a.committer.Commit(filePath, change)
+		_, err := cuebook.Commit(ctx, a.files, filePath, change)
+		return err
+	})
+}
+
+// createFileIfNotExists writes content to filePath only when the file is
+// missing. applyFileChange serializes it with every other change made by this
+// handler, so a concurrent request cannot create the file in between.
+func (a *handler) createFileIfNotExists(ctx context.Context, filePath string, content []byte) error {
+	return a.applyFileChange(filePath, func() error {
+		_, err := a.files.ReadFile(ctx, filePath)
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		return a.files.WriteFile(ctx, filePath, content)
 	})
 }
 
@@ -151,7 +165,7 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 			Path:        result.Path,
 			Description: searchEntryDescription(result.Entry),
 		}
-		if a.committer != nil {
+		if a.files != nil {
 			positions, exists := positionsByFile[result.Path]
 			if !exists {
 				positions, _ = a.searchEntryPositions(result.Path)

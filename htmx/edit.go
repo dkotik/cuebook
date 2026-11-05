@@ -35,7 +35,7 @@ type editFormResponse struct {
 }
 
 func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFormResponse, error) {
-	if a.committer == nil {
+	if a.files == nil {
 		return editFormResponse{}, errors.New("This source is read-only.")
 	}
 
@@ -105,8 +105,8 @@ func (response editErrorResponse) GetFlashMessage() (string, bool) {
 	return response.Error, response.Error == ""
 }
 
-func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, error) {
-	if a.committer == nil {
+func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {
+	if a.files == nil {
 		return editResponse{}, errors.New("This source is read-only.")
 	}
 	if request.Value == nil {
@@ -179,7 +179,7 @@ func (a *handler) edit(_ context.Context, request *editRequest) (editResponse, e
 	if _, err = cuebook.New(candidate); err != nil {
 		return editResponse{}, errors.New("The submitted value does not satisfy the CUE constraints: " + err.Error())
 	}
-	if err = a.commitFile(fileName, change); err != nil {
+	if err = a.commitFile(ctx, fileName, change); err != nil {
 		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
 			return editResponse{}, errors.New("The entry changed before the edit could be applied. Reload and try again.")
 		}

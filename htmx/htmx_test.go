@@ -89,7 +89,7 @@ func TestSidebarLabelSelection(t *testing.T) {
 func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 	t.Parallel()
 
-	handler, err := NewWithCommitter(testSource(), &recordingCommitter{})
+	handler, err := newTestHandler(testSource(), &recordingFileSystem{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestAddEntryFormUsesCurrentFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			handler, err := NewWithCommitter(files, &recordingCommitter{})
+			handler, err := newTestHandler(files, &recordingFileSystem{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -228,10 +228,10 @@ func TestAddEntryFormStartsAtTypeZeroValuesAndUnsetBooleans(t *testing.T) {
 }
 [...#entry] & [{Name: "Existing", Count: 12, Enabled: true}]
 `)
-	committer := &recordingCommitter{}
-	handler, err := NewWithCommitter(fstest.MapFS{
+	storage := &recordingFileSystem{}
+	handler, err := newTestHandler(fstest.MapFS{
 		"defaults.cue": &fstest.MapFile{Data: source},
-	}, committer)
+	}, storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,8 +305,8 @@ func TestAddEntryFormStartsAtTypeZeroValuesAndUnsetBooleans(t *testing.T) {
 	if !strings.Contains(failureBody, `<p class="notice notification is-danger" role="alert">`) || strings.Contains(failureBody, `add-entry-error`) || strings.Contains(failureBody, `<form`) || strings.Contains(failureBody, `<main id="workspace"`) {
 		t.Fatalf("HTMX validation response should be a generic error fragment, not replace the form or workspace: %s", failureBody)
 	}
-	if committer.calls != 0 {
-		t.Fatalf("committer calls = %d, want 0 for rejected entry", committer.calls)
+	if storage.calls != 0 {
+		t.Fatalf("write calls = %d, want 0 for rejected entry", storage.calls)
 	}
 }
 
@@ -486,7 +486,7 @@ func TestWritableDirectoryAppendsEntries(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(directory, "contacts.cue"), source, 0o600); err != nil {
 				t.Fatal(err)
 			}
-			handler, err := NewDirectory(directory)
+			handler, err := newDirectoryHandler(directory)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -559,7 +559,7 @@ func TestWritableDirectoryAppendsToEmptySchemaList(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(directory, "contacts.cue"), source, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	handler, err := NewDirectory(directory)
+	handler, err := newDirectoryHandler(directory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -600,8 +600,8 @@ func TestWritableDirectoryAppendsToEmptySchemaList(t *testing.T) {
 }
 
 func TestAddEntryFailures(t *testing.T) {
-	committer := &recordingCommitter{}
-	handler, err := NewWithCommitter(testSource(), committer)
+	storage := &recordingFileSystem{}
+	handler, err := newTestHandler(testSource(), storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -681,8 +681,8 @@ func TestAddEntryFailures(t *testing.T) {
 
 		})
 	}
-	if committer.calls != 0 {
-		t.Fatalf("committer calls = %d for rejected additions, want 0", committer.calls)
+	if storage.calls != 0 {
+		t.Fatalf("write calls = %d for rejected additions, want 0", storage.calls)
 	}
 }
 
@@ -708,8 +708,10 @@ func TestConstructorsValidateDependencies(t *testing.T) {
 		call func() (http.Handler, error)
 	}{
 		{name: "nil source", call: func() (http.Handler, error) { return New(nil) }},
-		{name: "nil committer", call: func() (http.Handler, error) { return NewWithCommitter(testSource(), nil) }},
-		{name: "missing directory", call: func() (http.Handler, error) { return NewDirectory(filepath.Join(t.TempDir(), "missing")) }},
+		{name: "nil file system", call: func() (http.Handler, error) { return NewWithFileSystem(testSource(), nil) }},
+		{name: "nil source with file system", call: func() (http.Handler, error) {
+			return NewWithFileSystem(nil, mapFileSystem{files: fstest.MapFS{}})
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -750,14 +752,4 @@ func addEntryValues(fileName string, fields [][2]string) url.Values {
 		values.Set(prefix+"value", field[1])
 	}
 	return values
-}
-
-type recordingCommitter struct {
-	calls int
-	err   error
-}
-
-func (c *recordingCommitter) Commit(_ string, _ cuebook.Patch) error {
-	c.calls++
-	return c.err
 }

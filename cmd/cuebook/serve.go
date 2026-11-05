@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/htmx"
 	"github.com/dkotik/cuebook/htmx/agent"
 	gitview "github.com/dkotik/cuebook/htmx/git"
@@ -54,7 +55,11 @@ func serveDirectory(directory string, port int64, options ...htmx.Option) error 
 	if isGitDirectory(directory) {
 		options = append(append([]htmx.Option(nil), options...), serveGitChangesOption(""))
 	}
-	handler, err := htmx.NewDirectory(directory, options...)
+	files, err := cuebook.NewFileSystem(cuebook.FileSystemConfig{Root: directory})
+	if err != nil {
+		return fmt.Errorf("open Cuebook directory: %w", err)
+	}
+	handler, err := htmx.NewWithFileSystem(os.DirFS(directory), files, options...)
 	if err != nil {
 		return fmt.Errorf("create Cuebook handler: %w", err)
 	}

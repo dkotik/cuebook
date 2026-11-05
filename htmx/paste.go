@@ -23,8 +23,8 @@ type pasteRequest struct {
 
 func (*pasteRequest) Validate(context.Context) error { return nil }
 
-func (a *handler) paste(_ context.Context, request *pasteRequest) (listResponse, error) {
-	if a.committer == nil {
+func (a *handler) paste(ctx context.Context, request *pasteRequest) (listResponse, error) {
+	if a.files == nil {
 		return listResponse{}, errors.New("This source is read-only.")
 	}
 	fileNames, err := a.fileNames()
@@ -51,17 +51,17 @@ func (a *handler) paste(_ context.Context, request *pasteRequest) (listResponse,
 		}
 		// A clipboard changed outside Cuebook must not move the previously cut entry.
 		if entrySourceFingerprint(request.Source) == request.CutFingerprint {
-			return a.pasteCut(request, fileNames)
+			return a.pasteCut(ctx, request, fileNames)
 		}
 	}
-	if err := a.appendEntry(request.File, raw, entry); err != nil {
+	if err := a.appendEntry(ctx, request.File, raw, entry); err != nil {
 		return listResponse{}, err
 	}
 	data, err := a.renderEditedFile(request.File)
 	return listResponse{pageData: data}, err
 }
 
-func (a *handler) pasteCut(request *pasteRequest, fileNames []string) (listResponse, error) {
+func (a *handler) pasteCut(ctx context.Context, request *pasteRequest, fileNames []string) (listResponse, error) {
 	index, err := strconv.Atoi(request.CutEntry)
 	if err != nil || index < 0 {
 		return listResponse{}, errors.New("The cut entry position is invalid. Cut the entry again.")
@@ -78,7 +78,7 @@ func (a *handler) pasteCut(request *pasteRequest, fileNames []string) (listRespo
 	if err != nil || entrySourceFingerprint(source) != request.CutFingerprint {
 		return listResponse{}, errors.New("The cut entry changed or moved. Copy or cut the entry again.")
 	}
-	data, err := a.transferEntry(request.CutFile, request.File, raw, document, index, fileNames)
+	data, err := a.transferEntry(ctx, request.CutFile, request.File, raw, document, index, fileNames)
 	return listResponse{pageData: data}, err
 }
 

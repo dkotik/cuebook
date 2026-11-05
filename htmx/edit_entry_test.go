@@ -48,7 +48,7 @@ func TestEntryFieldSaveReplacesCurrentEntryURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			files := fstest.MapFS{"people.cue": &fstest.MapFile{Data: []byte(source)}}
-			handler, err := NewWithCommitter(files, mapFileCommitter{files: files}, WithServeMuxPrefix(tt.prefix))
+			handler, err := newTestHandler(files, mapFileSystem{files: files}, WithServeMuxPrefix(tt.prefix))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -185,7 +185,7 @@ func TestEntryFieldSaveReplacesCurrentEntryURL(t *testing.T) {
 func TestEntryFieldValidationErrorDoesNotNavigate(t *testing.T) {
 	t.Parallel()
 	files := fstest.MapFS{"people.cue": &fstest.MapFile{Data: []byte("#entry: {Name: string, Count: int}\n[...#entry] & [{Name: \"Ada\", Count: 1}]")}}
-	handler, err := NewWithCommitter(files, mapFileCommitter{files: files})
+	handler, err := newTestHandler(files, mapFileSystem{files: files})
 	if err != nil {
 		t.Fatal(err)
 	}

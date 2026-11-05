@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"testing/fstest"
 	"time"
 )
 
@@ -20,10 +19,12 @@ func TestArchiveArchivesEntries(t *testing.T) {
 		name           string
 		initialArchive []byte
 		wantArchive    []string
+		wantCreate     bool
 	}{
 		{
 			name:        "creates daily archive",
 			wantArchive: []string{"Move me"},
+			wantCreate:  true,
 		},
 		{
 			name: "appends without replacing existing archive",
@@ -42,8 +43,8 @@ func TestArchiveArchivesEntries(t *testing.T) {
 			if test.initialArchive != nil {
 				files[archiveName] = test.initialArchive
 			}
-			committer := &archiveTestCommitter{transferCommitter: &transferCommitter{files: transferSourceFS(files)}}
-			handler, err := NewWithCommitter(committer.files, committer)
+			storage := &transferFileSystem{files: transferSourceFS(files)}
+			handler, err := newTestHandler(storage.files, storage)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -83,10 +84,14 @@ func TestArchiveArchivesEntries(t *testing.T) {
 				t.Fatalf("archive entries should not show a archive button: %s", response.Body.String())
 			}
 
-			assertEntryTitles(t, committer.files["source.cue"].Data, []string{"Keep me", "Third source"})
-			assertEntryTitles(t, committer.files[archiveName].Data, test.wantArchive)
-			if want := []string{archiveName, "source.cue"}; !equalStrings(committer.calls, want) {
-				t.Fatalf("commit order = %v, want %v", committer.calls, want)
+			assertEntryTitles(t, storage.files["source.cue"].Data, []string{"Keep me", "Third source"})
+			assertEntryTitles(t, storage.files[archiveName].Data, test.wantArchive)
+			want := []string{archiveName, "source.cue"}
+			if test.wantCreate {
+				want = append([]string{archiveName}, want...)
+			}
+			if !equalStrings(storage.calls, want) {
+				t.Fatalf("write order = %v, want %v", storage.calls, want)
 			}
 		})
 	}
@@ -98,7 +103,6 @@ func TestArchiveRejectsInvalidRequests(t *testing.T) {
 		file       string
 		entry      int
 		readOnly   bool
-		noCreator  bool
 		origin     string
 		wantStatus int
 		wantNotice string
@@ -111,14 +115,7 @@ func TestArchiveRejectsInvalidRequests(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 			wantNotice: "This source is read-only.",
 		},
-		{
-			name:       "committer cannot create archive files",
-			file:       "core1.cue",
-			noCreator:  true,
-			origin:     "http://example.test",
-			wantStatus: http.StatusInternalServerError,
-			wantNotice: "This source cannot create archive files.",
-		},
+
 		{
 			name:       "invalid entry index",
 			file:       "source.cue",
@@ -161,16 +158,13 @@ func TestArchiveRejectsInvalidRequests(t *testing.T) {
 			files := transferSourceFS(documents)
 
 			var handler http.Handler
-			var committer *archiveTestCommitter
+			var storage *transferFileSystem
 			var err error
-			switch {
-			case test.readOnly:
+			if test.readOnly {
 				handler, err = New(files)
-			case test.noCreator:
-				handler, err = NewWithCommitter(testSource(), &recordingCommitter{})
-			default:
-				committer = &archiveTestCommitter{transferCommitter: &transferCommitter{files: files}}
-				handler, err = NewWithCommitter(files, committer)
+			} else {
+				storage = &transferFileSystem{files: files}
+				handler, err = newTestHandler(files, storage)
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -183,8 +177,8 @@ func TestArchiveRejectsInvalidRequests(t *testing.T) {
 			if !strings.Contains(response.Body.String(), test.wantNotice) {
 				t.Errorf("response missing notice %q: %s", test.wantNotice, response.Body.String())
 			}
-			if committer != nil && len(committer.calls) != 0 {
-				t.Errorf("commit calls = %v, want none", committer.calls)
+			if storage != nil && len(storage.calls) != 0 {
+				t.Errorf("write calls = %v, want none", storage.calls)
 			}
 		})
 	}
@@ -195,11 +189,12 @@ func TestArchiveRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 
 	documents := transferTestDocuments()
 	files := transferSourceFS(documents)
-	committer := &archiveTestCommitter{transferCommitter: &transferCommitter{
+	// Writes: 1 creates the archive, 2 appends to it, 3 updates the source.
+	storage := &transferFileSystem{
 		files:     files,
-		failCalls: map[int]error{2: errors.New("source storage failure")},
-	}}
-	handler, err := NewWithCommitter(files, committer)
+		failCalls: map[int]error{3: errors.New("source storage failure")},
+	}
+	handler, err := newTestHandler(files, storage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,8 +212,8 @@ func TestArchiveRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 		t.Fatalf("source changed after failed transfer:\n%s", files["source.cue"].Data)
 	}
 	assertEntryTitles(t, files[archiveName].Data, nil)
-	if want := []string{archiveName, "source.cue", archiveName}; !equalStrings(committer.calls, want) {
-		t.Fatalf("commit order = %v, want %v", committer.calls, want)
+	if want := []string{archiveName, archiveName, "source.cue", archiveName}; !equalStrings(storage.calls, want) {
+		t.Fatalf("write order = %v, want %v", storage.calls, want)
 	}
 }
 
@@ -236,7 +231,7 @@ func TestArchiveDoesNotFollowArchiveDirectorySymlink(t *testing.T) {
 	if err := os.Symlink(outside, filepath.Join(root, strings.TrimSuffix(archiveDirectory, "/"))); err != nil {
 		t.Fatal(err)
 	}
-	handler, err := NewDirectory(root)
+	handler, err := newDirectoryHandler(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,18 +272,3 @@ func submitArchive(t *testing.T, handler http.Handler, file string, entry int, o
 	handler.ServeHTTP(response, request)
 	return response
 }
-
-type archiveTestCommitter struct {
-	*transferCommitter
-}
-
-func (c *archiveTestCommitter) CreateFileIfNotExists(name string, content []byte) error {
-	if _, exists := c.files[name]; exists {
-		return nil
-	}
-	c.files[name] = &fstest.MapFile{Data: append([]byte(nil), content...)}
-	return nil
-}
-
-var _ Committer = (*archiveTestCommitter)(nil)
-var _ FileCreator = (*archiveTestCommitter)(nil)

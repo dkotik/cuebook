@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -15,8 +16,13 @@ import (
 // already closed.
 var ErrTransactionClosed = errors.New("transaction is closed")
 
-// defaultFileMode is applied to files that did not exist before a write.
-const defaultFileMode fs.FileMode = 0o644
+const (
+	// defaultFileMode is applied to files that did not exist before a write.
+	defaultFileMode fs.FileMode = 0o644
+	// defaultDirectoryMode is applied to missing parent directories created by
+	// a write.
+	defaultDirectoryMode fs.FileMode = 0o755
+)
 
 // Transaction is a set of changes to be applied atomically to a [FileSystem].
 type Transaction interface {
@@ -119,7 +125,9 @@ func (f fileSystem) ReadFile(ctx context.Context, name string) ([]byte, error) {
 
 // WriteFile atomically replaces the named file with content: content is
 // written to a swap file, which is then moved over the target with
-// [os.Rename]. Existing permissions are preserved.
+// [os.Rename]. Existing permissions are preserved. Missing parent directories
+// are created, and paths through symbolic links are refused so that writes
+// cannot escape Root.
 func (f fileSystem) WriteFile(ctx context.Context, name string, content []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -127,7 +135,10 @@ func (f fileSystem) WriteFile(ctx context.Context, name string, content []byte) 
 	if !fs.ValidPath(name) || name == "." {
 		return &fs.PathError{Op: "write", Path: name, Err: fs.ErrInvalid}
 	}
-	targetPath := filepath.Join(f.Root, filepath.FromSlash(name))
+	targetPath, err := f.resolveTarget(name)
+	if err != nil {
+		return err
+	}
 
 	// The lock is held before the snapshot so that a concurrent write in the
 	// same transaction cannot be recorded as the original content.
@@ -157,6 +168,42 @@ func (f fileSystem) WriteFile(ctx context.Context, name string, content []byte) 
 		}
 	}
 	return f.replace(targetPath, content, mode)
+}
+
+// resolveTarget returns the operating system path for name beneath Root. It
+// creates missing parent directories and refuses symbolic links, non-directory
+// parents, and non-regular targets.
+func (f fileSystem) resolveTarget(name string) (string, error) {
+	refuse := &fs.PathError{Op: "write", Path: name, Err: fs.ErrPermission}
+	parts := strings.Split(name, "/")
+	current := f.Root
+	for index, part := range parts {
+		current = filepath.Join(current, part)
+		last := index == len(parts)-1
+		info, err := os.Lstat(current)
+		if errors.Is(err, fs.ErrNotExist) {
+			if last {
+				return current, nil
+			}
+			if err = os.Mkdir(current, defaultDirectoryMode); err != nil && !errors.Is(err, fs.ErrExist) {
+				return "", err
+			}
+			// Inspect again: another writer may have created the path first.
+			info, err = os.Lstat(current)
+		}
+		if err != nil {
+			return "", err
+		}
+		switch {
+		case info.Mode()&fs.ModeSymlink != 0:
+			return "", refuse
+		case !last && !info.IsDir():
+			return "", refuse
+		case last && !info.Mode().IsRegular():
+			return "", refuse
+		}
+	}
+	return current, nil
 }
 
 // snapshot captures the current state of name so that it can be restored.

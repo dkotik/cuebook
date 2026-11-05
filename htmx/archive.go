@@ -27,14 +27,9 @@ type archiveResponse struct {
 	pageData
 }
 
-func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveResponse, error) {
-	if a.committer == nil {
+func (a *handler) archive(ctx context.Context, request *archiveRequest) (archiveResponse, error) {
+	if a.files == nil {
 		return archiveResponse{}, errors.New("This source is read-only.")
-	}
-
-	creator, ok := a.committer.(FileCreator)
-	if !ok {
-		return archiveResponse{}, errors.New("This source cannot create archive files.")
 	}
 
 	fileName := request.File
@@ -64,9 +59,7 @@ func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveRe
 	}
 
 	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
-	if err := a.applyFileChange(archiveName, func() error {
-		return creator.CreateFileIfNotExists(archiveName, []byte("[]\n"))
-	}); err != nil {
+	if err := a.createFileIfNotExists(ctx, archiveName, []byte("[]\n")); err != nil {
 		return archiveResponse{}, errors.New("Unable to create the archive file.")
 	}
 
@@ -78,6 +71,6 @@ func (a *handler) archive(_ context.Context, request *archiveRequest) (archiveRe
 		return archiveResponse{}, &cuebook.FileNotFoundError{Path: archiveName}
 	}
 
-	data, err := a.transferEntry(fileName, archiveName, raw, document, from, fileNames)
+	data, err := a.transferEntry(ctx, fileName, archiveName, raw, document, from, fileNames)
 	return archiveResponse{pageData: data}, err
 }

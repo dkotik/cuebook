@@ -35,7 +35,7 @@ func TestPasteEntry(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			files := fstest.MapFS{"contacts.cue": &fstest.MapFile{Data: []byte(tt.initial)}}
-			handler, err := NewWithCommitter(files, mapFileCommitter{files: files}, WithServeMuxPrefix(tt.prefix))
+			handler, err := newTestHandler(files, mapFileSystem{files: files}, WithServeMuxPrefix(tt.prefix))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -94,13 +94,13 @@ func TestPasteErrorsPreserveWorkspaceAndSource(t *testing.T) {
 			t.Parallel()
 			original := []byte("#entry: {Name: string}\n[...#entry] & []")
 			files := fstest.MapFS{"contacts.cue": &fstest.MapFile{Data: bytes.Clone(original)}, "invalid.cue": &fstest.MapFile{Data: []byte("[")}}
-			committer := &recordingCommitter{err: tt.commitError}
+			storage := &recordingFileSystem{err: tt.commitError}
 			var handler http.Handler
 			var err error
 			if tt.readOnly {
 				handler, err = New(files)
 			} else {
-				handler, err = NewWithCommitter(files, committer)
+				handler, err = newTestHandler(files, storage)
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -129,8 +129,8 @@ func TestPasteErrorsPreserveWorkspaceAndSource(t *testing.T) {
 			if tt.commitError != nil {
 				wantCalls = 1
 			}
-			if committer.calls != wantCalls {
-				t.Errorf("commit calls = %d, want %d", committer.calls, wantCalls)
+			if storage.calls != wantCalls {
+				t.Errorf("write calls = %d, want %d", storage.calls, wantCalls)
 			}
 		})
 	}

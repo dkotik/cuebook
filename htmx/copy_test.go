@@ -65,7 +65,7 @@ func TestEntryCopyRoundTripsThroughPaste(t *testing.T) {
 			if tt.readOnly {
 				handler, err = New(files, WithServeMuxPrefix(tt.prefix))
 			} else {
-				handler, err = NewWithCommitter(files, mapFileCommitter{files: files}, WithServeMuxPrefix(tt.prefix))
+				handler, err = newTestHandler(files, mapFileSystem{files: files}, WithServeMuxPrefix(tt.prefix))
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -101,7 +101,7 @@ func TestEntryCopyRoundTripsThroughPaste(t *testing.T) {
 			assertCopiedEntryEqual(t, copied, original)
 
 			destination := fstest.MapFS{"people.cue": &fstest.MapFile{Data: []byte(tt.source)}}
-			writable, err := NewWithCommitter(destination, mapFileCommitter{files: destination}, WithServeMuxPrefix(tt.prefix))
+			writable, err := newTestHandler(destination, mapFileSystem{files: destination}, WithServeMuxPrefix(tt.prefix))
 			if err != nil {
 				t.Fatal(err)
 			}
