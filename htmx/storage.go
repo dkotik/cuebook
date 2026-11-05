@@ -1,6 +1,7 @@
 package htmx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -35,7 +36,11 @@ func NewDirectory(directory string, opts ...Option) (http.Handler, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("htmx: %q is not a directory", directory)
 	}
-	return NewWithCommitter(os.DirFS(root), directoryCommitter{root: root}, opts...)
+	files, err := cuebook.NewFileSystem(cuebook.FileSystemConfig{Root: root})
+	if err != nil {
+		return nil, fmt.Errorf("htmx: open directory: %w", err)
+	}
+	return NewWithCommitter(os.DirFS(root), directoryCommitter{root: root, files: files}, opts...)
 }
 
 // FileCreator creates a file only when it does not already exist. It is an
@@ -45,7 +50,8 @@ type FileCreator interface {
 }
 
 type directoryCommitter struct {
-	root string
+	root  string
+	files cuebook.FileSystem
 }
 
 func (c directoryCommitter) Commit(name string, change cuebook.Patch) error {
@@ -60,7 +66,8 @@ func (c directoryCommitter) Commit(name string, change cuebook.Patch) error {
 	if err := c.verifyRegularFile(name); err != nil {
 		return err
 	}
-	_, err = cuebook.Commit(target, filepath.Dir(target), change)
+	// Committer has no context parameter, so the commit cannot be canceled.
+	_, err = cuebook.Commit(context.TODO(), c.files, name, change)
 	return err
 }
 

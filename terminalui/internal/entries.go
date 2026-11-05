@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"cmp"
+	"context"
 
 	"cuelang.org/go/cue"
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -56,7 +57,11 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 	case cuebook.Patch:
 		return l, func() tea.Msg { // TODO: handle switch highlight
-			result, err := cuebook.Commit("test/testdata/simple.cue", "test/testdata", msg)
+			files, err := cuebook.NewFileSystem(cuebook.FileSystemConfig{Root: "test/testdata"})
+			if err != nil {
+				return err
+			}
+			result, err := cuebook.Commit(context.Background(), files, "simple.cue", msg)
 			if err != nil {
 				return err
 			}

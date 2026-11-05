@@ -60,8 +60,8 @@ type FileSystemConfig struct {
 }
 
 // NewFileSystem returns a [FileSystem] that reads and writes files under
-// config.Root. Files are replaced atomically: each write goes to a temporary file that is then moved
-// over the original with [os.Rename].
+// config.Root. Files are replaced atomically: each write goes to a temporary
+// file that is then moved over the original with [os.Rename].
 func NewFileSystem(config FileSystemConfig) (FileSystem, error) {
 	if config.Root == "" {
 		return nil, errors.New("file system root is empty")
@@ -274,50 +274,6 @@ func defaultSwapFileStrategy(targetPath string) (string, fs.File, error) {
 	return file.Name(), file, nil
 }
 
-func replaceFileAtomically(
-	targetPath string,
-	swapPath string,
-	content []byte,
-	mode os.FileMode,
-	rename func(oldPath, newPath string) error,
-) (err error) {
-	tempFile, err := os.CreateTemp(swapPath, "."+filepath.Base(targetPath)+"-*.tmp")
-	if err != nil {
-		return err
-	}
-	tempPath := tempFile.Name()
-	tempExists := true
-	fileClosed := false
-	defer func() {
-		if !fileClosed {
-			_ = tempFile.Close()
-		}
-		if tempExists {
-			_ = os.Remove(tempPath)
-		}
-	}()
-
-	written, writeErr := tempFile.Write(content)
-	if writeErr == nil && written != len(content) {
-		writeErr = io.ErrShortWrite
-	}
-	if writeErr != nil {
-		return fmt.Errorf("unable to write patch result: %w", writeErr)
-	}
-	if err = tempFile.Chmod(mode); err != nil {
-		return fmt.Errorf("unable to preserve target permissions: %w", err)
-	}
-	if err = tempFile.Sync(); err != nil {
-		return fmt.Errorf("unable to sync patch result: %w", err)
-	}
-	if err = tempFile.Close(); err != nil {
-		fileClosed = true
-		return fmt.Errorf("unable to close patch result: %w", err)
-	}
-	fileClosed = true
-	if err = rename(tempPath, targetPath); err != nil {
-		return err
-	}
-	tempExists = false
-	return nil
+type validatedFileSystem struct {
+	FileSystem
 }

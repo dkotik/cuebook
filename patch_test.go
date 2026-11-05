@@ -2,15 +2,29 @@ package cuebook
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
 )
+
+// commitInDirectory commits change to the file named name inside directory.
+// A nil swap uses the default swap file strategy.
+func commitInDirectory(t *testing.T, directory, name string, change Patch, swap func(string) (string, fs.File, error)) (Result, error) {
+	t.Helper()
+	files, err := NewFileSystem(FileSystemConfig{Root: directory, Swap: swap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return Commit(context.Background(), files, name, change)
+}
 
 func TestPatchApplication(t *testing.T) {
 	source := []byte(`[
@@ -41,7 +55,7 @@ func TestPatchApplication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := Commit(target, filepath.Dir(target), p)
+	result, err := commitInDirectory(t, filepath.Dir(target), filepath.Base(target), p, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -453,7 +467,7 @@ func TestCommitPreservesPermissionsAndCleansTemporaryFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Commit(target, directory, change); err != nil {
+	if _, err := commitInDirectory(t, directory, "book.cue", change, nil); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(target)
@@ -473,33 +487,74 @@ func TestCommitPreservesPermissionsAndCleansTemporaryFile(t *testing.T) {
 }
 
 func TestCommitCleansTemporaryFileWhenRenameFails(t *testing.T) {
-	directory := t.TempDir()
+	if runtime.GOOS == "windows" {
+		t.Skip("directory permissions do not block renames on Windows")
+	}
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	parent := t.TempDir()
+	directory := filepath.Join(parent, "book")
+	swapDirectory := filepath.Join(parent, "swap")
+	for _, path := range []string{directory, swapDirectory} {
+		if err := os.Mkdir(path, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
 	target := filepath.Join(directory, "book.cue")
-	original := []byte("original")
-	if err := os.WriteFile(target, original, 0o600); err != nil {
+	source := []byte(`[{Name: "old"}]`)
+	if err := os.WriteFile(target, source, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	document := cuecontext.New().CompileBytes(source)
+	if err := document.Err(); err != nil {
+		t.Fatal(err)
+	}
+	change, err := ReplaceStructListEntry(source, document.LookupPath(cuePathIndex(0)), []byte(`{Name: "new"}`))
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	renameErr := errors.New("rename denied")
-	err := replaceFileAtomically(target, directory, []byte("replacement"), 0o600, func(string, string) error {
-		return renameErr
-	})
-	if !errors.Is(err, renameErr) {
-		t.Fatalf("replaceFileAtomically() error = %v, want %v", err, renameErr)
+	// The swap file is created in a writable sibling directory, so it can be
+	// written and cleaned up, but renaming it into the read-only target
+	// directory fails.
+	stageInSwapDirectory := func(targetPath string) (string, fs.File, error) {
+		file, err := os.CreateTemp(swapDirectory, "."+filepath.Base(targetPath)+"-*.tmp")
+		if err != nil {
+			return "", nil, err
+		}
+		return file.Name(), file, nil
+	}
+	if err := os.Chmod(directory, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(directory, 0o755) })
+
+	_, err = commitInDirectory(t, directory, "book.cue", change, stageInSwapDirectory)
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Fatalf("Commit() error = %v, want %v", err, fs.ErrPermission)
 	}
 	got, err := os.ReadFile(target)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(got, original) {
+	if !bytes.Equal(got, source) {
 		t.Fatalf("target changed after failed rename: %q", got)
 	}
-	entries, err := os.ReadDir(directory)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(entries) != 1 || entries[0].Name() != filepath.Base(target) {
-		t.Fatalf("directory entries after failed rename = %v, want only target", entries)
+	for _, check := range []struct {
+		path string
+		want int
+	}{
+		{path: directory, want: 1},
+		{path: swapDirectory, want: 0},
+	} {
+		entries, err := os.ReadDir(check.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(entries) != check.want {
+			t.Fatalf("%s entries after failed rename = %v, want %d (swap file must be removed)", check.path, entries, check.want)
+		}
 	}
 }
 
@@ -519,7 +574,14 @@ func TestCommitLeavesOriginalUntouchedWhenSwapDirectoryIsMissing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = Commit(target, filepath.Join(directory, "missing"), change)
+	missingSwapDirectory := func(targetPath string) (string, fs.File, error) {
+		file, err := os.CreateTemp(filepath.Join(directory, "missing"), "."+filepath.Base(targetPath)+"-*.tmp")
+		if err != nil {
+			return "", nil, err
+		}
+		return file.Name(), file, nil
+	}
+	_, err = commitInDirectory(t, directory, "book.cue", change, missingSwapDirectory)
 	if err == nil {
 		t.Fatal("Commit() error = nil, want temporary-file creation error")
 	}
@@ -548,7 +610,7 @@ func TestCommitLeavesOriginalUntouchedWhenPatchCannotApply(t *testing.T) {
 	}
 	change := deletePatch{Target: ByteAnchor{Content: []byte("missing")}}
 
-	if _, err := Commit(target, directory, change); !errors.Is(err, ErrByteRangeNotFound) {
+	if _, err := commitInDirectory(t, directory, "book.cue", change, nil); !errors.Is(err, ErrByteRangeNotFound) {
 		t.Fatalf("Commit() error = %v, want %v", err, ErrByteRangeNotFound)
 	}
 	got, err := os.ReadFile(target)
@@ -579,7 +641,7 @@ func TestCommitLeavesOriginalUntouchedWhenValidationFails(t *testing.T) {
 		Replacement: ByteAnchor{Content: []byte(`"not a list"`)},
 	}
 
-	if _, err := Commit(target, directory, change); err == nil {
+	if _, err := commitInDirectory(t, directory, "book.cue", change, nil); err == nil {
 		t.Fatal("Commit() error = nil, want validation error")
 	}
 	got, err := os.ReadFile(target)

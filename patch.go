@@ -2,6 +2,7 @@ package cuebook
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"hash/fnv"
@@ -9,8 +10,6 @@ import (
 	"iter"
 	"log/slog"
 	"math/big"
-	"os"
-	"path/filepath"
 
 	"cuelang.org/go/cue"
 )
@@ -106,12 +105,12 @@ func (r Result) LogValue() slog.Value {
 	)
 }
 
-// Commit applies a patch to fresh source, validates the result, then atomically
-// replaces targetPath. swapPath is the staging directory; it must be on the same
-// filesystem as targetPath for the atomic rename to succeed. An empty swapPath
-// uses the target directory.
-func Commit(targetPath, swapPath string, p Patch) (r Result, err error) {
-	source, err := os.ReadFile(targetPath)
+// Commit reads the named file from fs, applies a patch to that fresh source,
+// validates the result, then writes it back. Atomicity of the write is provided
+// by the [FileSystem]; the one from [NewFileSystem] renames a temporary file
+// over the original and preserves its permissions.
+func Commit(ctx context.Context, fs FileSystem, name string, p Patch) (r Result, err error) {
+	source, err := fs.ReadFile(ctx, name)
 	if err != nil {
 		return r, err
 	}
@@ -132,14 +131,7 @@ func Commit(targetPath, swapPath string, p Patch) (r Result, err error) {
 	r.Hash = hash.Sum64()
 	r.LastChange = p
 
-	targetInfo, err := os.Stat(targetPath)
-	if err != nil {
-		return r, err
-	}
-	if swapPath == "" {
-		swapPath = filepath.Dir(targetPath)
-	}
-	if err = replaceFileAtomically(targetPath, swapPath, r.Source, targetInfo.Mode().Perm(), os.Rename); err != nil {
+	if err = fs.WriteFile(ctx, name, r.Source); err != nil {
 		return r, err
 	}
 	return r, nil
