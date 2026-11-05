@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"slices"
 	"testing"
 
+	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 )
 
@@ -183,5 +185,100 @@ func TestFieldDefinitionExtraction(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("testing source %d", i), requirePresentFieldDefinitions(testCase.Source, testCase.ExpectedDefinitions))
+	}
+}
+
+func TestEachFieldDefinitionUsesAbstractListConjunct(t *testing.T) {
+	tests := []struct {
+		name      string
+		source    string
+		want      []string
+		kindField string
+		wantKind  cue.Kind
+	}{
+		{
+			name: "skips an optional field only in the concrete entry",
+			source: `#Entry: {
+				Name: string
+				AbstractOptional?: string
+			}
+
+			[...#Entry] & [{Name: "Ada", ConcreteOptional?: string}]`,
+			want: []string{"Name", "AbstractOptional"},
+		},
+		{
+			name: "retains abstract fields when the concrete list is empty",
+			source: `#Entry: {
+				Name: string
+				AbstractOptional?: string
+			}
+
+			[...#Entry] & []`,
+			want: []string{"Name", "AbstractOptional"},
+		},
+		{
+			name: "unifies multiple abstract list constraints",
+			source: `#Entry: {
+				Name: string
+				AbstractOptional?: string
+				...
+			}
+
+			[...#Entry] & [...{Additional: string}] & [{Name: "Ada", Additional: "value", ConcreteOptional?: string}]`,
+			want: []string{"Name", "AbstractOptional", "Additional"},
+		},
+		{
+			name: "uses the left side of an abstract disjunction",
+			source: `[...({
+				Name: string
+				LeftOptional?: string
+			} | {
+				Name: string
+				RightOptional?: string
+			})] & [{Name: "Ada"}]`,
+			want: []string{"Name", "LeftOptional"},
+		},
+		{
+			name: "uses the left schema alternative and preserves field alternatives",
+			source: `#email: =~"^[^@]+@[^@]+$"
+			[...({
+				Name: string
+				Email: #email | [...#email]
+				LeftOptional?: string
+			} | {
+				Name: string
+				Email: #email | [...#email]
+				RightOptional?: string
+			})] & [{Name: "Ada", Email: "ada@example.test"}]`,
+			want:      []string{"Name", "Email", "LeftOptional"},
+			kindField: "Email",
+			wantKind:  cue.StringKind,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			value := cuecontext.New().CompileString(test.source)
+			if err := value.Err(); err != nil {
+				t.Fatal(err)
+			}
+
+			var got []string
+			for selector, field := range EachFieldDefinition(value) {
+				name := selector.Unquoted()
+				got = append(got, name)
+				if name == test.kindField && field.IncompleteKind() != test.wantKind {
+					t.Errorf("%s definition kind = %s, want %s", name, field.IncompleteKind(), test.wantKind)
+				}
+			}
+			slices.Sort(got)
+			want := slices.Clone(test.want)
+			slices.Sort(want)
+			if !slices.Equal(got, want) {
+				t.Errorf("EachFieldDefinition() fields = %v, want %v", got, want)
+			}
+		})
 	}
 }

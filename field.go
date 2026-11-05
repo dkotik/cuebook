@@ -128,16 +128,34 @@ func EachFieldDefinition(value cue.Value) iter.Seq2[cue.Selector, cue.Value] {
 	return func(yield func(_ cue.Selector, value cue.Value) bool) {
 		path := cue.MakePath(cue.Index(0))
 		if length, _ := value.Len().Uint64(); length == 0 {
-			// insert an empty entry, so that field definitions are inheritted
-			// from conjuctions; otherwise field query will return cue.BottomKind
-			// without any way of enumerating the fields
+			// Insert an empty entry so fields can be enumerated from an empty list.
 			value = value.FillPath(path, ast.NewStruct())
 		}
 
 		entry := firstDisjunct(value.LookupPath(path))
+		// CUE exposes the concrete entry alongside each abstract list ellipsis.
+		if op, conjuncts := entry.Expr(); op == cue.AndOp {
+			var definition cue.Value
+			found := false
+			for _, conjunct := range conjuncts {
+				if _, ok := conjunct.Source().(*ast.Ellipsis); !ok {
+					continue
+				}
+				conjunct = firstDisjunct(conjunct)
+				if found {
+					definition = definition.Unify(conjunct)
+				} else {
+					definition = conjunct
+					found = true
+				}
+			}
+			if found {
+				entry = definition
+			}
+		}
 		next, _ := entry.Fields(cue.All())
 		for next.Next() {
-			if !yield(next.Selector(), next.Value()) {
+			if !yield(next.Selector(), firstDisjunct(next.Value())) {
 				break
 			}
 		}

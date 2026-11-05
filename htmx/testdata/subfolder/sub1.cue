@@ -11,8 +11,8 @@
 
 [...#contact] & [
   {
-		Name:  "Maria"
 		Email: "mr@sfsdf.com"
+		Name:  "Maria"
 		Notes: "sdfsdf"
 	},
   {
@@ -23,7 +23,7 @@
 		Introduced: true
 		check:      "sdfsfsdf sdf"
 		sdfsdfsdf: """
-			~~sdfsdf~~ 
+			~~sdfsdf~~
 
 
 

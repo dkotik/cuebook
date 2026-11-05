@@ -273,7 +273,7 @@ func TestLiteralNotSetBooleanUnset(t *testing.T) {
 		{name: "edit union", declaration: "Enabled?: bool | string"},
 		{name: "edit secret", declaration: "Enabled?: string @cuebook(argon2id)"},
 		{name: "add string", declaration: "Enabled?: string", add: true},
-		{name: "add union", declaration: "Enabled?: bool | string", add: true},
+		{name: "add union with string first", declaration: "Enabled?: string | bool", add: true},
 		{name: "add secret", declaration: "Enabled?: string @cuebook(argon2id)", add: true},
 	}
 	for _, tt := range tests {
