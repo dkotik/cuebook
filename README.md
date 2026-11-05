@@ -29,9 +29,6 @@ changes in data to other users and, most importantly, programs.
 - [x] the search index keeps accumulating entries
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
 - [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
-- [ ] add transactions methods to FS:
-  - [ ] BeginTransaction(ctx) (tx, error)
-  - [ ] WithTransaction(tx) error
 - [ ] add/delete entry button
 - [ ] add/delete field button
 - [ ] move default assigning logic from FormatAccordingToAttributes to entry form as auto-filled in value
