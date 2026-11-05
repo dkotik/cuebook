@@ -32,7 +32,7 @@ func (p insertAfter) Invert() Patch {
 
 func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 	content, err := format.Node(
-		value.Syntax(),
+		value.Syntax(entrySyntaxOptions...),
 		format.Simplify(),
 		format.IndentPrefix(1),
 		format.UseSpaces(4),

@@ -11,24 +11,24 @@
 [...#contact] & [
 
   {
-		Name:  "sdkjfhsdkjfh12!!as12" @cuebook(title)
+		Name:  "sdkjfhsdkjfh12!!as12"
 		Email: "123aa12312aa@2324.2343"
 		Notes: "sdfsfxcvxv"
 	},
   {
-		Name:  "third and finaleee" @cuebook(title)
+		Name:  "third and finaleee"
 		Email: "third@some.email2"
-		Notes: "1212a" @cuebook(detail)
+		Notes: "1212a"
 	},
   {
-		Name:  "23424n33" @cuebook(title)
+		Name:  "23424n33"
 		Email: "234234@31234a1.com"
 	},
   {
-		Name:     "23424n33" @cuebook(title)
+		Name:     "23424n33"
 		Email:    "234234@31234a1.com"
-		Notes:    ""                                                                                                  @cuebook(detail)
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$rz9uo6bqtm+hvX1eAgHFLg$ukWzs9q95VMjYjlqSVHv/fEsW/eYeb3CPZPu/RGNv8A" @cuebook(detail,trim,argon2id)
+		Notes:    ""
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$rz9uo6bqtm+hvX1eAgHFLg$ukWzs9q95VMjYjlqSVHv/fEsW/eYeb3CPZPu/RGNv8A"
 	},
   {
 		Name:     "12sdf33zz"

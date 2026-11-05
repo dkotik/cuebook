@@ -21,8 +21,8 @@
 
 [...#contact] & [
   {
-		Name:  "Maria12" @cuebook(title)
-		Email: "mr1@sfsdf.com"
+		Name:  "Maria12"
+		Email: "mr121@sfsdf.com"
 		Notes: """
 			# laskdjasldkj asd
 
@@ -30,7 +30,7 @@
 
 
 
-			sdf sd fsdf 
+			sdf sd fsdf
 
 			dsfsdf
 
@@ -53,7 +53,7 @@
 			- \\[ \\] sdfsdf
 
 
-			""" @cuebook(detail,multiline)
+			"""
 	},
   {
 		Name:  "dsf lsadjl fksjdfl ksjdflkj"
@@ -61,7 +61,7 @@
 		Notes: "skdjfksjd fs"
 	},
   {
-		Name:  "new entry" @cuebook(title)
+		Name:  "new entry"
 		Email: "test1@doodod.co"
 	},
   {
@@ -73,19 +73,19 @@
 		Email: "sdfjkh@sdfs1df.com"
 	},
   {
-		Name:  "23424n33" @cuebook(title)
+		Name:  "23424n33"
 		Email: "234234@31234a1.com"
 	},
   {
-		Name:  "xcxcx" @cuebook(title)
+		Name:  "xcxcx"
 		Email: "cvxvxcv@ds1afsd.com"
 	},
   {
-		Name:  "xcxcx" @cuebook(title)
+		Name:  "xcxcx"
 		Email: "cvxvxcv@ds1afsd.com"
 	},
   {
-		Name:  "Maria" @cuebook(title)
+		Name:  "Maria"
 		Email: "mr@sfsdf.com"
 	},
   {

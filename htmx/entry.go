@@ -132,6 +132,6 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 }
 
 func entryCUESource(value cue.Value) (string, error) {
-	source, err := format.Node(value.Syntax(cue.Final(), cue.Concrete(true)), format.Simplify())
+	source, err := format.Node(value.Syntax(cue.Final(), cue.Concrete(true), cue.Attributes(false)), format.Simplify())
 	return string(source), err
 }

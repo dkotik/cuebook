@@ -91,6 +91,10 @@ func TestEntryCopyRoundTripsThroughPaste(t *testing.T) {
 				t.Fatalf("copy payload count = %d, want 1", len(matches))
 			}
 			payload := html.UnescapeString(matches[0][1])
+			// No test value contains "@", so any occurrence is a leaked attribute.
+			if strings.Contains(payload, "@") {
+				t.Fatalf("copied CUE contains attributes: %s", payload)
+			}
 			copied := cuecontext.New().CompileString(payload)
 			if err := copied.Validate(cue.Concrete(true)); err != nil {
 				t.Fatalf("copied CUE is not standalone concrete data: %v; source: %s", err, payload)

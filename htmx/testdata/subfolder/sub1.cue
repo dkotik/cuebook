@@ -11,14 +11,14 @@
 
 [...#contact] & [
   {
-		Name:       "aFirst11111aaDD222Dzxa11" @cuebook(title)
-		Email:      "tes44taaa1@testdo1zzzzain.com"
-		Password:   "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg" @cuebook(detail,trim,argon2id) @cuebook(detail, trim, argon2id)
-		Notes:      "sdf sdfsdf12 dfdf"                                                                                 @cuebook(detail)
-		Introduced: true                                                                                                @cuebook()
+		Name:       "aFirst11111aaDD222Dzxa11"
+		Email:      "tes44taaa1ds1@testdo1zzzzain.com"
+		Password:   "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg"
+		Notes:      "sdf sdfsdf12 dfdf fdfgdsg"
+		Introduced: true
 	},
   {
-		Name:  "Maria" @cuebook(title)
+		Name:  "Maria"
 		Email: "mr@sfsdf.com"
 		Notes: "sdfsdf"
 	},
@@ -27,12 +27,12 @@
 		Email: "test1@testdomain.com"
 	},
   {
-		Name:       "new entry" @cuebook(title)
+		Name:       "new entry"
 		Email:      "test1@testdomain.com"
 		Introduced: false
 	},
   {
-		Name:  "23424n33" @cuebook(title)
+		Name:  "23424n33"
 		Email: "234234@31234a1.com"
 	},
   {
@@ -40,15 +40,15 @@
 		Email: "test1@testdom1ain.com"
 	},
   {
-		Name:  "Super Rambo 123" @cuebook(title)
+		Name:  "Super Rambo 123"
 		Email: "test1@testdom1ain.com"
 	},
   {
-		Name:  "Super Rambo 123" @cuebook(title)
+		Name:  "Super Rambo 123"
 		Email: "test1@tes333333tdom12ain.com"
 	},
   {
-		Name:  "Super Rambo 123" @cuebook(title)
+		Name:  "Super Rambo 123"
 		Email: "test1@testdom1ain.com"
 	},
   {
@@ -57,7 +57,7 @@
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$cGeXjMyixX+xY8EygAgeOA$dx6GkcrszSRQCO7TA/jhoBzpuj4hdDOWrEWh/w9Rtig"
 	},
   {
-		Name:  "2378" @cuebook(title)
+		Name:  "2378"
 		Email: "sdf@sdf.com1"
 	},
   {
@@ -66,9 +66,9 @@
 		Password: "$argon2id$v=19$m=65536,t=3,p=4$lFPpEgVBiY1UicU755JcKg$j+KEEZIwJPJafycCnfAS035HiGsiuaMns5npt2wZGlI"
 	},
   {
-		Name:     "ksjdhf" @cuebook(title)
+		Name:     "ksjdhf"
 		Email:    "sjdkfh@sdfsdf.com"
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$medTMHpZfMcS6rdxNaMa+w$dnueH6PynLQroKz/4jXR9YuxoQtMu7VVjk0fUt+j3iM" @cuebook(detail,trim,argon2id)
+		Password: "$argon2id$v=19$m=65536,t=3,p=4$medTMHpZfMcS6rdxNaMa+w$dnueH6PynLQroKz/4jXR9YuxoQtMu7VVjk0fUt+j3iM"
 		Notes:    "sdfsdf"
 	},
   {
@@ -83,9 +83,9 @@
 		Notes: "sdfsdf"
 	},
   {
-		Name:       "test" @cuebook(title)
+		Name:       "test"
 		Email:      "sdfsdf@dsfasdf.com"
-		Notes:      "kljlj" @cuebook(detail)
+		Notes:      "kljlj"
 		Introduced: true
 	},
   {
@@ -101,11 +101,11 @@
 		Email: "test1@testdomain.com"
 	},
   {
-		Name:  "new entry" @cuebook(title)
+		Name:  "new entry"
 		Email: "test1@testdomain.com"
 	},
   {
-		Name:  "new entry" @cuebook(title)
+		Name:  "new entry"
 		Email: "test1@testdomain.com"
 	}
 ]

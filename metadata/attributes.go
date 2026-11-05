@@ -132,6 +132,9 @@ func GetFieldAttributes(v cue.Value, name string) AttributeFields {
 						params, _ = url.ParseQuery(query)
 					}
 				}
+				if key == "" {
+					continue
+				}
 
 				if !yield(AttributeField{
 					Key:   key,
