@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 

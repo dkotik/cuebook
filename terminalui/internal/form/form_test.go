@@ -3,8 +3,8 @@ package form_test
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/form"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
@@ -53,7 +53,7 @@ func TestFormLabelLayout(t *testing.T) {
 			t.Parallel()
 			recorder := &layoutRecorder{}
 			model := form.New(tt.configuration)
-			model, _ = model.Init()
+			_ = model.Init()
 			model, _ = model.Update(list.SetItems(recorder)())
 			model, _ = model.Update(tea.WindowSizeMsg{Width: tt.width, Height: 20})
 			if len(recorder.layouts) != 1 {
@@ -80,10 +80,10 @@ func TestFormStyle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			render := func(model tea.Model) string {
-				model, _ = model.Init()
+				_ = model.Init()
 				model, _ = model.Update(list.SetItems(text("field"))())
 				model, _ = model.Update(tea.WindowSizeMsg{Width: 40, Height: 5})
-				return model.View()
+				return model.View().Content
 			}
 			got := render(form.New(form.Configuration{Style: tt.style}))
 			want := render(list.New(list.Configuration{Style: tt.style}))
@@ -124,7 +124,7 @@ type layoutRecorder struct {
 	layouts []label.LayoutChangeEvent
 }
 
-func (r *layoutRecorder) Init() (tea.Model, tea.Cmd) { return r, nil }
+func (r *layoutRecorder) Init() tea.Cmd { return nil }
 
 func (r *layoutRecorder) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if layout, ok := msg.(label.LayoutChangeEvent); ok {
@@ -133,10 +133,10 @@ func (r *layoutRecorder) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return r, nil
 }
 
-func (*layoutRecorder) View() string { return "" }
+func (*layoutRecorder) View() tea.View { return tea.NewView("") }
 
 type text string
 
-func (t text) Init() (tea.Model, tea.Cmd)          { return t, nil }
+func (t text) Init() tea.Cmd                       { return nil }
 func (t text) Update(tea.Msg) (tea.Model, tea.Cmd) { return t, nil }
-func (t text) View() string                        { return string(t) }
+func (t text) View() tea.View                      { return tea.NewView(string(t)) }

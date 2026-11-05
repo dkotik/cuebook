@@ -1,8 +1,8 @@
 package textarea
 
 import (
-	"github.com/charmbracelet/bubbles/v2/textarea"
-	tea "github.com/charmbracelet/bubbletea/v2"
+	"charm.land/bubbles/v2/textarea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func ScrollFix(ta textarea.Model) textarea.Model {

@@ -3,11 +3,11 @@ package status
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/v2/help"
-	"github.com/charmbracelet/bubbles/v2/key"
-	"github.com/charmbracelet/bubbles/v2/spinner"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
@@ -49,8 +49,8 @@ type model struct {
 	Error       error
 }
 
-func (m model) Init() (tea.Model, tea.Cmd) {
-	return m, nil // m.Spinner.Tick
+func (m model) Init() tea.Cmd {
+	return nil // m.Spinner.Tick
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

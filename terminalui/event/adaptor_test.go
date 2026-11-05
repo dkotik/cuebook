@@ -3,7 +3,7 @@ package event_test
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/internal/card"
 )
@@ -17,7 +17,7 @@ func TestUpdateAdaptor(t *testing.T) {
 			return 7
 		}
 	})(card)
-	adapted, _ = adapted.Init()
+	_ = adapted.Init()
 
 	adapted, cmd := adapted.Update(testEvent("test"))
 	if cmd() != 7 {

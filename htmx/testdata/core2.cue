@@ -8,7 +8,6 @@
 }
 
 [...#contact] & [
-
   {
 		Name:  "sdkjfhsdkjfh12!!as12"
 		Email: "123aa12312aa@2324.2343"

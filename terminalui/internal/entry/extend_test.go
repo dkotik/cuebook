@@ -3,13 +3,16 @@ package entry
 import (
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
 	"github.com/dkotik/cuebook/terminalui/window"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"golang.org/x/text/language"
 )
 
 func TestLoadFieldsOffersExtendButtonForOpenEntries(t *testing.T) {
@@ -61,9 +64,24 @@ func TestFormAddsFieldWithNameKindAndValueFromOneForm(t *testing.T) {
 			want: `[{Name: "Ada", Age: -1.5}]`, wantOrder: []string{"Name", "Age"},
 		},
 		{
-			name: "boolean chosen by going left",
-			keys: keys(typed("Active"), down, left, down, typed("true"), ctrlS),
+			name: "boolean defaults to false",
+			keys: keys(typed("Active"), down, left, ctrlS),
+			want: `[{Name: "Ada", Active: false}]`, wantOrder: []string{"Name", "Active"},
+		},
+		{
+			name: "boolean true is chosen, not typed",
+			keys: keys(typed("Active"), down, left, down, right, ctrlS),
 			want: `[{Name: "Ada", Active: true}]`, wantOrder: []string{"Name", "Active"},
+		},
+		{
+			name: "boolean ignores text typed before switching kinds",
+			keys: keys(typed("Active"), down, down, typed("text"), up, left, down, left, ctrlS),
+			want: `[{Name: "Ada", Active: true}]`, wantOrder: []string{"Name", "Active"},
+		},
+		{
+			name: "text survives switching to boolean and back",
+			keys: keys(typed("Role"), down, down, typed("dev"), up, left, right, ctrlS),
+			want: `[{Name: "Ada", Role: "dev"}]`, wantOrder: []string{"Name", "Role"},
 		},
 		{
 			name: "empty value",
@@ -96,16 +114,13 @@ func TestFormAddsFieldWithNameKindAndValueFromOneForm(t *testing.T) {
 			}
 
 			var model tea.Model = newForm
-			model, cmd = model.Init()
-			model, _ = feed(model, runCommand(cmd))
-			// The window always sends a size; without one, text wraps at every
-			// character and moving down stays inside a field.
-			model, _ = model.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+			cmd = model.Init()
+			model, _ = feed(model, runWindowCommand(cmd))
 			var emitted []tea.Msg
 			for _, key := range tt.keys {
 				var out []tea.Msg
 				model, cmd = model.Update(key)
-				model, out = feed(model, runCommand(cmd))
+				model, out = feed(model, runWindowCommand(cmd))
 				emitted = append(emitted, out...)
 			}
 			var added *addFieldEvent
@@ -178,7 +193,6 @@ func TestNewFieldFormRejectsInvalidInput(t *testing.T) {
 		{name: "name with several lines", fieldName: "Role\nOwner", kind: cuebook.FieldKindString},
 		{name: "existing field", fieldName: "Name", kind: cuebook.FieldKindString},
 		{name: "text as number", fieldName: "Age", kind: cuebook.FieldKindNumber, value: "ten"},
-		{name: "unclear boolean", fieldName: "Active", kind: cuebook.FieldKindBoolean, value: "maybe"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -199,6 +213,41 @@ func TestNewFieldFormRejectsInvalidInput(t *testing.T) {
 	}
 }
 
+func TestNewFieldFormShowsBooleanChoicesOnlyForBooleans(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		kind cuebook.FieldKind
+		want bool
+	}{
+		{name: "string", kind: cuebook.FieldKindString},
+		{name: "multiline string", kind: cuebook.FieldKindMultiLine},
+		{name: "number", kind: cuebook.FieldKindNumber},
+		{name: "boolean", kind: cuebook.FieldKindBoolean, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var model tea.Model = newNewFieldForm(nil)
+			cmd := model.Init()
+			model, _ = feed(model, runWindowCommand(cmd))
+			model, cmd = model.Update(newFieldKindChanged(tt.kind))
+			model, _ = feed(model, runWindowCommand(cmd))
+			view := model.View().Content
+			if got := strings.Contains(view, "○ True") && strings.Contains(view, "◉ False"); got != tt.want {
+				t.Errorf("boolean choices shown = %t, want %t:\n%s", got, tt.want, view)
+			}
+		})
+	}
+}
+
+func TestNewFieldFormRendersBeforeItKnowsTheWindowSize(t *testing.T) {
+	t.Parallel()
+	var model tea.Model = newNewFieldForm([]string{"Name"})
+	_ = model.Init()
+	_ = model.View()
+}
+
 func TestFormRequiresSavedChangesBeforeAddingAField(t *testing.T) {
 	t.Parallel()
 	_, cards := loadEntry(t, `[{Name: "Ada"}]`, 0)
@@ -214,6 +263,7 @@ func TestFormRequiresSavedChangesBeforeAddingAField(t *testing.T) {
 
 var (
 	down  = tea.KeyPressMsg{Code: tea.KeyDown}
+	up    = tea.KeyPressMsg{Code: tea.KeyUp}
 	left  = tea.KeyPressMsg{Code: tea.KeyLeft}
 	right = tea.KeyPressMsg{Code: tea.KeyRight}
 	enter = tea.KeyPressMsg{Code: tea.KeyEnter}
@@ -241,18 +291,20 @@ func keys(groups ...any) []tea.KeyPressMsg {
 	return presses
 }
 
-// feed delivers messages that the new field form sends to itself, as the
-// window would, and returns the others.
+// feed delivers messages that the new field form sends to itself, and the
+// window's answers to its requests, as the window would. It returns the other
+// messages.
 func feed(model tea.Model, msgs []tea.Msg) (tea.Model, []tea.Msg) {
 	var others []tea.Msg
 	for len(msgs) > 0 {
 		msg := msgs[0]
 		msgs = msgs[1:]
 		switch msg.(type) {
-		case newFieldNameChanged, newFieldKindChanged, newFieldValueChanged, newFieldSubmitEvent:
+		case newFieldNameChanged, newFieldKindChanged, newFieldValueChanged, newFieldBooleanChanged, newFieldSubmitEvent,
+			tea.WindowSizeMsg, *i18n.Localizer:
 			var cmd tea.Cmd
 			model, cmd = model.Update(msg)
-			msgs = append(msgs, runCommand(cmd)...)
+			msgs = append(msgs, runWindowCommand(cmd)...)
 		default:
 			others = append(others, msg)
 		}
@@ -260,11 +312,25 @@ func feed(model tea.Model, msgs []tea.Msg) (tea.Model, []tea.Msg) {
 	return model, others
 }
 
-// runCommand runs cmd and the commands of any batch or sequence it returns,
-// in order, and collects the other messages. Messages that request a window
-// size or a localizer are not interesting here and are dropped, and so are
-// commands that wait, such as cursor blinks, which never return promptly.
+// runCommand is [runWindowCommand] without the window's answers.
 func runCommand(cmd tea.Cmd) []tea.Msg {
+	var msgs []tea.Msg
+	for _, msg := range runWindowCommand(cmd) {
+		switch msg.(type) {
+		case tea.WindowSizeMsg, *i18n.Localizer:
+		default:
+			msgs = append(msgs, msg)
+		}
+	}
+	return msgs
+}
+
+// runWindowCommand runs cmd and the commands of any batch or sequence it
+// returns, in order, and collects the messages. Requests for a window size or
+// a localizer are replaced with the window's answers, so that text does not
+// wrap at every character and labels are localized. Commands that wait, such
+// as cursor blinks, never return promptly and are dropped.
+func runWindowCommand(cmd tea.Cmd) []tea.Msg {
 	if cmd == nil {
 		return nil
 	}
@@ -283,13 +349,15 @@ func runCommand(cmd tea.Cmd) []tea.Msg {
 	if value := reflect.ValueOf(msg); value.Kind() == reflect.Slice && value.Type().Elem() == reflect.TypeFor[tea.Cmd]() {
 		var msgs []tea.Msg
 		for index := range value.Len() {
-			msgs = append(msgs, runCommand(value.Index(index).Interface().(tea.Cmd))...)
+			msgs = append(msgs, runWindowCommand(value.Index(index).Interface().(tea.Cmd))...)
 		}
 		return msgs
 	}
 	switch reflect.TypeOf(msg).String() {
-	case "tea.windowSizeMsg", "window.localizerRequestEvent":
-		return nil
+	case "tea.windowSizeMsg":
+		return []tea.Msg{tea.WindowSizeMsg{Width: 120, Height: 40}}
+	case "window.localizerRequestEvent":
+		return []tea.Msg{i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish), "en")}
 	}
 	return []tea.Msg{msg}
 }

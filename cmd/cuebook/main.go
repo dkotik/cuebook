@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui"
 	"github.com/urfave/cli/v3"
 )
@@ -32,8 +32,6 @@ func newCLICommand() *cli.Command {
 			p := tea.NewProgram(
 				ui,
 				tea.WithContext(ctx),
-				tea.WithAltScreen(),
-				tea.WithMouseCellMotion(),
 			)
 			go func() {
 				p.Send(terminalui.LoadFileEvent("test/testdata/simple.cue"))

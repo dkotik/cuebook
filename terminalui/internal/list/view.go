@@ -5,7 +5,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 func splitLines(s string) []string {
@@ -25,7 +26,7 @@ func (l List) forwardLineIterator() iter.Seq[string] {
 			if !yield(separator) {
 				return
 			}
-			for _, line := range splitLines(card.View()) {
+			for _, line := range splitLines(card.View().Content) {
 				if !yield(line) {
 					return
 				}
@@ -41,7 +42,7 @@ func (l List) reverseLineIterator() iter.Seq[string] {
 			if !yield(separator) {
 				return
 			}
-			lines := splitLines(l.Items[i].View())
+			lines := splitLines(l.Items[i].View().Content)
 			for j := len(lines) - 1; j >= 0; j-- {
 				if !yield(lines[j]) {
 					return
@@ -75,19 +76,19 @@ func (l List) reverseLineIterator() iter.Seq[string] {
 	}
 }
 
-func (l List) View() string {
+func (l List) View() tea.View {
 	total := len(l.Items)
 	if total == 0 {
-		return "<empty list>"
+		return tea.NewView("<empty list>")
 	}
 
-	view := l.Items[l.SelectedIndex].View()
+	view := l.Items[l.SelectedIndex].View().Content
 	space := l.Size.Height - lipgloss.Height(view)
 	if space < 0 {
 		l.fullScreenView.SetContent(view)
 		view = l.fullScreenView.View()
 	} else if space == 0 { // exact fit
-		return view
+		return tea.NewView(view)
 	} else {
 		below, stopBelow := iter.Pull(l.forwardLineIterator())
 		defer stopBelow()
@@ -149,8 +150,8 @@ func (l List) View() string {
 		view = lipgloss.JoinVertical(lipgloss.Left, lines...)
 	}
 
-	return l.Style.
+	return tea.NewView(l.Style.
 		Height(l.Size.Height).
 		MarginLeft(l.Size.Width / 4).
-		Render(view)
+		Render(view))
 }

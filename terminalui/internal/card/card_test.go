@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/card"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
@@ -95,7 +95,7 @@ func TestCardView(t *testing.T) {
 			model := card.New(tt.configuration)
 			model, _ = model.Update(tea.WindowSizeMsg{Width: tt.width, Height: 10})
 			model, _ = model.Update(list.HighlightHintEvent(tt.selected))
-			if got := model.View(); got != tt.want {
+			if got := model.View().Content; got != tt.want {
 				t.Errorf("View() =\n%q\nwant\n%q", got, tt.want)
 			}
 		})

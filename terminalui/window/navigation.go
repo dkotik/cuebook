@@ -1,7 +1,7 @@
 package window
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 func (w window) back() (tea.Model, tea.Cmd) {

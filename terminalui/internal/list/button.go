@@ -1,8 +1,8 @@
 package list
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
@@ -29,8 +29,8 @@ type button struct {
 	Focused      bool
 }
 
-func (b button) Init() (tea.Model, tea.Cmd) {
-	return b, nil
+func (b button) Init() tea.Cmd {
+	return nil
 }
 
 func (b button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -46,7 +46,7 @@ func (b button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		b.Width = msg.Width / 2
 	case HighlightHintEvent:
 		b.Focused = bool(msg)
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if msg.Key().Code == tea.KeyEnter {
 			return b, b.Command
 		}
@@ -54,7 +54,7 @@ func (b button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return b, nil
 }
 
-func (b button) View() string {
+func (b button) View() tea.View {
 	style := lipgloss.NewStyle().
 		Width(b.Width).
 		Foreground(lipgloss.Color("#999999"))
@@ -72,5 +72,5 @@ func (b button) View() string {
 		// PaddingLeft(1)
 	}
 
-	return style.Render("● " + b.Text)
+	return tea.NewView(style.Render("● " + b.Text))
 }

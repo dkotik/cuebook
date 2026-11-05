@@ -2,13 +2,15 @@ package markdown
 
 import (
 	"fmt"
+	"os"
 	"sync"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/glamour/ansi"
-	"github.com/charmbracelet/glamour/styles"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/glamour/v2"
+	"charm.land/glamour/v2/ansi"
+	"charm.land/glamour/v2/styles"
+	"charm.land/lipgloss/v2"
+	"github.com/dkotik/cuebook/terminalui/window"
 )
 
 // Configuration controls Markdown content and appearance.
@@ -24,7 +26,7 @@ type Configuration struct {
 
 // The background query is slow, so run it once and only when needed.
 var backgroundStyle = sync.OnceValue(func() string {
-	if lipgloss.HasDarkBackground() {
+	if lipgloss.HasDarkBackground(os.Stdin, os.Stdout) {
 		return styles.DarkStyle
 	}
 	return styles.LightStyle
@@ -41,7 +43,7 @@ func New(c Configuration) (_ tea.Model, err error) {
 		}
 		c.StyleConfig = config
 	}
-	return markdown{text: c.Text, style: *c.StyleConfig}, nil
+	return markdown{width: 40, text: c.Text, style: *c.StyleConfig}, nil
 }
 
 type markdown struct {
@@ -50,9 +52,8 @@ type markdown struct {
 	style ansi.StyleConfig
 }
 
-func (m markdown) Init() (tea.Model, tea.Cmd) {
-	m.width = 40
-	return m, tea.RequestWindowSize()
+func (m markdown) Init() tea.Cmd {
+	return window.RequestWindowSize()
 }
 
 func (m markdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -64,17 +65,17 @@ func (m markdown) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m markdown) View() string {
+func (m markdown) View() tea.View {
 	r, err := glamour.NewTermRenderer(
 		glamour.WithWordWrap(m.width),
 		glamour.WithStyles(m.style),
 	)
 	if err != nil {
-		return m.text
+		return tea.NewView(m.text)
 	}
 	out, err := r.Render(m.text)
 	if err != nil {
-		return m.text
+		return tea.NewView(m.text)
 	}
-	return out
+	return tea.NewView(out)
 }

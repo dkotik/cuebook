@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
@@ -179,8 +179,8 @@ type windowSignalModel struct {
 	err         error
 }
 
-func (m *windowSignalModel) Init() (tea.Model, tea.Cmd) {
-	return m, func() tea.Msg {
+func (m *windowSignalModel) Init() tea.Cmd {
+	return func() tea.Msg {
 		return windowSignalReadyMsg{}
 	}
 }
@@ -193,4 +193,4 @@ func (m *windowSignalModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *windowSignalModel) View() string { return "" }
+func (m *windowSignalModel) View() tea.View { return tea.NewView("") }

@@ -3,7 +3,7 @@ package event
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 type testParentModel struct {
@@ -47,8 +47,8 @@ func TestPropagateEvent(t *testing.T) {
 	}
 }
 
-func (c testChildModel) Init() (tea.Model, tea.Cmd) {
-	return c, nil
+func (c testChildModel) Init() tea.Cmd {
+	return nil
 }
 
 func (c testChildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -56,6 +56,6 @@ func (c testChildModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func (c testChildModel) View() string {
-	return ""
+func (c testChildModel) View() tea.View {
+	return tea.NewView("")
 }

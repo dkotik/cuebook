@@ -3,7 +3,7 @@ package list
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 type (
@@ -59,7 +59,7 @@ func ApplySelection(index int) tea.Cmd {
 	}
 }
 
-func (l List) applySelection(index int) (tea.Model, tea.Cmd) {
+func (l List) applySelection(index int) (List, tea.Cmd) {
 	total := len(l.Items)
 	if total == 0 {
 		return l, nil

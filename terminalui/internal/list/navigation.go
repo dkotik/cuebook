@@ -1,8 +1,8 @@
 package list
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "charm.land/bubbletea/v2"
 
-func (l List) navigate(msg tea.KeyMsg) (_ tea.Model, cmd tea.Cmd) {
+func (l List) navigate(msg tea.KeyPressMsg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg.Key().Code {
 	case tea.KeyTab:
 		if msg.Key().Mod == tea.ModShift {
@@ -28,7 +28,7 @@ func (l List) navigate(msg tea.KeyMsg) (_ tea.Model, cmd tea.Cmd) {
 		if cmd == nil {
 			if l.IsFullscreen() && !l.fullScreenView.AtBottom() {
 				var cmd tea.Cmd
-				l.fullScreenView.HalfViewDown()
+				l.fullScreenView.HalfPageDown()
 				return l, cmd
 			}
 
@@ -45,7 +45,7 @@ func (l List) navigate(msg tea.KeyMsg) (_ tea.Model, cmd tea.Cmd) {
 		if cmd == nil {
 			if l.IsFullscreen() && !l.fullScreenView.AtBottom() {
 				var cmd tea.Cmd
-				l.fullScreenView.HalfViewDown()
+				l.fullScreenView.HalfPageDown()
 				return l, cmd
 			}
 
@@ -69,7 +69,7 @@ func (l List) navigate(msg tea.KeyMsg) (_ tea.Model, cmd tea.Cmd) {
 		if cmd == nil {
 			if l.IsFullscreen() && !l.fullScreenView.AtTop() {
 				*l.fullScreenView, cmd = l.fullScreenView.Update(msg)
-				l.fullScreenView.HalfViewUp()
+				l.fullScreenView.HalfPageUp()
 				return l, cmd
 			}
 
@@ -86,7 +86,7 @@ func (l List) navigate(msg tea.KeyMsg) (_ tea.Model, cmd tea.Cmd) {
 		if cmd == nil {
 			if l.IsFullscreen() && !l.fullScreenView.AtTop() {
 				*l.fullScreenView, cmd = l.fullScreenView.Update(msg)
-				l.fullScreenView.HalfViewUp()
+				l.fullScreenView.HalfPageUp()
 				return l, cmd
 			}
 

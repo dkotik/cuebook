@@ -1,6 +1,6 @@
 package event
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "charm.land/bubbletea/v2"
 
 func If(condition bool, then ...tea.Cmd) tea.Cmd {
 	if condition {
@@ -31,8 +31,8 @@ func PropagateInit(
 	children []tea.Model,
 ) (out tea.Cmd) {
 	commands := make([]tea.Cmd, 0, len(children))
-	for i, child := range children {
-		children[i], out = child.Init()
+	for _, child := range children {
+		out = child.Init()
 		if out != nil {
 			commands = append(commands, out)
 		}

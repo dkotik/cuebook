@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/glamour/styles"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/glamour/v2"
+	"charm.land/glamour/v2/styles"
 	"github.com/dkotik/cuebook/terminalui/internal/markdown"
 )
 
@@ -57,7 +57,7 @@ func TestNew(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := model.View(); got != want {
+			if got := model.View().Content; got != want {
 				t.Errorf("View() =\n%q\nwant\n%q", got, want)
 			}
 		})

@@ -3,8 +3,8 @@ package label_test
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
@@ -87,8 +87,8 @@ func TestLabelStyles(t *testing.T) {
 			for _, highlighted := range tt.highlights {
 				model, _ = model.Update(list.HighlightHintEvent(highlighted))
 			}
-			want := lipgloss.JoinHorizontal(lipgloss.Left, tt.wantLabel, wrapped.View())
-			if got := model.View(); got != want {
+			want := lipgloss.JoinHorizontal(lipgloss.Left, tt.wantLabel, wrapped.View().Content)
+			if got := model.View().Content; got != want {
 				t.Errorf("View() = %q, want %q", got, want)
 			}
 			if len(wrapped.messages) != len(tt.highlights) {
@@ -145,14 +145,14 @@ func TestResponsiveLayout(t *testing.T) {
 			if text != "" {
 				text += ":"
 			}
-			want := wrapped.View()
+			want := wrapped.View().Content
 			if tt.wantHorizontal {
 				style = style.Align(lipgloss.Right).PaddingRight(1).Width(10)
 				want = lipgloss.JoinHorizontal(lipgloss.Left, style.Render(text), want)
 			} else if text != "" {
 				want = lipgloss.JoinVertical(lipgloss.Left, style.Render(text), want)
 			}
-			if got := model.View(); got != want {
+			if got := model.View().Content; got != want {
 				t.Errorf("View() = %q, want %q", got, want)
 			}
 		})
@@ -163,11 +163,11 @@ type recordingModel struct {
 	messages []tea.Msg
 }
 
-func (m *recordingModel) Init() (tea.Model, tea.Cmd) { return m, nil }
+func (m *recordingModel) Init() tea.Cmd { return nil }
 
 func (m *recordingModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.messages = append(m.messages, msg)
 	return m, nil
 }
 
-func (*recordingModel) View() string { return "value" }
+func (*recordingModel) View() tea.View { return tea.NewView("value") }

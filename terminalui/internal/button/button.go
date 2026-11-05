@@ -1,8 +1,8 @@
 package button
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
 
@@ -30,8 +30,8 @@ func New(c Configuration) tea.Model {
 	return button{Configuration: c}
 }
 
-func (b button) Init() (tea.Model, tea.Cmd) {
-	return b, nil
+func (b button) Init() tea.Cmd {
+	return nil
 }
 
 func (b button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -44,9 +44,9 @@ func (b button) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return b, nil
 }
 
-func (b button) View() string {
+func (b button) View() tea.View {
 	if b.Selected {
-		return b.ActiveStyle.Render(b.Text)
+		return tea.NewView(b.ActiveStyle.Render(b.Text))
 	}
-	return b.InactiveStyle.Render(b.Text)
+	return tea.NewView(b.InactiveStyle.Render(b.Text))
 }

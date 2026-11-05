@@ -4,8 +4,8 @@ import (
 	"slices"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
 
@@ -47,8 +47,8 @@ func New(c Configuration) tea.Model {
 	return card{Configuration: c}
 }
 
-func (c card) Init() (tea.Model, tea.Cmd) {
-	return c, nil
+func (c card) Init() tea.Cmd {
+	return nil
 }
 
 func (c card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -61,9 +61,9 @@ func (c card) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-func (c card) View() string {
+func (c card) View() tea.View {
 	if c.width < 4 {
-		return "</>"
+		return tea.NewView("</>")
 	}
 
 	state := c.InactiveStyle
@@ -81,5 +81,5 @@ func (c card) View() string {
 		_, _ = b.WriteRune('\n')
 		_, _ = b.WriteString(style.Inherit(c.DescriptionStyle).Render(line))
 	}
-	return b.String()
+	return tea.NewView(b.String())
 }

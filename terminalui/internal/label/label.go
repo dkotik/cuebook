@@ -1,8 +1,8 @@
 package label
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
 
@@ -57,9 +57,8 @@ type horizontalLabel struct {
 	Focused bool
 }
 
-func (l horizontalLabel) Init() (_ tea.Model, cmd tea.Cmd) {
-	l.Model, cmd = l.Model.Init()
-	return l, cmd
+func (l horizontalLabel) Init() tea.Cmd {
+	return l.Model.Init()
 }
 
 func (l horizontalLabel) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
@@ -99,12 +98,12 @@ func (l horizontalLabel) Render() string {
 	return l.GetStyle().Render(l.Text + ":")
 }
 
-func (l horizontalLabel) View() string {
-	return lipgloss.JoinHorizontal(
+func (l horizontalLabel) View() tea.View {
+	return tea.NewView(lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		l.Render(),
-		l.Model.View(),
-	)
+		l.Model.View().Content,
+	))
 }
 
 type verticalLabel struct {
@@ -127,13 +126,13 @@ func (l verticalLabel) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return l, cmd
 }
 
-func (l verticalLabel) View() string {
+func (l verticalLabel) View() tea.View {
 	if l.Text == "" {
 		return l.Model.View()
 	}
-	return lipgloss.JoinVertical(
+	return tea.NewView(lipgloss.JoinVertical(
 		lipgloss.Left,
 		l.Render(),
-		l.Model.View(),
-	)
+		l.Model.View().Content,
+	))
 }

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/textarea"
 )
 
@@ -47,7 +47,7 @@ func TestNew(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			model, _ = model.Init()
+			_ = model.Init()
 			_, cmd := model.Update(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
 			if tt.wantSubmitted == nil {
 				if cmd != nil {
@@ -103,7 +103,7 @@ func TestViewStyles(t *testing.T) {
 				t.Fatal(err)
 			}
 			model, _ = model.Update(tea.WindowSizeMsg{Width: 40, Height: 12})
-			view := model.View()
+			view := model.View().Content
 			label, body, _ := strings.Cut(view, "\n")
 			if strings.TrimRight(label, " ") != tt.wantLabel {
 				t.Errorf("label line = %q, want %q", label, tt.wantLabel)

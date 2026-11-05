@@ -1,9 +1,9 @@
 package form
 
 import (
-	"github.com/charmbracelet/bubbles/v2/textarea"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/textarea"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 	ta "github.com/dkotik/cuebook/terminalui/internal/textarea"
@@ -30,8 +30,8 @@ func NewField(name, value string, onChange func(string) tea.Cmd) tea.Model {
 	}, &label.Configuration{Text: name})
 }
 
-func (f field) Init() (tea.Model, tea.Cmd) {
-	return f, nil
+func (f field) Init() tea.Cmd {
+	return nil
 }
 
 func (f field) resizeInput() {
@@ -65,7 +65,7 @@ func (f field) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			return f.Blur()
 		}
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		var cmd tea.Cmd
 		switch msg.Key().Code {
 		case tea.KeyUp:
@@ -106,13 +106,13 @@ func (f field) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return f, nil
 }
 
-func (f field) View() string {
+func (f field) View() tea.View {
 	if f.selected {
 		// f.Input.Focus()
-		return f.Input.View()
+		return tea.NewView(f.Input.View())
 	}
 
-	return lipgloss.NewStyle().
+	return tea.NewView(lipgloss.NewStyle().
 		Width(f.width).
-		Render(f.Value)
+		Render(f.Value))
 }

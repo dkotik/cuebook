@@ -6,7 +6,7 @@ import (
 
 	"log/slog"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui"
 	"github.com/dkotik/cuebook/terminalui/event"
 

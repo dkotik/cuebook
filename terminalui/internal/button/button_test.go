@@ -3,8 +3,8 @@ package button_test
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/button"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
@@ -65,7 +65,7 @@ func TestButtonView(t *testing.T) {
 			for _, highlighted := range tt.highlights {
 				model, _ = model.Update(list.HighlightHintEvent(highlighted))
 			}
-			if got := model.View(); got != tt.want {
+			if got := model.View().Content; got != tt.want {
 				t.Errorf("View() = %q, want %q", got, tt.want)
 			}
 		})

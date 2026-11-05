@@ -1,7 +1,7 @@
 package internal
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 )
 
@@ -50,13 +50,13 @@ func (h patchHistoryTracker) redo() (tea.Model, tea.Cmd) {
 	)
 }
 
-func (h patchHistoryTracker) Init() (tea.Model, tea.Cmd) {
-	return h, nil
+func (h patchHistoryTracker) Init() tea.Cmd {
+	return nil
 }
 
 func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if msg.Key().Code == 'z' {
 			if msg.Key().Mod == tea.ModShift {
 				return h.redo()
@@ -84,4 +84,4 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return h, nil
 }
 
-func (h patchHistoryTracker) View() string { return "<patch history>" }
+func (h patchHistoryTracker) View() tea.View { return tea.NewView("<patch history>") }

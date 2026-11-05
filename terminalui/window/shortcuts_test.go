@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
 
@@ -56,7 +56,7 @@ func TestTerminalShortcuts(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					model, _ = model.Init()
+					_ = model.Init()
 					if state.busy {
 						model, _ = model.Update(window.SetBusyEvent(true))
 					}
@@ -96,19 +96,19 @@ func TestTerminalShortcuts(t *testing.T) {
 }
 
 type shortcutModel struct {
-	keys []tea.KeyMsg
+	keys []tea.KeyPressMsg
 }
 
 type childHandledKey struct{}
 
-func (m *shortcutModel) Init() (tea.Model, tea.Cmd) { return m, nil }
+func (m *shortcutModel) Init() tea.Cmd { return nil }
 
 func (m *shortcutModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if key, ok := msg.(tea.KeyMsg); ok {
+	if key, ok := msg.(tea.KeyPressMsg); ok {
 		m.keys = append(m.keys, key)
 		return m, func() tea.Msg { return childHandledKey{} }
 	}
 	return m, nil
 }
 
-func (*shortcutModel) View() string { return "" }
+func (*shortcutModel) View() tea.View { return tea.NewView("") }

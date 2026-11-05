@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/v2/key"
-	"github.com/charmbracelet/bubbles/v2/textarea"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/textarea"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
@@ -59,18 +59,20 @@ func New(c Configuration) (_ tea.Model, err error) {
 	m.textarea.Placeholder = "..."
 	m.textarea.ShowLineNumbers = false
 	m.textarea.CharLimit = 1 << 20 // 1mb
-	focused := m.textarea.Styles.Focused.Text.Border(lipgloss.NormalBorder(), true, true, true, true)
-	m.textarea.Styles.Focused.Text = c.TextStyle.Inherit(focused)
+	styles := m.textarea.Styles()
+	focused := styles.Focused.Text.Border(lipgloss.NormalBorder(), true, true, true, true)
+	styles.Focused.Text = c.TextStyle.Inherit(focused)
+	m.textarea.SetStyles(styles)
 
 	lc := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
 	m.saveKey = window.NewSaveKey(lc)
+	m.textarea.Focus()
+	m.textarea = ScrollFix(m.textarea)
 	return m, nil
 }
 
-func (t Textarea) Init() (tea.Model, tea.Cmd) {
-	t.textarea.Focus()
-	t.textarea = ScrollFix(t.textarea) // TODO: does not seem to work
-	return t, tea.RequestWindowSize()
+func (t Textarea) Init() tea.Cmd {
+	return window.RequestWindowSize()
 }
 
 func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -78,7 +80,7 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		t.textarea.SetWidth(msg.Width*3/4 - 2)
 		t.textarea.SetHeight(msg.Height*3/4 - 2)
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if key.Matches(msg, t.saveKey) {
 			return t, t.OnSubmit(t.textarea.Value())
 		}
@@ -88,10 +90,10 @@ func (t Textarea) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return t, textareaCmd
 }
 
-func (t Textarea) View() string {
-	return lipgloss.JoinVertical(lipgloss.Left,
+func (t Textarea) View() tea.View {
+	return tea.NewView(lipgloss.JoinVertical(lipgloss.Left,
 		t.LabelStyle.Render(" "+t.Label+":"),
-		t.FrameStyle.Render(t.textarea.View()))
+		t.FrameStyle.Render(t.textarea.View())))
 }
 
 func (t Textarea) LogValue() slog.Value {

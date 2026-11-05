@@ -3,7 +3,7 @@ package window_test
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/card"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
@@ -16,7 +16,7 @@ func TestStatePreservationWhenSwitching(t *testing.T) {
 	}
 	var cmd tea.Cmd
 
-	w, cmd = w.Init()
+	cmd = w.Init()
 	w, cmd = w.Update(window.SwitchTo(nil))
 
 	t.Log(w, cmd)

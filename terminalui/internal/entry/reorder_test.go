@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
@@ -283,8 +283,8 @@ func loadEntry(t *testing.T, source string, index int) (cuebook.Result, fieldLis
 
 func openForm(t *testing.T, cards fieldListCards, selected int) tea.Model {
 	t.Helper()
-	var model tea.Model = form{Entry: cards.Entry}
-	model, _ = model.Init()
+	var model tea.Model = newForm(cards.Entry)
+	_ = model.Init()
 	model, _ = model.Update(cards)
 	model, _ = model.Update(list.ApplySelection(selected)())
 	return model

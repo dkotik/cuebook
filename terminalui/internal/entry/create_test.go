@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"cuelang.org/go/cue/cuecontext"
-	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/x/exp/teatest/v2"
 )
 
@@ -23,7 +23,7 @@ func TestCreateForm(t *testing.T) {
 		t.Fatal("unable to parse test file:", err)
 	}
 
-	tm := teatest.NewTestModel(t, createForm{})
+	tm := teatest.NewTestModel(t, newCreateForm(nil))
 	tm.Send(emitCreateFormFields(book))
 	tm.Send(tea.WindowSizeMsg{Width: 20, Height: 20})
 	waitForString(t, tm, "Quit? (y/N)")

@@ -1,6 +1,6 @@
 package event
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "charm.land/bubbletea/v2"
 
 type (
 	Middleware func(tea.Cmd) tea.Cmd
@@ -28,12 +28,12 @@ type decorator struct {
 	Middleware
 }
 
-func (d decorator) Init() (_ tea.Model, cmd tea.Cmd) {
-	d.Model, cmd = d.Model.Init()
+func (d decorator) Init() tea.Cmd {
+	cmd := d.Model.Init()
 	if cmd == nil {
-		return d, nil
+		return nil
 	}
-	return d, d.Middleware(cmd)
+	return d.Middleware(cmd)
 }
 
 func (d decorator) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {

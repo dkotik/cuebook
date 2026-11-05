@@ -1,7 +1,7 @@
 package entry
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
 	"github.com/dkotik/cuebook/terminalui/internal/label"

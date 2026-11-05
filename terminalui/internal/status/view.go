@@ -3,9 +3,11 @@ package status
 import (
 	"fmt"
 	"strings"
+
+	tea "charm.land/bubbletea/v2"
 )
 
-func (m model) View() string {
+func (m model) View() tea.View {
 	s := strings.Builder{}
 	if m.Busy {
 		_, _ = s.WriteString(m.Spinner.View())
@@ -18,5 +20,5 @@ func (m model) View() string {
 
 	_, _ = s.WriteString(fmt.Sprintf(" %v", m.Busy))
 
-	return s.String()
+	return tea.NewView(s.String())
 }

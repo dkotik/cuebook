@@ -1,7 +1,7 @@
 package internal
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/internal/file"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -41,7 +41,7 @@ func ParseFileToBookAndCreateEntryListIfNeeded(cmd tea.Cmd) tea.Cmd {
 		return parseBook(msg)
 	case file.ContentEvent:
 		return tea.Sequence(
-			func() tea.Msg { return window.SwitchTo(EntryList{}) },
+			func() tea.Msg { return window.SwitchTo(NewEntryList()) },
 			parseBook(msg),
 		)
 	default:

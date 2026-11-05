@@ -1,7 +1,7 @@
 package window
 
 import (
-	"github.com/charmbracelet/bubbles/v2/key"
+	"charm.land/bubbles/v2/key"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 

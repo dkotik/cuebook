@@ -3,7 +3,7 @@ package entry
 import (
 	"slices"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/terminalui/event"
@@ -155,10 +155,14 @@ func loadFieldsSelecting(cueEntry cuebook.Entry, name string) tea.Cmd {
 func NewForm(entry cuebook.Entry) tea.Cmd {
 	return tea.Sequence(
 		func() tea.Msg {
-			return window.SwitchTo(form{Entry: entry})
+			return window.SwitchTo(newForm(entry))
 		},
 		LoadFields(entry),
 	)
+}
+
+func newForm(entry cuebook.Entry) form {
+	return form{Model: newFieldList(), Entry: entry, Changes: make(map[string]string)}
 }
 
 type form struct {
@@ -188,29 +192,19 @@ func (f form) swappable(current, desired int) (a, b orderedField, ok bool) {
 	return a, b, a.InSource && b.InSource && a.Detail == b.Detail
 }
 
-func (f form) Init() (tea.Model, tea.Cmd) {
-	var (
-		listInit  tea.Cmd
-		buildInit tea.Cmd
-	)
-
-	f.Model, listInit = newFieldList().Init()
-	f.Changes = make(map[string]string)
-	fieldsInit := event.PropagateInit(f.Fields)
-	buttonsInit := event.PropagateInit(f.Buttons)
-	f, buildInit = f.buildForm()
-	return f, tea.Batch(
-		listInit,
-		fieldsInit,
-		buttonsInit,
-		buildInit,
+func (f form) Init() tea.Cmd {
+	return tea.Batch(
+		f.Model.Init(),
+		event.PropagateInit(f.Fields),
+		event.PropagateInit(f.Buttons),
+		window.RequestLocalizer(),
 	)
 }
 
 func (f form) buildForm() (_ form, cmd tea.Cmd) {
 	f.Model, cmd = f.Model.Update(list.SetItems(
 		append(f.Fields, f.Buttons...)...)())
-	return f, tea.Batch(cmd, tea.RequestWindowSize(), window.RequestLocalizer())
+	return f, tea.Batch(cmd, window.RequestWindowSize(), window.RequestLocalizer())
 }
 
 func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
@@ -306,13 +300,14 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		f.KnownFields = msg.KnownFieldNames
 		f.Entry = msg.Entry
 		f.Order = msg.Order
-		f.Model, cmd = newFieldList().Init()
+		f.Model = newFieldList()
+		cmd = f.Model.Init()
 		initCmd := event.PropagateInit(msg.Cards)
 		var setCmd, selectCmd tea.Cmd
 		f.Model, setCmd = f.Model.Update(list.SetItems(msg.Cards...)())
 		f.Model, selectCmd = f.Model.Update(list.ApplySelection(msg.SelectedIndex)())
-		return f, tea.Sequence(cmd, setCmd, initCmd, selectCmd, tea.RequestWindowSize(), window.RequestLocalizer())
-	case tea.KeyMsg:
+		return f, tea.Sequence(cmd, setCmd, initCmd, selectCmd, window.RequestWindowSize(), window.RequestLocalizer())
+	case tea.KeyPressMsg:
 		if msg.Key().Code == tea.KeyEscape && len(f.Changes) > 0 {
 			return f, window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{

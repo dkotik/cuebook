@@ -4,8 +4,8 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/muesli/reflow/truncate"
 )
@@ -31,16 +31,16 @@ type slideSwitch struct {
 	Size     tea.WindowSizeMsg
 }
 
-func (s slideSwitch) Init() (tea.Model, tea.Cmd) {
-	return s, tea.Batch(
-		tea.RequestWindowSize(),
+func (s slideSwitch) Init() tea.Cmd {
+	return tea.Batch(
+		RequestWindowSize(),
 		func() tea.Msg { return advanceSlideAnimation{} },
 	)
 }
 
 func (s slideSwitch) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if msg.Key().Code == tea.KeyEscape {
 			s.Reverse = true
 			return s, nil
@@ -68,7 +68,7 @@ func (s slideSwitch) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return s, nil
 }
 
-func (s slideSwitch) View() string {
+func (s slideSwitch) View() tea.View {
 	if s.Size.Width == 0 {
 		if s.Reverse {
 			return s.Left.View()
@@ -76,8 +76,8 @@ func (s slideSwitch) View() string {
 		return s.Right.View()
 	}
 
-	left := strings.Split(s.Left.View(), "\n")
-	right := strings.Split(s.Right.View(), "\n")
+	left := strings.Split(s.Left.View().Content, "\n")
+	right := strings.Split(s.Right.View().Content, "\n")
 	boundary := uint(float32(s.Size.Width) * min(s.Progress, 1.0))
 
 	w := strings.Builder{}
@@ -97,5 +97,5 @@ func (s slideSwitch) View() string {
 			_, _ = w.WriteRune('\n')
 		}
 	}
-	return w.String()
+	return tea.NewView(w.String())
 }

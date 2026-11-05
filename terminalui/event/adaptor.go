@@ -1,7 +1,7 @@
 package event
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 type eventAdaptor[T any] struct {
@@ -9,9 +9,8 @@ type eventAdaptor[T any] struct {
 	update func(tea.Model, T) (tea.Model, tea.Cmd)
 }
 
-func (u eventAdaptor[T]) Init() (_ tea.Model, cmd tea.Cmd) {
-	u.Model, cmd = u.Model.Init()
-	return u, cmd
+func (u eventAdaptor[T]) Init() tea.Cmd {
+	return u.Model.Init()
 }
 
 func (u eventAdaptor[T]) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
@@ -45,7 +44,7 @@ func NewKeySwitchAdaptor(
 	key tea.Key,
 	constructor func() tea.Model,
 ) func(tea.Model) tea.Model {
-	return NewAdaptor(func(m tea.Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	return NewAdaptor(func(m tea.Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		// if msg.Key() == key {
 		// 	return m, func() tea.Msg {
 		// 		return SwitchTo(constructor())

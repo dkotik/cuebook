@@ -1,10 +1,10 @@
 package entry
 
 import (
+	tea "charm.land/bubbletea/v2"
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
-	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
@@ -58,24 +58,25 @@ func emitCreateFormFields(value cue.Value) tea.Cmd {
 func NewCreateForm(source []byte, value cue.Value) tea.Cmd {
 	return tea.Sequence(
 		func() tea.Msg {
-			return window.SwitchTo(createForm{
-				Source: source,
-			})
+			return window.SwitchTo(newCreateForm(source))
 		},
 		emitCreateFormFields(value),
 	)
 }
 
-func (f createForm) Init() (_ tea.Model, cmd tea.Cmd) {
-	f.Model, cmd = listForm.New(listForm.Configuration{}).Init()
-	return f, cmd
+func newCreateForm(source []byte) createForm {
+	return createForm{Model: listForm.New(listForm.Configuration{}), Source: source}
+}
+
+func (f createForm) Init() tea.Cmd {
+	return f.Model.Init()
 }
 
 func (f createForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case createFormFields:
 		f.Model, cmd = f.Model.Update(list.SetItems(msg...)())
-		return f, tea.Sequence(cmd, tea.RequestWindowSize(), window.RequestLocalizer())
+		return f, tea.Sequence(cmd, window.RequestWindowSize(), window.RequestLocalizer())
 	case cuebook.Result:
 		f.Source = msg.Source
 		if _, ok := msg.LastChange.(createEntryPatch); ok {
@@ -122,8 +123,8 @@ type createButton struct {
 	tea.Model
 }
 
-func (d createButton) Init() (tea.Model, tea.Cmd) {
-	return d, nil
+func (d createButton) Init() tea.Cmd {
+	return nil
 }
 
 func (d createButton) Translate(lc *i18n.Localizer) (window.TranslatableModel, error) {
@@ -139,9 +140,9 @@ func (d createButton) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return d, cmd
 }
 
-func (d createButton) View() string {
+func (d createButton) View() tea.View {
 	if d.Model == nil {
-		return "..."
+		return tea.NewView("...")
 	}
 	return d.Model.View()
 }

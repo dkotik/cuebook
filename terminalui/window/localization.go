@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"unicode"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
@@ -68,14 +68,8 @@ type translatableModel struct {
 	TranslatableModel
 }
 
-func (t translatableModel) Init() (tea.Model, tea.Cmd) {
-	model, cmd := t.TranslatableModel.Init()
-	var ok bool
-	t.TranslatableModel, ok = model.(TranslatableModel)
-	if !ok {
-		return model, tea.Batch(cmd, func() tea.Msg { return fmt.Errorf("model of type %T is not translatable", model) })
-	}
-	return t, cmd
+func (t translatableModel) Init() tea.Cmd {
+	return t.TranslatableModel.Init()
 }
 
 func (t translatableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

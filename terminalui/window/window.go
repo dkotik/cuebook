@@ -12,9 +12,13 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
+
+func RequestWindowSize() tea.Cmd {
+	return func() tea.Msg { return tea.RequestWindowSize() }
+}
 
 func New(withOptions ...Option) (_ tea.Model, err error) {
 	o := &options{
@@ -41,6 +45,7 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 	}
 
 	lastModel := len(o.stack) - 1
+	lcBundle := cmp.Or(o.lcBundle, i18n.NewBundle(language.AmericanEnglish))
 	return window{
 		commandContext: cmp.Or(o.commandContext, context.Background()),
 		current:        o.stack[lastModel],
@@ -54,7 +59,8 @@ func New(withOptions ...Option) (_ tea.Model, err error) {
 		},
 		FlashLingerDuration: o.FlashLingerDuration,
 		FlashMaximumHeight:  o.FlashMaximumHeight,
-		lcBundle:            cmp.Or(o.lcBundle, i18n.NewBundle(language.AmericanEnglish)),
+		lcBundle:            lcBundle,
+		localizer:           i18n.NewLocalizer(lcBundle, "en"),
 		logger:              cmp.Or(o.logger, slog.Default()),
 	}, nil
 }
@@ -78,20 +84,16 @@ type window struct {
 	logger    *slog.Logger
 }
 
-func (w window) Init() (_ tea.Model, cmd tea.Cmd) {
-	w.localizer = i18n.NewLocalizer(w.lcBundle, "en")
+func (w window) Init() tea.Cmd {
 	all := make([]tea.Cmd, 0, len(w.stack)+len(w.watchers)+1)
-	for i, model := range w.watchers {
-		w.watchers[i], cmd = model.Init()
-		all = append(all, cmd)
+	for _, model := range w.watchers {
+		all = append(all, model.Init())
 	}
-	for i, model := range w.stack {
-		w.stack[i], cmd = model.Init()
-		all = append(all, cmd)
+	for _, model := range w.stack {
+		all = append(all, model.Init())
 	}
-	w.current, cmd = w.current.Init()
-	all = append(all, cmd)
-	return w, tea.Batch(all...)
+	all = append(all, w.current.Init())
+	return tea.Batch(all...)
 }
 
 func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
@@ -99,7 +101,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 
 	// Raw terminal mode turns these shortcuts into key events, not OS signals.
 	// Handle them before busy filtering or child models can consume them.
-	if key, ok := msg.(tea.KeyMsg); ok && key.Key().Mod == tea.ModCtrl {
+	if key, ok := msg.(tea.KeyPressMsg); ok && key.Key().Mod == tea.ModCtrl {
 		var command tea.Cmd
 		switch key.Key().Code {
 		case 'c', '\\':
@@ -137,9 +139,8 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		return w, msg.Translate(w.localizer)
 	case SwitchTo:
 		w.stack = append(w.stack, w.current)
-		var cmdInit tea.Cmd
-		w.current, cmdInit = msg.Init()
-		return w, cmdInit
+		w.current = tea.Model(msg)
+		return w, w.current.Init()
 	case BackEvent:
 		return w.back()
 	case SetBusyEvent:
@@ -160,7 +161,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			}
 		}
 		return w, nil
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if w.busy != 0 {
 			return w, nil // drop event if busy
 		}
@@ -195,7 +196,7 @@ func (w window) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		return w, w.RenderFlashMessage(msg)
 	case flashMessage:
 		w.flashMessage = &msg
-		return w, tea.RequestWindowSize()
+		return w, RequestWindowSize()
 	case tea.WindowSizeMsg:
 		if w.flashMessage != nil {
 			msg.Height = max(0, msg.Height-w.flashMessage.Height)

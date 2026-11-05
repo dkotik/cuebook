@@ -1,6 +1,6 @@
 package middleware
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import tea "charm.land/bubbletea/v2"
 
 type Middleware interface {
 	Wrap(tea.Model) tea.Model

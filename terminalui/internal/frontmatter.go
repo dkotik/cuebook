@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
@@ -29,9 +29,12 @@ type FrontMatterView struct {
 	state cuebook.Result
 }
 
-func (v FrontMatterView) Init() (_ tea.Model, cmd tea.Cmd) {
-	v.Model = list.New(list.Configuration{})
-	return v, nil
+func newFrontMatterView() tea.Model {
+	return FrontMatterView{Model: list.New(list.Configuration{})}
+}
+
+func (v FrontMatterView) Init() tea.Cmd {
+	return v.Model.Init()
 }
 
 func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {

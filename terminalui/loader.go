@@ -1,6 +1,9 @@
 package terminalui
 
-import tea "github.com/charmbracelet/bubbletea/v2"
+import (
+	tea "charm.land/bubbletea/v2"
+	"github.com/dkotik/cuebook/terminalui/window"
+)
 
 type ModelConstructor[T any] func(T) (tea.Model, error)
 
@@ -22,8 +25,8 @@ type loader[T any] struct {
 	modelConstructor ModelConstructor[T]
 }
 
-func (l *loader[T]) Init() (tea.Model, tea.Cmd) {
-	return l, tea.RequestWindowSize()
+func (l *loader[T]) Init() tea.Cmd {
+	return window.RequestWindowSize()
 }
 
 func (l *loader[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -44,9 +47,9 @@ func (l *loader[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// panic("another loader triggered loading complete")
 			return l, nil
 		}
-		var cmd tea.Cmd
-		l.Model, cmd = msg.constructed.Init()
-		return l, tea.Batch(tea.RequestWindowSize(), cmd)
+		l.Model = msg.constructed
+		cmd := l.Model.Init()
+		return l, tea.Batch(window.RequestWindowSize(), cmd)
 	}
 
 	var cmd tea.Cmd
@@ -56,10 +59,10 @@ func (l *loader[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return l, cmd
 }
 
-func (l *loader[T]) View() string {
+func (l *loader[T]) View() tea.View {
 	if l.Model == nil {
 		// TODO: flash screen?
-		return "<loading>"
+		return tea.NewView("<loading>")
 	}
 	return l.Model.View()
 }

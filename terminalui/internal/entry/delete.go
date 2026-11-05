@@ -1,7 +1,7 @@
 package entry
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 	"github.com/dkotik/cuebook/terminalui/window"
@@ -18,7 +18,12 @@ var deleteButtonText = &i18n.LocalizeConfig{
 type deleteEvent struct{}
 
 func NewDeleteButton() tea.Model {
-	return label.New(deleteButton{}, nil)
+	return label.New(deleteButton{
+		Model: list.NewButton(deleteButtonText, func() tea.Msg {
+			return deleteEvent{}
+		}),
+		Cancel: NewCancelButton(),
+	}, nil)
 }
 
 type deleteButton struct {
@@ -27,22 +32,18 @@ type deleteButton struct {
 	ShowCancel bool
 }
 
-func (d deleteButton) Init() (tea.Model, tea.Cmd) {
-	d.Model = list.NewButton(deleteButtonText, func() tea.Msg {
-		return deleteEvent{}
-	})
-	d.Cancel = NewCancelButton()
-	return d, nil
+func (d deleteButton) Init() tea.Cmd {
+	return tea.Batch(d.Model.Init(), d.Cancel.Init())
 }
 
 func (d deleteButton) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg.(type) {
 	case fieldChangedEvent:
 		d.ShowCancel = true
-		return d, tea.Batch(window.RequestLocalizer(), tea.RequestWindowSize())
+		return d, tea.Batch(window.RequestLocalizer(), window.RequestWindowSize())
 	case cancelEvent:
 		d.ShowCancel = false
-		return d, tea.Batch(window.RequestLocalizer(), tea.RequestWindowSize())
+		return d, tea.Batch(window.RequestLocalizer(), window.RequestWindowSize())
 	}
 
 	if d.ShowCancel {
@@ -53,7 +54,7 @@ func (d deleteButton) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return d, cmd
 }
 
-func (d deleteButton) View() string {
+func (d deleteButton) View() tea.View {
 	if d.ShowCancel {
 		return d.Cancel.View()
 	}

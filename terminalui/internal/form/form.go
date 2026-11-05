@@ -4,8 +4,9 @@ import (
 	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/dkotik/cuebook/terminalui/window"
 )
 
 const (
@@ -53,14 +54,13 @@ type form struct {
 	LabelWidthRatioToWindowWidth float32
 }
 
-func (f form) Init() (_ tea.Model, cmd tea.Cmd) {
-	f.Model, cmd = f.Model.Init()
-	return f, tea.Batch(cmd, tea.RequestWindowSize())
+func (f form) Init() tea.Cmd {
+	return tea.Batch(f.Model.Init(), window.RequestWindowSize())
 }
 
 func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.Key().Code {
 		case tea.KeyEscape:
 			return f, nil

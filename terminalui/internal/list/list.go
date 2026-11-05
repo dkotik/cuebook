@@ -1,9 +1,9 @@
 package list
 
 import (
-	"github.com/charmbracelet/bubbles/v2/viewport"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/event"
 )
 
@@ -24,12 +24,14 @@ func New(c Configuration) tea.Model {
 		c.OnSwapOrder = func(e SwapOrderEvent) tea.Msg { return e }
 	}
 	fs := viewport.New()
-	return List{
+	l := List{
 		Items:          c.Items,
 		Style:          c.Style.Inherit(lipgloss.NewStyle().AlignVertical(lipgloss.Center)),
 		fullScreenView: &fs,
 		onSwapOrder:    c.OnSwapOrder,
 	}
+	l, l.initCmd = l.applySelection(l.SelectedIndex)
+	return l
 }
 
 type List struct {
@@ -41,18 +43,18 @@ type List struct {
 
 	fullScreenView *viewport.Model
 	onSwapOrder    func(SwapOrderEvent) tea.Msg
+	initCmd        tea.Cmd
 }
 
-func (l List) Init() (m tea.Model, cmd tea.Cmd) {
-	m, cmd = l.applySelection(l.SelectedIndex) // TODO: deprecate?
-	return m, tea.Batch(event.PropagateInit(l.Items), cmd)
+func (l List) Init() tea.Cmd {
+	return tea.Batch(event.PropagateInit(l.Items), l.initCmd)
 }
 
 func (l List) IsFullscreen() bool {
 	if len(l.Items) == 0 {
 		return false
 	}
-	view := l.Items[l.SelectedIndex].View()
+	view := l.Items[l.SelectedIndex].View().Content
 	// l.fullScreenView.SetContent(view)
 	return lipgloss.Height(view) > l.Size.Height
 }
@@ -66,7 +68,7 @@ func (l List) UpdateSelected(msg tea.Msg) (_ List, cmd tea.Cmd) {
 
 func (l List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return l.navigate(msg)
 	case countRequestEvent:
 		return l, func() tea.Msg {

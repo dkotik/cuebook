@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/charmbracelet/bubbles/v2/filepicker"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/bubbles/v2/filepicker"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 type Command func(filePath string) tea.Cmd
@@ -122,17 +122,17 @@ func (f file) Load() (tea.Model, tea.Cmd) {
 	}
 }
 
-func (f file) Init() (_ tea.Model, cmd tea.Cmd) {
-	f.Model, cmd = f.Model.Init()
-	// if f.Path != "" {
-	// 	return f.Load() // TODO: skipping cmd!
-	// }
-	return f, cmd
+func (f file) Init() tea.Cmd {
+	return f.Model.Init()
+}
+
+func (f file) View() tea.View {
+	return tea.NewView(f.Model.View())
 }
 
 func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.Key().Code {
 		case tea.KeyEsc:
 			cwd, _ := os.Getwd()

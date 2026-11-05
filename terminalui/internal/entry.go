@@ -1,7 +1,7 @@
 package internal
 
 import (
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 type entrySelected int
@@ -16,14 +16,13 @@ type Entry struct {
 	Index int
 }
 
-func (e Entry) Init() (_ tea.Model, cmd tea.Cmd) {
-	e.Model, cmd = e.Model.Init()
-	return e, cmd
+func (e Entry) Init() tea.Cmd {
+	return e.Model.Init()
 }
 
 func (e Entry) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.Key().Code {
 		// case 'k', tea.KeyUp:
 		// 	if e.Index > 0 && !msg.Key().Mod.Contains(tea.ModCtrl) {

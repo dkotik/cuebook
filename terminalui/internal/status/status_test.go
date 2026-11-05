@@ -3,11 +3,11 @@ package status_test
 import (
 	"testing"
 
-	"github.com/charmbracelet/bubbles/v2/help"
-	"github.com/charmbracelet/bubbles/v2/key"
-	"github.com/charmbracelet/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
 
-	"github.com/charmbracelet/lipgloss/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/status"
 	"github.com/dkotik/cuebook/terminalui/window"
 )
@@ -82,7 +82,7 @@ func TestStatusView(t *testing.T) {
 			t.Parallel()
 			model := status.New(tt.configuration)
 			model, _ = model.Update(window.IsBusyEvent(tt.busy))
-			if got := model.View(); got != tt.want {
+			if got := model.View().Content; got != tt.want {
 				t.Errorf("View() = %q, want %q", got, tt.want)
 			}
 		})

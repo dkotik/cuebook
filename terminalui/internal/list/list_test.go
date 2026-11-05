@@ -3,8 +3,8 @@ package list_test
 import (
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
 
@@ -61,9 +61,9 @@ func TestListView(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			model := list.New(tt.configuration)
-			model, _ = model.Init()
+			_ = model.Init()
 			model, _ = model.Update(size)
-			if got := model.View(); got != tt.want {
+			if got := model.View().Content; got != tt.want {
 				t.Errorf("View() =\n%q\nwant\n%q", got, tt.want)
 			}
 		})
@@ -92,7 +92,7 @@ func TestListHighlightsSelectedItem(t *testing.T) {
 				models[i] = it
 			}
 			model := list.New(list.Configuration{Items: models})
-			model, _ = model.Init()
+			_ = model.Init()
 			model, _ = model.Update(tea.WindowSizeMsg{Width: 40, Height: 20})
 			for _, key := range tt.keys {
 				model, _ = model.Update(key)
@@ -139,7 +139,7 @@ func TestListSwapOrder(t *testing.T) {
 				Items:       []tea.Model{item("a"), item("b"), item("c")},
 				OnSwapOrder: tt.onSwapOrder,
 			})
-			model, _ = model.Init()
+			_ = model.Init()
 			model, _ = model.Update(list.ApplySelection(tt.selected)())
 			_, cmd := model.Update(tt.key)
 			var got tea.Msg
@@ -155,15 +155,15 @@ func TestListSwapOrder(t *testing.T) {
 
 type item string
 
-func (i item) Init() (tea.Model, tea.Cmd)          { return i, nil }
+func (i item) Init() tea.Cmd                       { return nil }
 func (i item) Update(tea.Msg) (tea.Model, tea.Cmd) { return i, nil }
-func (i item) View() string                        { return string(i) }
+func (i item) View() tea.View                      { return tea.NewView(string(i)) }
 
 type highlightItem struct {
 	highlighted bool
 }
 
-func (h *highlightItem) Init() (tea.Model, tea.Cmd) { return h, nil }
+func (h *highlightItem) Init() tea.Cmd { return nil }
 
 func (h *highlightItem) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if highlighted, ok := msg.(list.HighlightHintEvent); ok {
@@ -172,4 +172,4 @@ func (h *highlightItem) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return h, nil
 }
 
-func (*highlightItem) View() string { return "item" }
+func (*highlightItem) View() tea.View { return tea.NewView("item") }

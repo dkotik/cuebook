@@ -5,9 +5,9 @@ import (
 	"cmp"
 	"context"
 
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"cuelang.org/go/cue"
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/terminalui/event"
@@ -31,10 +31,12 @@ type EntryList struct {
 	selected int // *cuebook.ByteAnchor
 }
 
-func (l EntryList) Init() (_ tea.Model, cmd tea.Cmd) {
-	l.Model = list.New(list.Configuration{})
-	l.selected = -1
-	return l, nil
+func NewEntryList() tea.Model {
+	return EntryList{Model: list.New(list.Configuration{}), selected: -1}
+}
+
+func (l EntryList) Init() tea.Cmd {
+	return l.Model.Init()
 }
 
 type entryListCards struct {
@@ -108,14 +110,14 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		return l, LoadEntries(msg, l.selected)
 	case entryListCards:
 		l.selected = msg.SelectedIndex
-		l.Model, cmd = l.Model.Init()
+		cmd = l.Model.Init()
 		var setCmd, updateCmd tea.Cmd
 		l.Model, setCmd = l.Model.Update(list.SetItems(msg.Cards...)())
 		l.Model, updateCmd = l.Model.Update(list.ApplySelection(l.selected)())
 		return l, tea.Sequence(
 			cmd,
 			setCmd,
-			tea.RequestWindowSize(),
+			window.RequestWindowSize(),
 			window.RequestLocalizer(),
 			updateCmd,
 		)
@@ -146,7 +148,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			}
 			return p
 		}
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.Key().Code {
 		case 'x':
 			if msg.Key().Mod != tea.ModCtrl {
@@ -197,12 +199,12 @@ func LoadEntries(r cuebook.Result, selectionIndex int) tea.Cmd {
 			SelectedIndex: selectionIndex,
 		}
 
-		title := event.NewAdaptor[tea.KeyMsg](func(m tea.Model, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+		title := event.NewAdaptor[tea.KeyPressMsg](func(m tea.Model, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			switch msg.Key().Code {
 			case tea.KeyEnter:
 				return m, tea.Sequence(
 					func() tea.Msg {
-						return window.SwitchTo(FrontMatterView{})
+						return window.SwitchTo(newFrontMatterView())
 					},
 					func() tea.Msg {
 						return r // to populate the frontmatter view

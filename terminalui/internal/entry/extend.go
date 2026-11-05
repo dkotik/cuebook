@@ -4,8 +4,8 @@ import (
 	"slices"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/event"
 	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
@@ -35,10 +35,11 @@ type (
 
 	// These have their own types so the entry form below the new field form
 	// does not mistake them for changes to its own fields.
-	newFieldNameChanged  string
-	newFieldKindChanged  cuebook.FieldKind
-	newFieldValueChanged string
-	newFieldSubmitEvent  struct{}
+	newFieldNameChanged    string
+	newFieldKindChanged    cuebook.FieldKind
+	newFieldValueChanged   string
+	newFieldBooleanChanged string
+	newFieldSubmitEvent    struct{}
 )
 
 func NewExtendButton() tea.Model {
@@ -53,7 +54,9 @@ func NewExtendButton() tea.Model {
 	), nil)
 }
 
-// newFieldForm collects a new field's name, kind, and value.
+// newFieldForm collects a new field's name, kind, and value. A boolean value
+// is chosen from True and False; other values are typed. Both are kept, so
+// switching kinds back and forth does not lose what was entered.
 type newFieldForm struct {
 	tea.Model
 
@@ -61,25 +64,38 @@ type newFieldForm struct {
 	Name        string
 	Kind        cuebook.FieldKind
 	Value       string
+	Boolean     string
+	initCmd     tea.Cmd
 }
 
 func newNewFieldForm(knownFields []string) newFieldForm {
-	return newFieldForm{
+	f := newFieldForm{
 		Model:       listForm.New(listForm.Configuration{}),
 		KnownFields: knownFields,
 		Kind:        cuebook.FieldKinds()[0],
+		Boolean:     "false",
 	}
+	f, f.initCmd = f.setItemsWithInit(false)
+	return f
 }
 
-func (f newFieldForm) Init() (_ tea.Model, cmd tea.Cmd) {
+func (f newFieldForm) Init() tea.Cmd {
+	return tea.Sequence(f.Model.Init(), f.initCmd)
+}
+
+// setItems rebuilds the form rows from the form state. The list keeps its
+// selected row.
+func (f newFieldForm) setItems() (newFieldForm, tea.Cmd) {
+	return f.setItemsWithInit(true)
+}
+
+func (f newFieldForm) setItemsWithInit(initialize bool) (newFieldForm, tea.Cmd) {
 	items := []tea.Model{
-		listForm.NewField("Name", "", func(value string) tea.Cmd { // TODO: localize label
+		listForm.NewField("Name", f.Name, func(value string) tea.Cmd { // TODO: localize label
 			return func() tea.Msg { return newFieldNameChanged(value) }
 		}),
 		label.New(newKindSelector(f.Kind), &label.Configuration{Text: "Type"}), // TODO: localize label
-		listForm.NewField("Value", "", func(value string) tea.Cmd { // TODO: localize label
-			return func() tea.Msg { return newFieldValueChanged(value) }
-		}),
+		f.valueItem(),
 		label.New(list.NewButton(
 			&i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{ID: "bookEntryNewFieldSubmit", Other: "Add Field"},
@@ -87,11 +103,29 @@ func (f newFieldForm) Init() (_ tea.Model, cmd tea.Cmd) {
 			func() tea.Msg { return newFieldSubmitEvent{} },
 		), nil),
 	}
-	f.Model, cmd = f.Model.Init()
-	initCmd := event.PropagateInit(items)
+	var initCmd tea.Cmd
+	if initialize {
+		initCmd = event.PropagateInit(items)
+	}
 	var setCmd tea.Cmd
 	f.Model, setCmd = f.Model.Update(list.SetItems(items...)())
-	return f, tea.Sequence(cmd, initCmd, setCmd, tea.RequestWindowSize(), window.RequestLocalizer())
+	return f, tea.Sequence(initCmd, setCmd, window.RequestWindowSize(), window.RequestLocalizer())
+}
+
+func (f newFieldForm) valueItem() tea.Model {
+	if f.Kind == cuebook.FieldKindBoolean {
+		return label.New(newBooleanSelector(f.Boolean), &label.Configuration{Text: "Value"}) // TODO: localize label
+	}
+	return listForm.NewField("Value", f.Value, func(value string) tea.Cmd { // TODO: localize label
+		return func() tea.Msg { return newFieldValueChanged(value) }
+	})
+}
+
+func (f newFieldForm) value() string {
+	if f.Kind == cuebook.FieldKindBoolean {
+		return f.Boolean
+	}
+	return f.Value
 }
 
 func (f newFieldForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
@@ -100,14 +134,21 @@ func (f newFieldForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		f.Name = string(msg)
 		return f, nil
 	case newFieldKindChanged:
+		wasBoolean := f.Kind == cuebook.FieldKindBoolean
 		f.Kind = cuebook.FieldKind(msg)
+		if wasBoolean != (f.Kind == cuebook.FieldKindBoolean) {
+			return f.setItems()
+		}
 		return f, nil
 	case newFieldValueChanged:
 		f.Value = string(msg)
 		return f, nil
+	case newFieldBooleanChanged:
+		f.Boolean = string(msg)
+		return f, nil
 	case newFieldSubmitEvent:
 		return f, f.submit()
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// The list form turns Ctrl+S into a save event, which the entry form
 		// below would also act on. Submit this form instead.
 		if msg.Key().Code == 's' && msg.Key().Mod.Contains(tea.ModCtrl) {
@@ -138,86 +179,110 @@ func (f newFieldForm) submit() tea.Cmd {
 			TemplateData: map[string]any{"Name": name},
 		})
 	}
-	if err := f.Kind.ValidateValue(f.Value); err != nil {
+	value := f.value()
+	if err := f.Kind.ValidateValue(value); err != nil {
 		message := &i18n.Message{ID: "bookEntryInvalidFieldValue", Other: "The value is invalid."}
-		switch f.Kind {
-		case cuebook.FieldKindNumber:
+		if f.Kind == cuebook.FieldKindNumber {
 			message = &i18n.Message{ID: "bookEntryInvalidNumberValue", Other: "The value must be a number, such as 42 or -1.5."}
-		case cuebook.FieldKindBoolean:
-			message = &i18n.Message{ID: "bookEntryInvalidBooleanValue", Other: "The value must be true or false."}
 		}
 		return window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{DefaultMessage: message})
 	}
-	added := addFieldEvent{Name: name, Kind: f.Kind, Value: f.Value}
+	added := addFieldEvent{Name: name, Kind: f.Kind, Value: value}
 	return func() tea.Msg { return added }
 }
 
-var fieldKindMessages = map[cuebook.FieldKind]*i18n.Message{
-	cuebook.FieldKindString:    {ID: "bookEntryFieldKindString", Other: "String"},
-	cuebook.FieldKindMultiLine: {ID: "bookEntryFieldKindMultiLine", Other: "Multiline String"},
-	cuebook.FieldKindNumber:    {ID: "bookEntryFieldKindNumber", Other: "Number"},
-	cuebook.FieldKindBoolean:   {ID: "bookEntryFieldKindBoolean", Other: "Boolean"},
-}
-
-// kindSelector picks one of the field kinds. Left and right, or Enter and
-// space, change the kind; up and down move to the next form item.
-type kindSelector struct {
-	Kinds   []cuebook.FieldKind
-	Labels  []string
-	Index   int
-	Focused bool
-	Width   int
-}
-
-func newKindSelector(selected cuebook.FieldKind) kindSelector {
+func newKindSelector(selected cuebook.FieldKind) optionSelector {
 	kinds := cuebook.FieldKinds()
-	labels := make([]string, len(kinds))
+	options := make([]selectorOption, len(kinds))
 	for index, kind := range kinds {
-		labels[index] = kind.Label()
+		options[index] = selectorOption{
+			Value: string(kind),
+			Message: &i18n.Message{
+				ID:    "bookEntryFieldKind" + strings.ToUpper(string(kind[:1])) + string(kind[1:]),
+				Other: kind.Label(),
+			},
+		}
 	}
-	return kindSelector{
-		Kinds:  kinds,
-		Labels: labels,
-		Index:  max(0, slices.Index(kinds, selected)),
-	}
+	return newOptionSelector(options, string(selected), func(value string) tea.Msg {
+		return newFieldKindChanged(value)
+	})
 }
 
-func (s kindSelector) Init() (tea.Model, tea.Cmd) {
-	return s, nil
+func newBooleanSelector(selected string) optionSelector {
+	return newOptionSelector([]selectorOption{
+		{Value: "true", Message: &i18n.Message{ID: "bookEntryBooleanTrue", Other: "True"}},
+		{Value: "false", Message: &i18n.Message{ID: "bookEntryBooleanFalse", Other: "False"}},
+	}, selected, func(value string) tea.Msg {
+		return newFieldBooleanChanged(value)
+	})
 }
 
-func (s kindSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+type selectorOption struct {
+	Value   string
+	Message *i18n.Message
+}
+
+// optionSelector picks one of a few options on a single line. Left and right,
+// or Enter and space, change the option; up and down move to the next form
+// row.
+type optionSelector struct {
+	Options  []selectorOption
+	Labels   []string
+	Index    int
+	Focused  bool
+	Width    int
+	OnChange func(string) tea.Msg
+}
+
+func newOptionSelector(options []selectorOption, selected string, onChange func(string) tea.Msg) optionSelector {
+	labels := make([]string, len(options))
+	index := 0
+	for i, option := range options {
+		labels[i] = option.Message.Other
+		if option.Value == selected {
+			index = i
+		}
+	}
+	return optionSelector{Options: options, Labels: labels, Index: index, OnChange: onChange}
+}
+
+func (s optionSelector) Init() tea.Cmd {
+	return nil
+}
+
+func (s optionSelector) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case *i18n.Localizer:
-		for index, kind := range s.Kinds {
-			if message, ok := fieldKindMessages[kind]; ok {
-				if text, err := msg.Localize(&i18n.LocalizeConfig{DefaultMessage: message}); err == nil {
-					s.Labels[index] = text
-				}
+		// Copy so that selectors rebuilt from the same options do not share
+		// a label slice.
+		s.Labels = slices.Clone(s.Labels)
+		for index, option := range s.Options {
+			if text, err := msg.Localize(&i18n.LocalizeConfig{DefaultMessage: option.Message}); err == nil {
+				s.Labels[index] = text
 			}
 		}
 	case list.HighlightHintEvent:
 		s.Focused = bool(msg)
 	case tea.WindowSizeMsg:
 		s.Width = msg.Width
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.Key().Code {
 		case tea.KeyRight, tea.KeyEnter, tea.KeySpace, 'l':
-			return s.choose((s.Index + 1) % len(s.Kinds))
+			return s.choose((s.Index + 1) % len(s.Options))
 		case tea.KeyLeft, 'h':
-			return s.choose((s.Index + len(s.Kinds) - 1) % len(s.Kinds))
+			return s.choose((s.Index + len(s.Options) - 1) % len(s.Options))
 		}
 	}
 	return s, nil
 }
 
-func (s kindSelector) choose(index int) (tea.Model, tea.Cmd) {
+func (s optionSelector) choose(index int) (tea.Model, tea.Cmd) {
 	s.Index = index
-	kind := s.Kinds[index]
-	return s, func() tea.Msg { return newFieldKindChanged(kind) }
+	value, onChange := s.Options[index].Value, s.OnChange
+	return s, func() tea.Msg { return onChange(value) }
 }
 
-func (s kindSelector) View() string {
+func (s optionSelector) View() tea.View {
 	inactive := lipgloss.NewStyle().Foreground(lipgloss.Color(label.DefaultInactiveColor))
 	active := lipgloss.NewStyle()
 	if s.Focused {
@@ -231,5 +296,5 @@ func (s kindSelector) View() string {
 			options[index] = inactive.Render("○ " + text)
 		}
 	}
-	return lipgloss.NewStyle().Width(s.Width).Render(strings.Join(options, "  "))
+	return tea.NewView(lipgloss.NewStyle().Width(s.Width).Render(strings.Join(options, "  ")))
 }

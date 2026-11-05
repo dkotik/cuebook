@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 var cacheID atomic.Uint64
@@ -22,6 +22,7 @@ func NewCache(preview string) Middleware {
 		}
 		return cachedModel{
 			Model:      model,
+			ID:         cacheID.Add(1),
 			view:       preview,
 			debounce:   make(chan struct{}, 1),
 			lastUpdate: time.Now().UnixNano(),
@@ -38,17 +39,15 @@ type cachedModel struct {
 	lastUpdate int64
 }
 
-func (c cachedModel) Init() (model tea.Model, cmd tea.Cmd) {
-	c.Model, cmd = c.Model.Init()
-	c.ID = cacheID.Add(1)
-	return c, tea.Batch(cmd, c.Render())
+func (c cachedModel) Init() tea.Cmd {
+	return tea.Batch(c.Model.Init(), c.Render())
 }
 
 func (c cachedModel) Render() tea.Cmd {
 	select {
 	case c.debounce <- struct{}{}:
 		return func() tea.Msg {
-			view := c.Model.View()
+			view := c.Model.View().Content
 			// time.Sleep(time.Second)
 			<-c.debounce
 			return cachedView{
@@ -79,6 +78,6 @@ func (c cachedModel) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return c, tea.Batch(cmd, c.Render())
 }
 
-func (c cachedModel) View() string {
-	return c.view
+func (c cachedModel) View() tea.View {
+	return tea.NewView(c.view)
 }
