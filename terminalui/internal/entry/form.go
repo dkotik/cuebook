@@ -3,9 +3,9 @@ package entry
 import (
 	"slices"
 
-	"cuelang.org/go/cue"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/terminalui/event"
 	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
@@ -86,7 +86,7 @@ func loadFields(cueEntry cuebook.Entry, selectedIndex int) tea.Cmd {
 			fields = append(fields, createField(f.Field))
 			knownFieldNames = append(knownFieldNames, f.Name)
 		}
-		if cueEntry.Value.Allows(cue.AnyString) {
+		if metadata.IsOpen(cueEntry.Value) {
 			fields = append(fields, NewExtendButton())
 		}
 		return fieldListCards{
@@ -131,6 +131,25 @@ func sourceOrder(cueEntry cuebook.Entry, fields []cuebook.Field, detail bool) []
 		return 0
 	})
 	return ordered
+}
+
+// loadFieldsSelecting loads the fields of an entry and selects the named one,
+// such as a field that was just added, so it can be edited right away.
+func loadFieldsSelecting(cueEntry cuebook.Entry, name string) tea.Cmd {
+	return func() tea.Msg {
+		msg := loadFields(cueEntry, 0)()
+		cards, ok := msg.(fieldListCards)
+		if !ok {
+			return msg
+		}
+		for index, field := range cards.Order {
+			if field.Name == name {
+				cards.SelectedIndex = index
+				break
+			}
+		}
+		return cards
+	}
 }
 
 func NewForm(entry cuebook.Entry) tea.Cmd {
@@ -257,26 +276,31 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			f.Model, cmd = f.Model.Update(msg)
 		}
 		return f, cmd
-	case extendEvent:
-		if slices.Index(f.KnownFields, msg.Name) >= 0 {
+	case extendRequestEvent:
+		// Adding a field rewrites the entry, which would discard unsaved changes.
+		if len(f.Changes) > 0 {
 			return f, window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{
 				DefaultMessage: &i18n.Message{
-					ID:    "bookEntryDuplicateFieldName",
-					Other: "Field `{{ .Name }}` already exists.",
-				},
-				TemplateData: map[string]any{
-					"Name": msg.Name,
+					ID:    "bookEntryExtendUnsavedChangesWarning",
+					Other: "Save or discard your changes before adding a field.",
 				},
 			})
 		}
-		f.KnownFields = append(f.KnownFields, msg.Name)
-		f.Model, cmd = f.Model.Update(list.AddItems(createField(cuebook.Field{
-			Name: msg.Name,
-		}))())
+		knownFields := slices.Clone(f.KnownFields)
+		return f, func() tea.Msg { return window.SwitchTo(newNewFieldForm(knownFields)) }
+	case addFieldEvent:
+		entryValue := f.Entry.Value
 		return f, tea.Sequence(
-			cmd,
-			tea.RequestWindowSize(),
 			func() tea.Msg { return window.BackEvent{} },
+			func() tea.Msg {
+				return Update(func(state cuebook.Result) (cuebook.Patch, error) {
+					p, err := cuebook.AddField(state.Source, entryValue, msg.Name, msg.Kind, msg.Value)
+					if err != nil {
+						return nil, err
+					}
+					return addFieldPatch{Patch: p, Name: msg.Name}, nil
+				})
+			},
 		)
 	case fieldListCards:
 		f.KnownFields = msg.KnownFieldNames
@@ -304,6 +328,23 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 	case cuebook.Result:
 		switch p := msg.LastChange.(type) {
+		case addFieldPatch:
+			return f, tea.Batch(
+				window.NewFlashMessage(window.FlashMessageKindSuccess, &i18n.LocalizeConfig{
+					DefaultMessage: &i18n.Message{
+						ID:    "flashMessageFieldAdded",
+						Other: "Field `{{ .Name }}` added.",
+					},
+					TemplateData: map[string]any{"Name": p.Name},
+				}),
+				func() tea.Msg {
+					entry, ok := entryContaining(msg, p.Difference())
+					if !ok {
+						return window.BackEvent{}
+					}
+					return loadFieldsSelecting(entry, p.Name)()
+				},
+			)
 		case swapFieldsPatch:
 			return f, func() tea.Msg {
 				entry, ok := entryContaining(msg, p.Difference())

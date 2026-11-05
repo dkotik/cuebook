@@ -7,6 +7,27 @@ import (
 	"cuelang.org/go/cue"
 )
 
+// IsOpen reports whether a struct or list accepts fields or elements beyond
+// those it declares, as written with the "..." operator. Plain structs and
+// structs with a pattern constraint matching every label, such as
+// [string]: int, are open too, because CUE treats "..." as [string]: _.
+// Closed structs and definitions without "..." are not open. A disjunction
+// is open when any of its structs is open. Values of other kinds, including
+// top (_), are never open.
+func IsOpen(v cue.Value) bool {
+	if !v.Exists() {
+		return false
+	}
+	switch v.IncompleteKind() {
+	case cue.StructKind:
+		return v.Allows(cue.AnyString)
+	case cue.ListKind:
+		return v.Allows(cue.AnyIndex)
+	default:
+		return false
+	}
+}
+
 func ValueToString(v cue.Value) string {
 	switch k := v.Kind(); k {
 	case cue.BoolKind:

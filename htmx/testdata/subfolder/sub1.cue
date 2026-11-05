@@ -16,6 +16,15 @@
 		Password:   "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg"
 		Notes:      "sdf sdfsdf12 dfdf fdfgdsg"
 		Introduced: true
+		check:      "sdfsfsdf sdf"
+		sdfsdfsdf: """
+			~~sdfsdf~~ 
+
+
+
+			~~sdfsdfs~~
+			""" @cuebook(multiline)
+		cxxcxcv: "sdfsdfsdf" @cuebook(multiline)
 	},
   {
 		Name:  "Maria"

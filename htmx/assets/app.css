@@ -732,6 +732,21 @@ remember-details > [data-details-content][hidden] {
   margin: 0;
 }
 
+/* Show only the value control of the chosen type. Without :has() support all
+   controls stay visible, and the server still reads the matching one. */
+@supports selector(:has(*)) {
+  .entry-new-field-form .new-field-value {
+    display: none;
+  }
+
+  .entry-new-field-form:has(input[name="kind"][value="string"]:checked) .new-field-value[data-kind="string"],
+  .entry-new-field-form:has(input[name="kind"][value="multiline"]:checked) .new-field-value[data-kind="multiline"],
+  .entry-new-field-form:has(input[name="kind"][value="number"]:checked) .new-field-value[data-kind="number"],
+  .entry-new-field-form:has(input[name="kind"][value="boolean"]:checked) .new-field-value[data-kind="boolean"] {
+    display: block;
+  }
+}
+
 
 #field-edit-modal > .modal-card {
   margin: 0;

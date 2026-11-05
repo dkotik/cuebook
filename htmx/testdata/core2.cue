@@ -5,7 +5,6 @@
 	Email: #email | [...#email]
 	Notes?:    string @cuebook(detail)
 	Password?: string @cuebook(detail,trim,argon2id)
-	... // allow any additional fields
 }
 
 [...#contact] & [

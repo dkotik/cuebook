@@ -20,6 +20,10 @@ const (
 	ErrDoubleCommaAtListEnd
 	ErrNotListOfStructs
 	ErrRootListEndNotFound
+	ErrFieldNameEmpty
+	ErrFieldExists
+	ErrUnknownFieldKind
+	ErrInvalidFieldValue
 )
 
 // FileNotFoundError reports that a requested CUE file does not exist.
@@ -58,6 +62,14 @@ func (e PatchError) Error() string {
 		return "not a list of structs"
 	case ErrRootListEndNotFound:
 		return "root list end not found"
+	case ErrFieldNameEmpty:
+		return "field name is empty"
+	case ErrFieldExists:
+		return "field already exists"
+	case ErrUnknownFieldKind:
+		return "unknown field kind"
+	case ErrInvalidFieldValue:
+		return "field value does not match its kind"
 	default:
 		return fmt.Sprintf("unknown patch error code #%d", e)
 	}
@@ -82,6 +94,14 @@ func (e PatchError) LocalizeWith(localizer *i18n.Localizer) (string, error) {
 		message = i18n.Message{ID: "patch.notListOfStructs", Other: "not a list of structs"}
 	case ErrRootListEndNotFound:
 		message = i18n.Message{ID: "patch.rootListEndNotFound", Other: "root list end not found"}
+	case ErrFieldNameEmpty:
+		message = i18n.Message{ID: "patch.fieldNameEmpty", Other: "field name is empty"}
+	case ErrFieldExists:
+		message = i18n.Message{ID: "patch.fieldExists", Other: "field already exists"}
+	case ErrUnknownFieldKind:
+		message = i18n.Message{ID: "patch.unknownFieldKind", Other: "unknown field kind"}
+	case ErrInvalidFieldValue:
+		message = i18n.Message{ID: "patch.invalidFieldValue", Other: "field value does not match its kind"}
 	default:
 		message = i18n.Message{ID: "patch.unknownError", Other: "unknown patch error code #{{.Code}}"}
 	}

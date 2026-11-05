@@ -100,6 +100,9 @@ func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRang
 			}
 			view.CUESource = source
 			view.CutFingerprint = entrySourceFingerprint(source)
+			if view.CanAddField {
+				view.NewFieldKinds = makeNewFieldKindViews()
+			}
 			if view.CanMove {
 				view.MoveFilePicker = makeFilePicker(fileNames, filePath, filePickerOptions{
 					Legend:         "Destination file",

@@ -73,6 +73,8 @@ type entryView struct {
 	Title          string
 	CanMove        bool
 	CanArchive     bool
+	CanAddField    bool
+	NewFieldKinds  []newFieldKindView
 	MoveFilePicker filePickerView
 	Fields         []fieldView
 	Details        []fieldView
@@ -197,13 +199,14 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 
 func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange cuebook.ByteRange, readOnly, includeTitleField bool) entryView {
 	view := entryView{
-		Index:      index,
-		File:       fileName,
-		FileURL:    fileURL(fileName),
-		EntryURL:   entryURL(fileName, entryRange),
-		Title:      entry.GetTitle(),
-		CanMove:    !readOnly,
-		CanArchive: !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
+		Index:       index,
+		File:        fileName,
+		FileURL:     fileURL(fileName),
+		EntryURL:    entryURL(fileName, entryRange),
+		Title:       entry.GetTitle(),
+		CanMove:     !readOnly,
+		CanArchive:  !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
+		CanAddField: !readOnly && metadata.IsOpen(entry.Value),
 	}
 	if view.Title == "" {
 		view.Title = fmt.Sprintf("Entry %d", index+1)

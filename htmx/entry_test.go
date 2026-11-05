@@ -13,6 +13,93 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
+func TestEntryViewShowsAddFieldButtonForOpenEntries(t *testing.T) {
+	t.Parallel()
+	const addField = `data-entry-add-field`
+	tests := []struct {
+		name     string
+		source   string
+		readOnly bool
+		want     bool
+	}{
+		{name: "entry without schema", source: `[{Name: "Ada"}]`, want: true},
+		{name: "open definition", source: "#person: {\n\tName: string\n\t... // allow any additional fields\n}\n[...#person] & [{Name: \"Ada\"}]", want: true},
+		{name: "closed definition", source: `#person: {Name: string}` + "\n" + `[...#person] & [{Name: "Ada"}]`, want: false},
+		{name: "closed struct", source: `[close({Name: "Ada"})]`, want: false},
+		{name: "read only open entry", source: `[{Name: "Ada"}]`, readOnly: true, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			source := []byte(tt.source)
+			book, err := cuebook.New(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entry, err := book.GetValue(0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entryRange, err := cuebook.NewByteRange(entry)
+			if err != nil {
+				t.Fatal(err)
+			}
+			files := fstest.MapFS{"people.cue": &fstest.MapFile{Data: source}}
+			var handler http.Handler
+			if tt.readOnly {
+				handler, err = New(files)
+			} else {
+				handler, err = newTestHandler(files, &recordingFileSystem{})
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "http://example.test"+entryURL("people.cue", entryRange), nil)
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+			}
+			body := response.Body.String()
+			if got := strings.Contains(body, addField); got != tt.want {
+				t.Fatalf("Add Field button shown = %t, want %t; body: %s", got, tt.want, body)
+			}
+			if tt.want {
+				for _, want := range []string{
+					`data-file-picker-open="entry-new-field-dialog"`,
+					`>Add Field</button>`,
+					`<dialog id="entry-new-field-dialog"`,
+					`action="/add-field"`,
+					`name="name" required`,
+					`value="string" required checked`,
+					`value="multiline" required>`,
+					`value="number" required>`,
+					`value="boolean" required>`,
+					`name="value_string"`,
+					`<textarea id="entry-new-field-value-multiline" class="textarea" data-markdown-editor name="value_multiline"`,
+					`inputmode="decimal" name="value_number"`,
+					`name="value_boolean" value="true">`,
+					`name="value_boolean" value="false" checked>`,
+				} {
+					if !strings.Contains(body, want) {
+						t.Errorf("Add Field dialog is missing %q", want)
+					}
+				}
+			} else if strings.Contains(body, `entry-new-field-dialog`) {
+				t.Errorf("Add Field dialog rendered for an entry that does not accept fields")
+			}
+
+			listRequest := httptest.NewRequest(http.MethodGet, "http://example.test/?file=people.cue", nil)
+			listResponse := httptest.NewRecorder()
+			handler.ServeHTTP(listResponse, listRequest)
+			if strings.Contains(listResponse.Body.String(), addField) {
+				t.Errorf("list view unexpectedly shows the Add Field button")
+			}
+		})
+	}
+}
+
 func TestAddEntryFormRendersFieldDocumentationAsHelp(t *testing.T) {
 	t.Parallel()
 

@@ -249,6 +249,22 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 	}
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "edit"), sameOriginMiddleware(NewHTMXSwitch(editPageHandler, editWorkspaceHandler)))
 
+	newFieldPageHandler, err := config.Adaptor.AdaptFunc(app.newField,
+		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("page.html"))),
+		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("page.html")))),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt new field route: %w", err)
+	}
+	newFieldWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.newField,
+		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("workspace.html"))),
+		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("workspace.html")))),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt new field HTMX route: %w", err)
+	}
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "add-field"), sameOriginMiddleware(NewHTMXSwitch(newFieldPageHandler, newFieldWorkspaceHandler)))
+
 	formErrorEncoder := NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("error.html")))
 	formErrorHandler := func(target string) htadaptor.ErrorHandlerFunc {
 		return htadaptor.ErrorHandlerFunc(func(w http.ResponseWriter, r *http.Request, cause error) {
