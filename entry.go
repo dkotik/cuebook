@@ -28,10 +28,11 @@ func (e *EntryNotFoundError) HyperTextStatusCode() int {
 }
 
 type Entry struct {
-	title   string
-	Value   cue.Value
-	Fields  []Field
-	Details []Field
+	title            string
+	Value            cue.Value
+	Fields           []Field
+	Details          []Field
+	FieldDefinitions []FieldDefinition
 }
 
 func (e Entry) GetTitle() string {

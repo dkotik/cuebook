@@ -63,7 +63,10 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 	return func(yield func(Entry, error) bool) {
 		for next.Next() {
 			value := next.Value()
-			entry := Entry{Value: value}
+			entry := Entry{
+				Value:            value,
+				FieldDefinitions: d.Definitions,
+			}
 			var entryErr error
 			if !value.IsConcrete() || value.IsNull() {
 				entryErr = errors.New("cannot load an abstract value as structured object")

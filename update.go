@@ -218,7 +218,13 @@ func RemoveFieldValue(source []byte, entry cue.Value, fieldName string) (Patch, 
 	return ReplaceStructListEntry(source, entry, content)
 }
 
-func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) (_ Patch, err error) {
+func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) (Patch, error) {
+	return MergeFieldValuesAndRemove(source, entry, values, nil)
+}
+
+// MergeFieldValuesAndRemove merges field values and removes named fields in one
+// entry rewrite. Removal takes precedence if a field appears in both arguments.
+func MergeFieldValuesAndRemove(source []byte, entry cue.Value, values map[string]string, removals []string) (_ Patch, err error) {
 	fields, err := entrySyntax(source, entry)
 	if err != nil {
 		return nil, err
@@ -228,18 +234,37 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 	for selector, field := range eachField(entry, cue.All()) {
 		all[selector.Unquoted()] = field
 	}
-	existing := make(map[string]*ast.Field, len(fields.Elts))
-	for _, element := range fields.Elts {
-		if field, ok := element.(*ast.Field); ok {
-			if label, _, err := ast.LabelName(field.Label); err == nil {
-				existing[label] = field
-			}
-		}
+	remove := make(map[string]struct{}, len(removals))
+	for _, label := range removals {
+		remove[label] = struct{}{}
 	}
+
+	existing := make(map[string]*ast.Field, len(fields.Elts))
+	kept := fields.Elts[:0]
+	changed := false
+	for _, element := range fields.Elts {
+		field, ok := element.(*ast.Field)
+		if !ok {
+			kept = append(kept, element)
+			continue
+		}
+		label, _, labelErr := ast.LabelName(field.Label)
+		if labelErr == nil {
+			if _, shouldRemove := remove[label]; shouldRemove {
+				changed = true
+				continue
+			}
+			existing[label] = field
+		}
+		kept = append(kept, element)
+	}
+	fields.Elts = kept
 
 	labels := make([]string, 0, len(values))
 	for label := range values {
-		labels = append(labels, label)
+		if _, shouldRemove := remove[label]; !shouldRemove {
+			labels = append(labels, label)
+		}
 	}
 	sort.Strings(labels)
 	for _, label := range labels {
@@ -259,14 +284,19 @@ func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) 
 		)
 		if field, ok := existing[label]; ok {
 			field.Value = updated
+			changed = true
 			continue
 		}
 		fields.Elts = append(fields.Elts, &ast.Field{
 			Label: ast.NewString(label),
 			Value: updated,
 		})
+		changed = true
 	}
 
+	if !changed {
+		return nothingPatch{}, nil
+	}
 	content, err := format.Node(
 		fields,
 		format.Simplify(),

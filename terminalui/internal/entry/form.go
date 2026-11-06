@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	tea "charm.land/bubbletea/v2"
+	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/terminalui/event"
@@ -205,9 +206,18 @@ func (f form) buildForm() (_ form, cmd tea.Cmd) {
 func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg := msg.(type) {
 	case listForm.SaveChangesEvent:
+		values := make(map[string]string, len(f.Changes))
+		var removals []string
+		for name, value := range f.Changes {
+			if value == "" && emptyFieldShouldBeRemoved(f.Entry, name) {
+				removals = append(removals, name)
+				continue
+			}
+			values[name] = value
+		}
 		return f, func() tea.Msg {
 			return Update(func(state cuebook.Result) (cuebook.Patch, error) {
-				p, err := cuebook.MergeFieldValues(state.Source, f.Entry.Value, f.Changes)
+				p, err := cuebook.MergeFieldValuesAndRemove(state.Source, f.Entry.Value, values, removals)
 				if err != nil {
 					return nil, err
 				}
@@ -407,6 +417,15 @@ func displayFieldForm(source []byte, entry cuebook.Entry, field cuebook.Field) t
 		}
 		return window.SwitchTo(form)
 	}
+}
+
+func emptyFieldShouldBeRemoved(entry cuebook.Entry, name string) bool {
+	for _, definition := range entry.FieldDefinitions {
+		if definition.Selector.Unquoted() == name {
+			return definition.Selector.ConstraintType() == cue.OptionalConstraint
+		}
+	}
+	return true
 }
 
 func createField(f cuebook.Field) tea.Model {
