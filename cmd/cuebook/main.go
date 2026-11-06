@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	tea "charm.land/bubbletea/v2"
@@ -17,10 +18,19 @@ func main() {
 
 func newCLICommand() *cli.Command {
 	return &cli.Command{
-		Name:     "cuebook",
-		Usage:    "edit lists of structured data items",
-		Commands: []*cli.Command{newServeCommand()},
+		Name:      "cuebook",
+		Usage:     "edit lists of structured data items",
+		ArgsUsage: "<file>",
+		Commands:  []*cli.Command{newServeCommand()},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
+			if cmd.NArg() == 0 {
+				return cli.ShowAppHelp(cmd)
+			}
+			if cmd.NArg() != 1 {
+				return fmt.Errorf("cuebook requires exactly one file argument, got %d", cmd.NArg())
+			}
+			filePath := cmd.Args().First()
+
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
@@ -34,7 +44,7 @@ func newCLICommand() *cli.Command {
 				tea.WithContext(ctx),
 			)
 			go func() {
-				p.Send(terminalui.LoadFileEvent("test/testdata/simple.cue"))
+				p.Send(terminalui.LoadFileEvent(filePath))
 			}()
 			_, err = p.Run()
 

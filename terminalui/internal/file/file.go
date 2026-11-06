@@ -118,7 +118,7 @@ func (f file) Load() (tea.Model, tea.Cmd) {
 		}
 	}
 	return f, func() tea.Msg {
-		return ContentEvent(content)
+		return ContentEvent{Path: f.Path, Content: content}
 	}
 }
 
@@ -158,7 +158,7 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err != nil {
 				return err
 			}
-			return ContentEvent(content)
+			return ContentEvent{Path: string(msg), Content: content}
 		}
 	case saveEvent:
 		return f, func() tea.Msg {
@@ -173,7 +173,7 @@ func (f file) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if err = handle.Close(); err != nil {
 				return err
 			}
-			return UpdateEvent(msg)
+			return UpdateEvent{Path: f.Path, Content: []byte(msg)}
 		}
 	}
 	var cmd tea.Cmd

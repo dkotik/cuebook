@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"errors"
+	"path/filepath"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -27,12 +30,33 @@ type entryHighlighted int
 type EntryList struct {
 	tea.Model
 
-	book     cuebook.Result
-	selected int // *cuebook.ByteAnchor
+	sourcePath string
+	book       cuebook.Result
+	selected   int // *cuebook.ByteAnchor
 }
 
-func NewEntryList() tea.Model {
-	return EntryList{Model: list.New(list.Configuration{}), selected: -1}
+func NewEntryList(sourcePath string) tea.Model {
+	return EntryList{
+		Model:      list.New(list.Configuration{}),
+		sourcePath: sourcePath,
+		selected:   -1,
+	}
+}
+
+func (l EntryList) sourceFileSystem() (cuebook.FileSystem, string, error) {
+	if l.sourcePath == "" {
+		return nil, "", errors.New("source file path is empty")
+	}
+	path := filepath.Clean(l.sourcePath)
+	name := filepath.Base(path)
+	if name == "." || name == string(filepath.Separator) {
+		return nil, "", errors.New("source path does not name a file")
+	}
+	files, err := cuebook.NewFileSystem(cuebook.FileSystemConfig{Root: filepath.Dir(path)})
+	if err != nil {
+		return nil, "", err
+	}
+	return files, name, nil
 }
 
 func (l EntryList) Init() tea.Cmd {
@@ -57,13 +81,36 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			}
 			return patch
 		}
-	case cuebook.Patch:
-		return l, func() tea.Msg { // TODO: handle switch highlight
-			files, err := cuebook.NewFileSystem(cuebook.FileSystemConfig{Root: "test/testdata"})
+	case entry.ArchiveEntryEvent:
+		return l, func() tea.Msg {
+			files, sourceName, err := l.sourceFileSystem()
 			if err != nil {
 				return err
 			}
-			result, err := cuebook.Commit(context.Background(), files, "simple.cue", msg)
+			result, err := archiveEntry(context.Background(), files, sourceName, l.book.Source, msg.Entry, time.Now())
+			if err != nil {
+				return err
+			}
+			return entry.ArchiveEntryCompletedEvent{
+				Title:        msg.Entry.GetTitle(),
+				Result:       result,
+				ReturnToList: msg.ReturnToList,
+			}
+		}
+	case entry.ArchiveEntryCompletedEvent:
+		l.book = msg.Result
+		refresh := LoadEntries(msg.Result, l.selected)
+		if msg.ReturnToList {
+			return l, tea.Sequence(refresh, func() tea.Msg { return window.BackEvent{} })
+		}
+		return l, refresh
+	case cuebook.Patch:
+		return l, func() tea.Msg { // TODO: handle switch highlight
+			files, sourceName, err := l.sourceFileSystem()
+			if err != nil {
+				return err
+			}
+			result, err := cuebook.Commit(context.Background(), files, sourceName, msg)
 			if err != nil {
 				return err
 			}
@@ -158,20 +205,13 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if err != nil {
 				panic(err)
 			}
-			index -= 1
-			l.selected--
-			return l, func() tea.Msg {
-				entry, err := l.book.Document.GetEntry(index)
-				if err != nil {
-					return err
-				}
-				p, err := cuebook.DeleteFromStructList(
-					l.book.Source, entry.Value)
-				if err != nil {
-					return err
-				}
-				return p
+			index--
+			selectedEntry, err := l.book.Document.GetEntry(index)
+			if err != nil {
+				return l, func() tea.Msg { return err }
 			}
+			l.selected--
+			return l, func() tea.Msg { return entry.ArchiveEntryEvent{Entry: selectedEntry} }
 		case 'n':
 			if msg.Key().Mod != tea.ModCtrl {
 				break

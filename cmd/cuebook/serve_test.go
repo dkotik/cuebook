@@ -1,12 +1,28 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestCLIWithoutFileShowsHelp(t *testing.T) {
+	command := newCLICommand()
+	var output bytes.Buffer
+	command.Writer = &output
+
+	if err := command.Run(context.Background(), []string{"cuebook"}); err != nil {
+		t.Fatalf("Run() error = %v, want help without an error", err)
+	}
+	for _, expected := range []string{"cuebook", "edit lists of structured data items", "<file>"} {
+		if !strings.Contains(output.String(), expected) {
+			t.Errorf("help output %q does not contain %q", output.String(), expected)
+		}
+	}
+}
 
 func TestServeFileLinker(t *testing.T) {
 	tests := []struct {

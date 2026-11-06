@@ -2,41 +2,55 @@ package entry
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/internal/label"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 	"github.com/dkotik/cuebook/terminalui/window"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-var deleteButtonText = &i18n.LocalizeConfig{
+var archiveButtonText = &i18n.LocalizeConfig{
 	DefaultMessage: &i18n.Message{
-		ID:    "bookEntryDelete",
-		Other: "Delete Entry",
+		ID:    "bookEntryArchive",
+		Other: "Archive Entry",
 	},
 }
 
-type deleteEvent struct{}
+type archiveEvent struct{}
 
-func NewDeleteButton() tea.Model {
-	return label.New(deleteButton{
-		Model: list.NewButton(deleteButtonText, func() tea.Msg {
-			return deleteEvent{}
+// ArchiveEntryEvent requests moving an entry to the daily archive.
+type ArchiveEntryEvent struct {
+	Entry        cuebook.Entry
+	ReturnToList bool
+}
+
+// ArchiveEntryCompletedEvent reports a successful archive operation.
+type ArchiveEntryCompletedEvent struct {
+	Title        string
+	Result       cuebook.Result
+	ReturnToList bool
+}
+
+func NewArchiveButton() tea.Model {
+	return label.New(archiveButton{
+		Model: list.NewButton(archiveButtonText, func() tea.Msg {
+			return archiveEvent{}
 		}),
 		Cancel: NewCancelButton(),
 	}, nil)
 }
 
-type deleteButton struct {
+type archiveButton struct {
 	tea.Model
 	Cancel     tea.Model
 	ShowCancel bool
 }
 
-func (d deleteButton) Init() tea.Cmd {
+func (d archiveButton) Init() tea.Cmd {
 	return tea.Batch(d.Model.Init(), d.Cancel.Init())
 }
 
-func (d deleteButton) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
+func (d archiveButton) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	switch msg.(type) {
 	case fieldChangedEvent:
 		d.ShowCancel = true
@@ -54,7 +68,7 @@ func (d deleteButton) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return d, cmd
 }
 
-func (d deleteButton) View() tea.View {
+func (d archiveButton) View() tea.View {
 	if d.ShowCancel {
 		return d.Cancel.View()
 	}

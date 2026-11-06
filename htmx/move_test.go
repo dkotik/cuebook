@@ -195,7 +195,7 @@ func TestEntryValueWithoutConstraintsRoundTripsPlainJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	decoded, intermediate, err := entryValueWithoutConstraints(entryValue)
+	decoded, intermediate, err := cuebook.EntryValueWithoutConstraints(entryValue)
 	if err != nil {
 		t.Fatal(err)
 	}

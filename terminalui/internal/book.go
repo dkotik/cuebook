@@ -38,11 +38,11 @@ func parseBook(source []byte) tea.Cmd {
 func ParseFileToBookAndCreateEntryListIfNeeded(cmd tea.Cmd) tea.Cmd {
 	switch msg := cmd().(type) {
 	case file.UpdateEvent:
-		return parseBook(msg)
+		return parseBook(msg.Content)
 	case file.ContentEvent:
 		return tea.Sequence(
-			func() tea.Msg { return window.SwitchTo(NewEntryList()) },
-			parseBook(msg),
+			func() tea.Msg { return window.SwitchTo(NewEntryList(msg.Path)) },
+			parseBook(msg.Content),
 		)
 	default:
 		return func() tea.Msg { return msg }

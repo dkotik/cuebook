@@ -31,7 +31,7 @@ type Entry struct {
 	title   string
 	Value   cue.Value
 	Fields  []Field
-	Details []Field // TODO: drop fields and details in favor of using iterators
+	Details []Field
 }
 
 func (e Entry) GetTitle() string {

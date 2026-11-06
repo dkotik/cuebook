@@ -86,18 +86,6 @@
 			""" @cuebook(detail)
 	},
 	{
-		Name:  "33333" @cuebook(title)
-		Email: "test@testdomain.com"
-		Notes: """
-			sdhkjhf
-			sfkjsdfh
-			"""
-	},
-	{
-		Name:  "45" @cuebook(title)
-		Email: "test@testdomain.com"
-	},
-	{
 		Name:  "7"
 		Email: "test@testdomain.com"
 	},
@@ -142,8 +130,4 @@
 		Name:  "Someone!!!!a" @cuebook(title)
 		Email: "someEmai1l@somehost.net"
 	},
-  {
-		Name:  "Someone!!!!"
-		Email: "someEmail@somehost.net"
-	}
 ]

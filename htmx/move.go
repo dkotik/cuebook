@@ -104,15 +104,11 @@ func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName
 	if err != nil {
 		return pageData{}, &cuebook.EntryNotFoundError{Path: sourceName}
 	}
-	destinationEntryValue, _, err := entryValueWithoutConstraints(sourceEntryValue)
+	transfer, err := cuebook.PrepareEntryTransfer(sourceRaw, destinationRaw, sourceEntryValue)
 	if err != nil {
-		return pageData{}, errors.New("The source entry could not be converted for transfer.")
+		return pageData{}, errors.New("The entry transfer could not be prepared.")
 	}
-
-	appendChange, err := cuebook.AppendToStructList(destinationRaw, destinationEntryValue)
-	if err != nil {
-		return pageData{}, errors.New("The entry could not be added to the destination file.")
-	}
+	appendChange := transfer.DestinationPatch
 	destinationCandidate, err := appendChange.ApplyToCueSource(destinationRaw)
 	if err != nil {
 		return pageData{}, errors.New("The destination file changed before the entry could be added. Reload and try again.")
@@ -121,10 +117,7 @@ func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName
 		return pageData{}, errors.New("The entry does not satisfy the destination file's CUE constraints.")
 	}
 
-	deleteChange, err := cuebook.DeleteFromStructList(sourceRaw, sourceEntryValue)
-	if err != nil {
-		return pageData{}, errors.New("The entry could not be removed from the source file.")
-	}
+	deleteChange := transfer.SourcePatch
 	sourceCandidate, err := deleteChange.ApplyToCueSource(sourceRaw)
 	if err != nil {
 		return pageData{}, errors.New("The source file changed before the entry could be removed. Reload and try again.")
@@ -152,20 +145,6 @@ func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName
 		return pageData{}, errors.New("The transfer could not be completed; the destination change was rolled back.")
 	}
 	return a.renderEditedFile(destinationName)
-}
-
-func entryValueWithoutConstraints(value cue.Value) (cue.Value, string, error) {
-	encoded, err := value.MarshalJSON()
-	if err != nil {
-		return cue.Value{}, "", err
-	}
-
-	intermediate := string(encoded)
-	decoded := cuecontext.New().CompileString(intermediate)
-	if err := decoded.Err(); err != nil {
-		return cue.Value{}, intermediate, err
-	}
-	return decoded, intermediate, nil
 }
 
 func entryMovePatch(source []byte, from, to int) (cuebook.Patch, error) {

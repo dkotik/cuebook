@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/dkotik/cuebook"
 )
 
 func TestArchiveArchivesEntries(t *testing.T) {
@@ -39,7 +41,7 @@ func TestArchiveArchivesEntries(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			files := transferTestDocuments()
-			archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
+			archiveName := cuebook.ArchiveFileName(time.Now())
 			if test.initialArchive != nil {
 				files[archiveName] = test.initialArchive
 			}
@@ -199,7 +201,7 @@ func TestArchiveRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	originalSource := append([]byte(nil), files["source.cue"].Data...)
-	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
+	archiveName := cuebook.ArchiveFileName(time.Now())
 
 	response := submitArchive(t, handler, "source.cue", 0, "http://example.test")
 	if response.Code != http.StatusInternalServerError {

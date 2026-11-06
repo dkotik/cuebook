@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	archiveDirectory = ".archive/"
-	archiveFolder    = ".archive"
+	archiveDirectory = cuebook.ArchiveDirectory + "/"
+	archiveFolder    = cuebook.ArchiveDirectory
 )
 
 type archiveRequest struct {
@@ -58,8 +58,8 @@ func (a *handler) archive(ctx context.Context, request *archiveRequest) (archive
 		return archiveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 
-	archiveName := archiveDirectory + time.Now().Format("2006-01-02") + ".cue"
-	if err := a.createFileIfNotExists(ctx, archiveName, []byte("[]\n")); err != nil {
+	archiveName := cuebook.ArchiveFileName(time.Now())
+	if err := a.createFileIfNotExists(ctx, archiveName, []byte(cuebook.EmptyArchiveSource)); err != nil {
 		return archiveResponse{}, errors.New("Unable to create the archive file.")
 	}
 

@@ -8,12 +8,18 @@ import (
 
 type LoadEvent string
 
-type ContentEvent []byte
+type ContentEvent struct {
+	Path    string
+	Content []byte
+}
 
-type UpdateEvent []byte
+type UpdateEvent struct {
+	Path    string
+	Content []byte
+}
 
 func (c ContentEvent) LogValue() slog.Value {
-	return slog.StringValue("data:" + string(c[:min(len(c), 30)]) + "...")
+	return slog.StringValue("path:" + c.Path + " data:" + string(c.Content[:min(len(c.Content), 30)]) + "...")
 }
 
 type saveEvent []byte

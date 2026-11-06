@@ -58,11 +58,6 @@ type (
 		cuebook.Patch
 		SelectedIndex int
 	}
-
-	deleteEntryPatch struct {
-		cuebook.Patch
-		Entry cuebook.Entry
-	}
 )
 
 func LoadFields(cueEntry cuebook.Entry) tea.Cmd {
@@ -93,7 +88,7 @@ func loadFields(cueEntry cuebook.Entry, selectedIndex int) tea.Cmd {
 			Cards: append(
 				fields,
 				NewSaveButton(),
-				NewDeleteButton(),
+				NewArchiveButton(),
 			),
 			KnownFieldNames: knownFieldNames,
 			Entry:           cueEntry,
@@ -246,18 +241,9 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				return swapFieldsPatch{Patch: p, SelectedIndex: selected}, nil
 			})
 		}
-	case deleteEvent:
+	case archiveEvent:
 		return f, func() tea.Msg {
-			return Update(func(state cuebook.Result) (cuebook.Patch, error) {
-				p, err := cuebook.DeleteFromStructList(state.Source, f.Entry.Value)
-				if err != nil {
-					return nil, err
-				}
-				return deleteEntryPatch{ // TODO: restore matching to cuebook.Result.LastChange type
-					Patch: p,
-					Entry: f.Entry,
-				}, nil
-			})
+			return ArchiveEntryEvent{Entry: f.Entry, ReturnToList: true}
 		}
 	case fieldChangedEvent:
 		if msg.Value == msg.Original {
@@ -321,6 +307,16 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				PluralCount: len(f.Changes),
 			})
 		}
+	case ArchiveEntryCompletedEvent:
+		return f, window.NewFlashMessage(window.FlashMessageKindSuccess, &i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{
+				ID:    "flashMessageEntryArchived",
+				Other: "Entry `{{.Title}}` archived.",
+			},
+			TemplateData: map[string]interface{}{
+				"Title": msg.Title,
+			},
+		})
 	case cuebook.Result:
 		switch p := msg.LastChange.(type) {
 		case addFieldPatch:
@@ -361,19 +357,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				}),
 				func() tea.Msg { return window.BackEvent{} },
 			)
-		case deleteEntryPatch:
-			return f, tea.Batch(
-				window.NewFlashMessage(window.FlashMessageKindWarning, &i18n.LocalizeConfig{
-					DefaultMessage: &i18n.Message{
-						ID:    "flashMessageEntryDeleted",
-						Other: "Entry `{{.Title}}` deleted.",
-					},
-					TemplateData: map[string]interface{}{
-						"Title": p.Entry.GetTitle(),
-					},
-				}),
-				func() tea.Msg { return window.BackEvent{} },
-			)
+
 		}
 	}
 	f.Model, cmd = f.Model.Update(msg)

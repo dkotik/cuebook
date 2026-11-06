@@ -17,11 +17,15 @@ import (
 
 func TestAddFieldThroughTheTerminalUI(t *testing.T) {
 	source := []byte(`[{Name: "Ada"}]`)
+	sourcePath := filepath.Join(t.TempDir(), "simple.cue")
+	if err := os.WriteFile(sourcePath, source, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	book, err := cuebook.New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ui, err := window.New(window.WithInitialModels(NewEntryList()), WithStateEventTransformers())
+	ui, err := window.New(window.WithInitialModels(NewEntryList(sourcePath)), WithStateEventTransformers())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,6 +42,7 @@ func TestAddFieldThroughTheTerminalUI(t *testing.T) {
 	press(tm, tea.KeyPressMsg{Code: tea.KeyEnter})
 	waitFor(t, tm, "Type")
 	tm.Type("Role")
+	waitFor(t, tm, "Role")
 	press(tm, tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
 	time.Sleep(time.Second)
 
@@ -46,6 +51,14 @@ func TestAddFieldThroughTheTerminalUI(t *testing.T) {
 		t.Fatal(err)
 	}
 	tm.WaitFinished(t, teatest.WithFinalTimeout(3*time.Second))
+
+	updatedSource, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(updatedSource), "Role:") {
+		t.Fatalf("source file was not updated at %q:\n%s", sourcePath, updatedSource)
+	}
 }
 
 // press sends a key and then the terminal size, which a real terminal reports
