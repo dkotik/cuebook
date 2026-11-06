@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -174,10 +175,7 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 		return editResponse{}, errors.New("The submitted value does not satisfy the CUE constraints: " + err.Error())
 	}
 	if err = a.commitFile(ctx, fileName, change); err != nil {
-		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
-			return editResponse{}, errors.New("The entry changed before the edit could be applied. Reload and try again.")
-		}
-		return editResponse{}, errors.New("The edit could not be saved.")
+		return editResponse{}, err
 	}
 	return a.renderEditResponse(request, entryIndex)
 }
@@ -200,7 +198,9 @@ func (a *handler) renderEditResponse(request *editRequest, entryIndex int) (edit
 func (a *handler) renderEditedFile(fileName string) (pageData, error) {
 	data, status := a.loadPage(fileName, "")
 	if status == http.StatusNotFound {
-		return pageData{}, &cuebook.FileNotFoundError{Path: fileName}
+		return pageData{}, &cuebook.FileSystemPathError{PathError: &fs.PathError{
+			Path: fileName, Err: cuebook.ErrFileSystemFileNotFound,
+		}}
 	}
 	if status != http.StatusOK {
 		return pageData{}, errors.New("The edit was saved, but the updated document could not be displayed.")

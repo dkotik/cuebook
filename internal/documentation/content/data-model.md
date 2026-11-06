@@ -13,10 +13,9 @@ Create a book with `cuebook.New(source)`, where `source` is a byte slice contain
 - `Len()` returns the number of list values.
 - `GetValue(index)` returns the CUE value at a list index.
 - `GetField(entryIndex, fieldIndex)` gets a field from an entry. Regular fields come before detail fields.
-- `EachValue()` iterates over the list's `cue.Value` items.
 - `EachEntry()` iterates as `(Entry, error)` pairs, converting each item to a struct entry.
 
-The package also provides the iterator helpers `cuebook.EachValue(value)`, `cuebook.EachField(value, options...)`, and `cuebook.EachFieldDefinition(value)`. They are useful when working directly with CUE values, including schema field definitions.
+For direct iteration over the underlying CUE list, call `Book.Value.List()` and check its returned error. The package also provides `cuebook.EachFieldDefinition(value)` to inspect abstract schema fields.
 
 ## Entry
 

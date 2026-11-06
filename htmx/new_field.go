@@ -116,10 +116,7 @@ func (a *handler) newField(ctx context.Context, request *newFieldRequest) (editR
 		return editResponse{}, errors.New("The new field does not satisfy the CUE constraints: " + err.Error())
 	}
 	if err = a.commitFile(ctx, fileName, change); err != nil {
-		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
-			return editResponse{}, errors.New("The entry changed before the field could be added. Reload and try again.")
-		}
-		return editResponse{}, errors.New("The field could not be saved.")
+		return editResponse{}, err
 	}
 	return a.renderEditResponse(&editRequest{File: fileName, View: "entry"}, entryIndex)
 }

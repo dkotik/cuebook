@@ -1,7 +1,6 @@
 package cuebook
 
 import (
-	"fmt"
 	"time"
 
 	"cuelang.org/go/cue"
@@ -35,15 +34,15 @@ func PrepareEntryTransfer(source, destination []byte, entry cue.Value) (EntryTra
 
 	unconstrained, _, err := EntryValueWithoutConstraints(entry)
 	if err != nil {
-		return transfer, fmt.Errorf("unable to convert source entry for transfer: %w", err)
+		return transfer, err
 	}
 	transfer.DestinationPatch, err = AppendToStructList(destination, unconstrained)
 	if err != nil {
-		return transfer, fmt.Errorf("unable to append entry to destination: %w", err)
+		return transfer, err
 	}
 	transfer.SourcePatch, err = DeleteFromStructList(source, entry)
 	if err != nil {
-		return transfer, fmt.Errorf("unable to remove entry from source: %w", err)
+		return transfer, err
 	}
 	return transfer, nil
 }

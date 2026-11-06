@@ -49,7 +49,7 @@ func TestCutPasteUsesMoveWorkflow(t *testing.T) {
 		{name: "invalid clipboard is validated only on server", clipboard: "[", wantStatus: http.StatusNoContent, wantNotice: "Unable to parse", wantSource: []string{"Keep me", "Move me"}, wantTarget: []string{"Existing"}},
 		{name: "read only cannot cut", readOnly: true, wantStatus: http.StatusNoContent, wantNotice: "read-only", wantSource: []string{"Keep me", "Move me"}, wantTarget: []string{"Existing"}},
 		{name: "destination constraints preserve source", constrained: true, wantStatus: http.StatusNoContent, wantNotice: "destination file's CUE constraints", wantSource: []string{"Keep me", "Move me"}, wantTarget: []string{"Existing"}},
-		{name: "source commit failure rolls back destination", failCommit: true, wantStatus: http.StatusNoContent, wantNotice: "destination change was rolled back", wantSource: []string{"Keep me", "Move me"}, wantTarget: []string{"Existing"}},
+		{name: "source commit failure rolls back destination", failCommit: true, wantStatus: http.StatusNoContent, wantNotice: "storage failure", wantSource: []string{"Keep me", "Move me"}, wantTarget: []string{"Existing"}},
 	}
 	payloadPattern := regexp.MustCompile(`(?s)<pre id="entry-cue-1" hidden>(.*?)</pre>`)
 	fingerprintPattern := regexp.MustCompile(`data-cut-fingerprint="([^"]+)"`)

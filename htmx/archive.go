@@ -3,6 +3,7 @@ package htmx
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,7 +69,9 @@ func (a *handler) archive(ctx context.Context, request *archiveRequest) (archive
 		return archiveResponse{}, errors.New("Unable to list CUE files.")
 	}
 	if !containsFile(fileNames, archiveName) {
-		return archiveResponse{}, &cuebook.FileNotFoundError{Path: archiveName}
+		return archiveResponse{}, &cuebook.FileSystemPathError{PathError: &fs.PathError{
+			Path: archiveName, Err: cuebook.ErrFileSystemFileNotFound,
+		}}
 	}
 
 	data, err := a.transferEntry(ctx, fileName, archiveName, raw, document, from, fileNames)

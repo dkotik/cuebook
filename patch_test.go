@@ -120,13 +120,31 @@ func TestResultBottomChangeIndex(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			got := (Result{Document: current, Source: currentSource}).BottomChangeIndex(
+			got, err := (Result{Document: current, Source: currentSource}).BottomChangeIndex(
 				Result{Document: older, Source: olderSource},
 			)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if got != test.want {
 				t.Fatalf("BottomChangeIndex() = %d, want %d", got, test.want)
 			}
 		})
+	}
+}
+
+func TestResultBottomChangeIndexReturnsListError(t *testing.T) {
+	current, err := New([]byte("[]"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalidList := cuecontext.New().CompileString(`"not a list"`)
+
+	_, err = (Result{Document: current}).BottomChangeIndex(Result{
+		Document: Book{Value: invalidList},
+	})
+	if err == nil {
+		t.Fatal("BottomChangeIndex() error = nil, want an error for an invalid list")
 	}
 }
 

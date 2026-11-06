@@ -73,19 +73,13 @@ func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse,
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
-			return moveResponse{}, errors.New("The document changed before the entries could be reordered. Reload and try again.")
-		}
-		return moveResponse{}, errors.New("The entries could not be reordered.")
+		return moveResponse{}, err
 	}
 	if _, err := cuebook.New(candidate); err != nil {
 		return moveResponse{}, errors.New("The reordered document does not satisfy the CUE constraints.")
 	}
 	if err := a.commitFile(ctx, fileName, change); err != nil {
-		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
-			return moveResponse{}, errors.New("The document changed before the entries could be reordered. Reload and try again.")
-		}
-		return moveResponse{}, errors.New("The entries could not be saved.")
+		return moveResponse{}, err
 	}
 	data, err := a.renderEditedFile(fileName)
 	return moveResponse{pageData: data}, err
@@ -127,22 +121,15 @@ func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName
 	}
 
 	if err := a.commitFile(ctx, destinationName, cuebook.Validated(appendChange)); err != nil {
-		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
-			return pageData{}, errors.New("The destination file changed before the entry could be added. Reload and try again.")
-		}
-		return pageData{}, errors.New("The entry could not be added to the destination file.")
+		return pageData{}, err
 	}
 	if err := a.commitFile(ctx, sourceName, cuebook.Validated(deleteChange)); err != nil {
 		// Roll back even if the request was canceled; ctx no longer matters once
 		// the destination has been changed.
-		rollbackErr := a.commitFile(context.WithoutCancel(ctx), destinationName, cuebook.Validated(appendChange.Invert()))
-		if rollbackErr != nil {
-			return pageData{}, errors.New("The entry was added to the destination, but the source could not be updated and the destination change could not be rolled back. It may now exist in both files.")
-		}
-		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
-			return pageData{}, errors.New("The source file changed before the entry could be removed. The destination change was rolled back; reload and try again.")
-		}
-		return pageData{}, errors.New("The transfer could not be completed; the destination change was rolled back.")
+		return pageData{}, errors.Join(
+			err,
+			a.commitFile(context.WithoutCancel(ctx), destinationName, cuebook.Validated(appendChange.Invert())),
+		)
 	}
 	return a.renderEditedFile(destinationName)
 }

@@ -1,9 +1,7 @@
 package cuebook
 
 import (
-	"errors"
 	"fmt"
-	"iter"
 	"net/http"
 	"strings"
 
@@ -54,7 +52,7 @@ func (e Entry) GetDescription() (description []string) {
 
 func (e Entry) GetField(atIndex int) (f Field, err error) {
 	if atIndex < 0 {
-		return f, errors.New("not found: index out of range") // TODO: model
+		return f, ErrFieldIndexOutOfRange
 	}
 	fieldCount := len(e.Fields)
 	if atIndex < fieldCount {
@@ -62,7 +60,7 @@ func (e Entry) GetField(atIndex int) (f Field, err error) {
 	}
 	atIndex -= fieldCount
 	if atIndex >= len(e.Details) {
-		return f, errors.New("not found: index out of range") // TODO: model
+		return f, ErrFieldIndexOutOfRange
 	}
 	return e.Details[atIndex], nil
 }
@@ -79,22 +77,4 @@ func (e Entry) GetFieldByName(name string) (field Field, ok bool) {
 		}
 	}
 	return
-}
-
-// EachValue returns an iterator over the elements of a CUE list.
-//
-// It panics if value cannot be iterated as a list.
-func EachValue(value cue.Value) iter.Seq[cue.Value] {
-	next, err := value.List()
-	if err != nil {
-		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
-	}
-
-	return func(yield func(cue.Value) bool) {
-		for next.Next() {
-			if !yield(next.Value()) {
-				break
-			}
-		}
-	}
 }

@@ -275,11 +275,11 @@ func TestFileSystemTransaction(t *testing.T) {
 			}
 			assertDirectory(t, root, tt.want)
 
-			if err := bound.WriteFile(ctx, "a.cue", []byte("late")); !errors.Is(err, ErrTransactionClosed) {
-				t.Errorf("write after Close error = %v, want ErrTransactionClosed", err)
+			if err := bound.WriteFile(ctx, "a.cue", []byte("late")); !errors.Is(err, ErrFileSystemTransactionClosed) {
+				t.Errorf("write after Close error = %v, want ErrFileSystemTransactionClosed", err)
 			}
-			if _, err := fsys.WithTransaction(tx); !errors.Is(err, ErrTransactionClosed) {
-				t.Errorf("WithTransaction after Close error = %v, want ErrTransactionClosed", err)
+			if _, err := fsys.WithTransaction(tx); !errors.Is(err, ErrFileSystemTransactionClosed) {
+				t.Errorf("WithTransaction after Close error = %v, want ErrFileSystemTransactionClosed", err)
 			}
 		})
 	}

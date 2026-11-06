@@ -309,7 +309,7 @@ func TestMoveTransferFailures(t *testing.T) {
 			failCalls:   map[int]error{2: errors.New("source storage failure")},
 			wantStatus:  http.StatusInternalServerError,
 			wantCalls:   []string{"destination.cue", "source.cue", "destination.cue"},
-			wantNotice:  "destination change was rolled back",
+			wantNotice:  "source storage failure",
 		},
 	}
 

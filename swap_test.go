@@ -23,11 +23,24 @@ func TestSwapEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for a := range EachValue(document) {
-		if a.Err() != nil {
+	aValues, err := document.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for aValues.Next() {
+		a := aValues.Value()
+		if err := a.Err(); err != nil {
 			t.Fatal("unable to parse entry:", err)
 		}
-		for b := range EachValue(document) {
+		bValues, err := document.List()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for bValues.Next() {
+			b := bValues.Value()
+			if err := b.Err(); err != nil {
+				t.Fatal("unable to parse entry:", err)
+			}
 			patch, err := SwapEntries(source, a, b)
 			if err != nil {
 				t.Fatal(err)
@@ -38,8 +51,6 @@ func TestSwapEntries(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Log(string(result))
-			// replacement := []byte(`{ replacement: "replacement"}`)
-			// for value := range EachValue(document) {
 			t.Run("reverse", ensureInversible(source, patch))
 		}
 	}

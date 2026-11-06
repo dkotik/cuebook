@@ -132,10 +132,7 @@ func (a *handler) appendEntry(ctx context.Context, fileName string, raw []byte, 
 		return errors.New("The submitted entry does not satisfy the CUE constraints: " + err.Error())
 	}
 	if err := a.commitFile(ctx, fileName, change); err != nil {
-		if errors.Is(err, cuebook.ErrByteRangeNotFound) {
-			return errors.New("The document changed before the entry could be added. Reload and try again.")
-		}
-		return errors.New("The entry could not be saved.")
+		return err
 	}
 	return nil
 }

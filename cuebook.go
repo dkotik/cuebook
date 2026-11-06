@@ -5,7 +5,6 @@ package cuebook
 
 import (
 	"errors"
-	"fmt"
 	"iter"
 	"log/slog"
 	"sort"
@@ -25,17 +24,17 @@ type Book struct {
 func New(source []byte) (book Book, err error) {
 	book.Value = cuecontext.New().CompileBytes(source)
 	if err = book.Value.Err(); err != nil {
-		return book, fmt.Errorf("unable to parse Cue list: %w", err)
+		return book, err
 	}
 	if err = book.Value.Validate(
 		cue.Attributes(true),
 		cue.Concrete(true),
 		cue.Definitions(true),
 	); err != nil {
-		return book, fmt.Errorf("unable to validate Cue list: %w", err)
+		return book, err
 	}
 	if book.Value.Kind() != cue.ListKind {
-		return book, fmt.Errorf("expected a list structued data, got %s", book.Value.Kind())
+		return book, ErrNotCueList
 	}
 
 	fieldSource := firstDisjunct(book.Value)
@@ -47,20 +46,21 @@ func New(source []byte) (book Book, err error) {
 }
 
 func (d Book) EachEntry() iter.Seq2[Entry, error] {
-	next, err := d.Value.List()
-	if err != nil {
-		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
-	}
-
-	fieldOrder := make(map[string]int, len(d.Definitions))
-	for index, definition := range d.Definitions {
-		name := definition.Selector.Unquoted()
-		if _, exists := fieldOrder[name]; !exists {
-			fieldOrder[name] = index
-		}
-	}
-
 	return func(yield func(Entry, error) bool) {
+		next, err := d.Value.List()
+		if err != nil {
+			yield(Entry{}, err)
+			return
+		}
+
+		fieldOrder := make(map[string]int, len(d.Definitions))
+		for index, definition := range d.Definitions {
+			name := definition.Selector.Unquoted()
+			if _, exists := fieldOrder[name]; !exists {
+				fieldOrder[name] = index
+			}
+		}
+
 		for next.Next() {
 			value := next.Value()
 			entry := Entry{
@@ -69,15 +69,15 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 			}
 			var entryErr error
 			if !value.IsConcrete() || value.IsNull() {
-				entryErr = errors.New("cannot load an abstract value as structured object")
+				entryErr = ErrCannotLoadAbstractEntry
 			} else if kind := value.Kind(); kind != cue.StructKind {
-				entryErr = fmt.Errorf("value is not a structured object: %s", kind)
+				entryErr = ErrEntryValueNotStruct
 			}
 
 			if entryErr == nil {
 				fields, fieldsErr := value.Value().Fields(cue.Optional(true))
 				if fieldsErr != nil {
-					entryErr = fmt.Errorf("unable to iterate through fields of a structured object: %w", fieldsErr)
+					entryErr = fieldsErr
 				} else {
 					for fields.Next() {
 						fieldValue := fields.Value()
@@ -125,7 +125,7 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 
 func (d Book) GetEntry(atIndex int) (Entry, error) {
 	if atIndex < 0 {
-		return Entry{}, errors.New("not found: index out of range")
+		return Entry{}, ErrBookEntryIndexOutOfRange
 	}
 
 	index := 0
@@ -138,12 +138,15 @@ func (d Book) GetEntry(atIndex int) (Entry, error) {
 		}
 		index++
 	}
-	return Entry{}, errors.New("not found: index out of range")
+	return Entry{}, ErrBookEntryIndexOutOfRange
 }
 
 func (d Book) GetValue(atIndex int) (cue.Value, error) {
 	value := d.Value.LookupPath(cue.MakePath(cue.Index(atIndex)))
-	return value, value.Err()
+	if err := value.Err(); err != nil {
+		return value, err
+	}
+	return value, nil
 }
 
 func (d Book) GetField(atIndex, fieldIndex int) (f Field, err error) {
@@ -156,10 +159,7 @@ func (d Book) GetField(atIndex, fieldIndex int) (f Field, err error) {
 
 func (d Book) Len() (int, error) {
 	length, err := d.Value.Len().Int64()
-	if err != nil {
-		panic(fmt.Errorf("unable to get the length of the Cue list: %w", err))
-	}
-	return int(length), nil
+	return int(length), err
 }
 
 func (d Book) LogValue() slog.Value {

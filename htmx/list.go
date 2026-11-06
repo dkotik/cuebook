@@ -25,7 +25,9 @@ import (
 
 func documentReadError(filePath string, status int, message string) error {
 	if status == http.StatusNotFound {
-		return &cuebook.FileNotFoundError{Path: filePath}
+		return &cuebook.FileSystemPathError{PathError: &fs.PathError{
+			Path: filePath, Err: cuebook.ErrFileSystemFileNotFound,
+		}}
 	}
 	return errors.New(message)
 }

@@ -2,7 +2,6 @@ package cuebook
 
 import (
 	"bytes"
-	"fmt"
 	"sort"
 
 	"cuelang.org/go/cue"
@@ -231,8 +230,12 @@ func MergeFieldValuesAndRemove(source []byte, entry cue.Value, values map[string
 	}
 
 	all := make(map[string]cue.Value)
-	for selector, field := range eachField(entry, cue.All()) {
-		all[selector.Unquoted()] = field
+	allFields, err := entry.Fields(cue.All())
+	if err != nil {
+		return nil, err
+	}
+	for allFields.Next() {
+		all[allFields.Selector().Unquoted()] = allFields.Value()
 	}
 	remove := make(map[string]struct{}, len(removals))
 	for _, label := range removals {
@@ -272,7 +275,7 @@ func MergeFieldValuesAndRemove(source []byte, entry cue.Value, values map[string
 		if known, ok := all[label]; ok {
 			value, err = metadata.FormatAccordingToAttributes(known, value)
 			if err != nil {
-				return nil, fmt.Errorf("%w: %w", ErrUnableToFormatFieldValue, err)
+				return nil, err
 			}
 		}
 

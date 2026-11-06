@@ -117,36 +117,6 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return result
 		}
 	case cuebook.Result:
-		// if msg.LastChange != nil {
-		// 	target, err := msg.LastChange.Difference().Match(msg.Source)
-		// 	if err == nil {
-		// 		i := 0
-		// 		for entry := range cuebook.EachValue(msg.Document.Value) {
-		// 			i++
-		// 			r, err := cuebook.NewByteRange(entry)
-		// 			if err == nil && r == target {
-		// 				l.selected = i
-		// 				break
-		// 			}
-		// 		}
-		// 	}
-		// }
-		// switch p := msg.LastChange.(type) {
-		// case swapEntriesPatch:
-		// 	target, err := p.Difference().Match(msg.Source)
-		// 	if err == nil {
-		// 		i := 0
-		// 		for entry := range cuebook.EachValue(msg.Document.Value) {
-		// 			i++
-		// 			r, err := cuebook.NewByteRange(entry)
-		// 			if err == nil && r == target {
-		// 				l.selected = i
-		// 				break
-		// 			}
-		// 		}
-		// 	}
-		// }
-
 		// if l.book.IsEqual(msg) {
 		// 	return l, nil
 		// }

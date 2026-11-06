@@ -21,7 +21,12 @@ func TestDeleteStructFromList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for value := range EachValue(document) {
+	values, err := document.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for values.Next() {
+		value := values.Value()
 		if err = value.Err(); err != nil {
 			t.Fatal(err)
 		}

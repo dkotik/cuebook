@@ -763,7 +763,7 @@ func TestReadOnlySourceRejectsEdits(t *testing.T) {
 	}
 }
 
-func TestCommitFailureDoesNotExposeStorageError(t *testing.T) {
+func TestCommitFailureReturnsStorageError(t *testing.T) {
 	storage := &recordingFileSystem{err: errors.New("private disk error")}
 	handler, err := newTestHandler(testSource(), storage)
 	if err != nil {
@@ -773,11 +773,8 @@ func TestCommitFailureDoesNotExposeStorageError(t *testing.T) {
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusNoContent, response.Body.String())
 	}
-	if strings.Contains(response.Header().Get("HX-Trigger"), "private disk error") {
-		t.Fatal("storage error leaked to response")
-	}
-	if !strings.Contains(response.Header().Get("HX-Trigger"), "The edit could not be saved.") {
-		t.Fatal("expected safe storage error message")
+	if !strings.Contains(response.Header().Get("HX-Trigger"), "private disk error") {
+		t.Fatal("original storage error was not returned")
 	}
 	if storage.calls != 1 {
 		t.Fatalf("write calls = %d, want 1", storage.calls)

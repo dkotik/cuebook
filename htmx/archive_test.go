@@ -207,8 +207,8 @@ func TestArchiveRollsBackArchiveIfSourceCommitFails(t *testing.T) {
 	if response.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusInternalServerError, response.Body.String())
 	}
-	if !strings.Contains(response.Body.String(), "destination change was rolled back") {
-		t.Fatalf("rollback notice missing: %s", response.Body.String())
+	if !strings.Contains(response.Body.String(), "source storage failure") {
+		t.Fatalf("source commit error missing: %s", response.Body.String())
 	}
 	if !bytes.Equal(files["source.cue"].Data, originalSource) {
 		t.Fatalf("source changed after failed transfer:\n%s", files["source.cue"].Data)

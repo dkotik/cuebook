@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"iter"
 	"log/slog"
 	"math/big"
-
-	"cuelang.org/go/cue"
 )
 
 // Patch is a reversible source change that can be applied to a CUE document.
@@ -38,19 +35,22 @@ func (r Result) IsEqual(another Result) bool {
 	return r.Hash == another.Hash
 }
 
-func (r Result) BottomChangeIndex(since Result) (i int) {
-	nextOlder, close := iter.Pull[cue.Value](EachValue(since.Document.Value))
-	defer close()
+func (r Result) BottomChangeIndex(since Result) (int, error) {
+	olderValues, err := since.Document.Value.List()
+	if err != nil {
+		return -1, err
+	}
+
 	index := -1
 	for entry, err := range r.Document.EachEntry() {
 		index++
 		if err != nil {
-			continue
+			return -1, err
 		}
-		olderValue, ok := nextOlder()
-		if !ok {
-			return index
+		if !olderValues.Next() {
+			return index, nil
 		}
+		olderValue := olderValues.Value()
 		current, err := NewByteRange(entry.Value)
 		if err != nil || !validByteRange(current, r.Source) {
 			continue
@@ -60,10 +60,10 @@ func (r Result) BottomChangeIndex(since Result) (i int) {
 			continue
 		}
 		if !bytes.Equal(r.Source[current.Head:current.Tail], since.Source[older.Head:older.Tail]) {
-			return index
+			return index, nil
 		}
 	}
-	return -1
+	return -1, nil
 }
 
 // Match returns the entry in this result identified by the last change's

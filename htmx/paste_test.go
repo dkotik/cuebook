@@ -86,8 +86,8 @@ func TestPasteErrorsPreserveWorkspaceAndSource(t *testing.T) {
 		{name: "missing file", source: `{Name: "Pasted"}`, file: "missing.cue", wantNotice: "file not found"},
 		{name: "invalid document", source: `{Name: "Pasted"}`, file: "invalid.cue", wantNotice: "Unable to parse or validate"},
 		{name: "read only", source: `{Name: "Pasted"}`, readOnly: true, wantNotice: "read-only"},
-		{name: "save failure", source: `{Name: "Pasted"}`, commitError: errors.New("disk full"), wantNotice: "could not be saved"},
-		{name: "stale patch", source: `{Name: "Pasted"}`, commitError: cuebook.ErrByteRangeNotFound, wantNotice: "document changed"},
+		{name: "save failure", source: `{Name: "Pasted"}`, commitError: errors.New("disk full"), wantNotice: "disk full"},
+		{name: "stale patch", source: `{Name: "Pasted"}`, commitError: cuebook.ErrByteRangeNotFound, wantNotice: "byte range not found"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

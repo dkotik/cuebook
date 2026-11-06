@@ -1,6 +1,7 @@
 package cuebook
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -128,6 +129,28 @@ func TestBookEntryClassifiesFieldsOutsideDefinitionsAsDetails(t *testing.T) {
 			}
 			if !slices.Equal(gotDetails, wantDetails) {
 				t.Errorf("detail fields = %v, want %v", gotDetails, wantDetails)
+			}
+		})
+	}
+}
+
+func TestEntryGetFieldRejectsOutOfRangeIndexes(t *testing.T) {
+	entry := Entry{
+		Fields:  []Field{{Name: "Name"}},
+		Details: []Field{{Name: "Note"}},
+	}
+	tests := []struct {
+		name  string
+		index int
+	}{
+		{name: "negative index", index: -1},
+		{name: "index past fields and details", index: 2},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			if _, err := entry.GetField(test.index); !errors.Is(err, ErrFieldIndexOutOfRange) {
+				t.Errorf("GetField(%d) error = %v, want field index error", test.index, err)
 			}
 		})
 	}

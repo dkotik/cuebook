@@ -28,7 +28,12 @@ func TestUpdateStructInList(t *testing.T) {
 
 	// // last := document.LookupPath(cue.MakePath(cue.Index(2)))
 	replacement := []byte(`{ replacement: "replacement"}`)
-	for value := range EachValue(document) {
+	values, err := document.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for values.Next() {
+		value := values.Value()
 		if err = value.Err(); err != nil {
 			t.Fatal(err)
 		}
@@ -90,7 +95,7 @@ func TestUpdateReturnsTargetFieldNotStructFieldError(t *testing.T) {
 	}
 }
 
-func TestMergeFieldValuesWrapsFormattingError(t *testing.T) {
+func TestMergeFieldValuesReturnsFormattingError(t *testing.T) {
 	entry := cuecontext.New().CompileString(`{Name: "" @cuebook(default=missingTestDefault)}`)
 	if err := entry.Err(); err != nil {
 		t.Fatal(err)
@@ -100,16 +105,13 @@ func TestMergeFieldValuesWrapsFormattingError(t *testing.T) {
 	if err == nil {
 		t.Fatal("MergeFieldValues() error = nil, want a formatting error")
 	}
-	if !errors.Is(err, ErrUnableToFormatFieldValue) {
-		t.Fatalf("error = %v, want to include %v", err, ErrUnableToFormatFieldValue)
-	}
-	if got, want := err.Error(), "failed to format field value: no such default function: missingTestDefault"; got != want {
+	if got, want := err.Error(), "no such default function: missingTestDefault"; got != want {
 		t.Fatalf("error = %q, want %q", got, want)
 	}
 
 	var code PatchError
-	if !errors.As(err, &code) || code != ErrUnableToFormatFieldValue {
-		t.Fatalf("error code = %v, want %v", code, ErrUnableToFormatFieldValue)
+	if errors.As(err, &code) {
+		t.Fatalf("error unexpectedly has PatchError code %v", code)
 	}
 }
 

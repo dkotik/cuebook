@@ -66,7 +66,11 @@ func AddField(source []byte, entry cue.Value, name string, kind FieldKind, value
 	if entry.IncompleteKind() != cue.StructKind {
 		return nil, ErrEntryNotStruct
 	}
-	if hasField(entry, name) {
+	exists, err := hasField(entry, name)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
 		return nil, ErrFieldExists
 	}
 	field, err := newFieldDeclaration(name, kind, value)
@@ -117,13 +121,17 @@ func AddField(source []byte, entry cue.Value, name string, kind FieldKind, value
 
 // hasField includes optional fields from the schema, because adding one of
 // those is editing an existing field rather than adding a new one.
-func hasField(entry cue.Value, name string) bool {
-	for selector := range eachField(entry, cue.Optional(true)) {
-		if selector.Unquoted() == name {
-			return true
+func hasField(entry cue.Value, name string) (bool, error) {
+	fields, err := entry.Fields(cue.Optional(true))
+	if err != nil {
+		return false, err
+	}
+	for fields.Next() {
+		if fields.Selector().Unquoted() == name {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func newFieldDeclaration(name string, kind FieldKind, value string) (*ast.Field, error) {

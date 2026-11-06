@@ -105,21 +105,6 @@ func (f Field) MarshalText() ([]byte, error) {
 	return f.MarshallText()
 }
 
-func eachField(value cue.Value, options ...cue.Option) iter.Seq2[cue.Selector, cue.Value] {
-	next, err := value.Fields(options...)
-	if err != nil {
-		panic(fmt.Errorf("unable to iterate over the Cue list: %w", err))
-	}
-
-	return func(yield func(cue.Selector, cue.Value) bool) {
-		for next.Next() {
-			if !yield(next.Selector(), next.Value()) {
-				break
-			}
-		}
-	}
-}
-
 func firstDisjunct(value cue.Value) cue.Value {
 	if op, disjuncts := value.Expr(); op == cue.OrOp && len(disjuncts) > 0 {
 		return disjuncts[0]
