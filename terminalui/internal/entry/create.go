@@ -27,9 +27,9 @@ type createFormFields []tea.Model
 func emitCreateFormFields(value cue.Value) tea.Cmd {
 	return func() tea.Msg {
 		fields := make(createFormFields, 0, 9)
-		for selector, field := range cuebook.EachFieldDefinition(value) {
-			name := selector.Unquoted()
-			text, _ := field.String()
+		for definition := range cuebook.EachFieldDefinition(value) {
+			name := definition.Selector.Unquoted()
+			text, _ := definition.Value.String()
 			if text == "" {
 				def, _ := value.Default()
 				text, _ = def.String()

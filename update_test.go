@@ -135,17 +135,16 @@ func TestUpdateStructField(t *testing.T) {
 		{	two: "ok" },
 		{	two: "ok" }
 ]`)
-	document := cuecontext.New().CompileBytes(source)
-	err := document.Err()
+	book, err := New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	target := document.LookupPath(cue.MakePath(cue.Index(2)))
+	target := book.Value.LookupPath(cue.MakePath(cue.Index(2)))
 	if target.Err() != nil {
 		t.Fatal(target.Err())
 	}
-	entry, err := NewEntry(target)
+	entry, err := book.GetEntry(2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,22 +187,22 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 			difficult: true
 			"12": "sure"
 		},
-		{	two: "ok" },
-		{	two: "ok" },
-		{	two: "ok" },
-		{	two: "ok" }
+	{	two: "ok" },
+	{	two: "ok" },
+	{	two: "ok" },
+	{	two: "ok" }
 ]`)
-	document := cuecontext.New().CompileBytes(source)
-	err := document.Err()
+	book, err := New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
+	document := book.Value
 
 	target := document.LookupPath(cue.MakePath(cue.Index(2)))
 	if target.Err() != nil {
 		t.Fatal(target.Err())
 	}
-	entry, err := NewEntry(target)
+	entry, err := book.GetEntry(2)
 	if err != nil {
 		t.Fatal(err)
 	}

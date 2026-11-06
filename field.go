@@ -19,6 +19,11 @@ type Field struct {
 	Value       cue.Value
 }
 
+type FieldDefinition struct {
+	Selector cue.Selector
+	Value    cue.Value
+}
+
 // NewField creates a field from a CUE value and its preceding documentation comments.
 func NewField(name string, value cue.Value) Field {
 	var description strings.Builder
@@ -122,10 +127,36 @@ func firstDisjunct(value cue.Value) cue.Value {
 	return value
 }
 
+func abstractListEntryDefinition(entry cue.Value) (cue.Value, bool) {
+	if op, conjuncts := firstDisjunct(entry).Expr(); op == cue.AndOp {
+		var definition cue.Value
+		found := false
+		for _, conjunct := range conjuncts {
+			if _, ok := conjunct.Source().(*ast.Ellipsis); !ok {
+				continue
+			}
+			conjunct = firstDisjunct(conjunct)
+			if found {
+				definition = definition.Unify(conjunct)
+			} else {
+				definition = conjunct
+				found = true
+			}
+		}
+		if found {
+			return definition, true
+		}
+	}
+	return entry, false
+}
+
 // EachFieldDefinition emits abstract field definitions for structured entries
 // of a Cue list.
-func EachFieldDefinition(value cue.Value) iter.Seq2[cue.Selector, cue.Value] {
-	return func(yield func(_ cue.Selector, value cue.Value) bool) {
+func EachFieldDefinition(value cue.Value) iter.Seq[FieldDefinition] {
+	return func(yield func(FieldDefinition) bool) {
+		if value.Kind() != cue.ListKind {
+			return
+		}
 		path := cue.MakePath(cue.Index(0))
 		if length, _ := value.Len().Uint64(); length == 0 {
 			// Insert an empty entry so fields can be enumerated from an empty list.
@@ -133,29 +164,19 @@ func EachFieldDefinition(value cue.Value) iter.Seq2[cue.Selector, cue.Value] {
 		}
 
 		entry := firstDisjunct(value.LookupPath(path))
-		// CUE exposes the concrete entry alongside each abstract list ellipsis.
-		if op, conjuncts := entry.Expr(); op == cue.AndOp {
-			var definition cue.Value
-			found := false
-			for _, conjunct := range conjuncts {
-				if _, ok := conjunct.Source().(*ast.Ellipsis); !ok {
-					continue
-				}
-				conjunct = firstDisjunct(conjunct)
-				if found {
-					definition = definition.Unify(conjunct)
-				} else {
-					definition = conjunct
-					found = true
-				}
-			}
-			if found {
-				entry = definition
-			}
+		// CUE exposes the abstract entry alongside each list-ellipsis conjunct.
+		if definition, found := abstractListEntryDefinition(entry); found {
+			entry = definition
 		}
-		next, _ := entry.Fields(cue.All())
+		next, err := entry.Fields(cue.All())
+		if err != nil {
+			return
+		}
 		for next.Next() {
-			if !yield(next.Selector(), firstDisjunct(next.Value())) {
+			if !yield(FieldDefinition{
+				Selector: next.Selector(),
+				Value:    firstDisjunct(next.Value()),
+			}) {
 				break
 			}
 		}

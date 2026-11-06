@@ -442,11 +442,7 @@ func entryTitles(source []byte) ([]string, error) {
 	}
 	titles := make([]string, 0, length)
 	for index := 0; index < length; index++ {
-		value, err := document.GetValue(index)
-		if err != nil {
-			return nil, err
-		}
-		entry, err := cuebook.NewEntry(value)
+		entry, err := document.GetEntry(index)
 		if err != nil {
 			return nil, err
 		}

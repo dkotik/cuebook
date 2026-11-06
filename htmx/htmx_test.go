@@ -529,11 +529,7 @@ func TestWritableDirectoryAppendsEntries(t *testing.T) {
 			if err != nil || length != beforeLength+1 {
 				t.Fatalf("entry count = %d, err = %v; want %d", length, err, beforeLength+1)
 			}
-			value, err := document.GetValue(length - 1)
-			if err != nil {
-				t.Fatal(err)
-			}
-			entry, err := cuebook.NewEntry(value)
+			entry, err := document.GetEntry(length - 1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -586,11 +582,7 @@ func TestWritableDirectoryAppendsToEmptySchemaList(t *testing.T) {
 	if length, err := document.Len(); err != nil || length != 1 {
 		t.Fatalf("entry count = %d, err = %v; want 1", length, err)
 	}
-	value, err := document.GetValue(0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	entry, err := cuebook.NewEntry(value)
+	entry, err := document.GetEntry(0)
 	if err != nil {
 		t.Fatal(err)
 	}

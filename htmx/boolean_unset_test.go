@@ -241,7 +241,7 @@ func TestFieldViewBooleanUnset(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := cuebook.NewEntry(value)
+			entry, err := book.GetEntry(0)
 			if err != nil {
 				t.Fatal(err)
 			}

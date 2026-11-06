@@ -19,18 +19,18 @@ func TestEntryGetDescriptionIncludesAllFieldsAndUsesPlaceholders(t *testing.T) {
 	}{
 		{
 			name:   "regular and detail fields including title",
-			source: `{ Name: "Ada" @cuebook(title), Email: "ada@example.test", Note: "Additional context" @cuebook(detail) }`,
+			source: `[{ Name: "Ada" @cuebook(title), Email: "ada@example.test", Note: "Additional context" @cuebook(detail) }]`,
 			want:   []string{"Ada", "ada@example.test", "Additional context"},
 		},
 		{
 			name:   "empty regular and detail fields use ellipsis",
-			source: `{ Name: "" @cuebook(title), Email: "  ", Note: "" @cuebook(detail), Null: null }`,
+			source: `[{ Name: "" @cuebook(title), Email: "  ", Note: "" @cuebook(detail), Null: null }]`,
 			want:   []string{"...", "...", "...", "..."},
 		},
 		{
 			name: "absent optional regular and detail fields use ellipsis",
 			source: `#person: { Name: string, Nick?: string, Note?: string @cuebook(detail) }
-#person & {Name: "Ada"}`,
+			[...#person] & [{Name: "Ada"}]`,
 			want: []string{"Ada", "...", "..."},
 		},
 	}
@@ -39,11 +39,11 @@ func TestEntryGetDescriptionIncludesAllFieldsAndUsesPlaceholders(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			value := cuecontext.New().CompileString(test.source)
-			if err := value.Err(); err != nil {
+			book, err := New([]byte(test.source))
+			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := NewEntry(value)
+			entry, err := book.GetEntry(0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -54,23 +54,104 @@ func TestEntryGetDescriptionIncludesAllFieldsAndUsesPlaceholders(t *testing.T) {
 	}
 }
 
+func TestBookEntryClassifiesFieldsOutsideDefinitionsAsDetails(t *testing.T) {
+	tests := []struct {
+		name       string
+		source     string
+		entryIndex int
+		wantFields []string
+		wantDetail []string
+	}{
+		{
+			name: "uses abstract list definitions and treats concrete-only optional fields as details",
+			source: `#Entry: {
+				Name: string
+				AbstractOptional?: string
+				...
+			}
+			[...#Entry] & [{Name: "Ada", ConcreteOptional?: string}]`,
+			wantFields: []string{"Name", "AbstractOptional"},
+			wantDetail: []string{"ConcreteOptional"},
+		},
+		{
+			name: "uses the book definitions for later concrete entries",
+			source: `[
+				{Name: "Ada"},
+				{Name: "Grace", Additional: "notes"},
+			]`,
+			entryIndex: 1,
+			wantFields: []string{"Name"},
+			wantDetail: []string{"Additional"},
+		},
+		{
+			name: "keeps explicitly annotated detail fields in details",
+			source: `#Entry: {
+				Name: string
+				Notes?: string @cuebook(detail)
+			}
+			[...#Entry] & [{Name: "Ada", Notes: "more"}]`,
+			wantFields: []string{"Name"},
+			wantDetail: []string{"Notes"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			book, err := New([]byte(test.source))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			entry, err := book.GetEntry(test.entryIndex)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			gotFields := make([]string, len(entry.Fields))
+			for index, field := range entry.Fields {
+				gotFields[index] = field.Name
+			}
+			gotDetails := make([]string, len(entry.Details))
+			for index, field := range entry.Details {
+				gotDetails[index] = field.Name
+			}
+			slices.Sort(gotFields)
+			slices.Sort(gotDetails)
+			wantFields := slices.Clone(test.wantFields)
+			wantDetails := slices.Clone(test.wantDetail)
+			slices.Sort(wantFields)
+			slices.Sort(wantDetails)
+			if !slices.Equal(gotFields, wantFields) {
+				t.Errorf("regular fields = %v, want %v", gotFields, wantFields)
+			}
+			if !slices.Equal(gotDetails, wantDetails) {
+				t.Errorf("detail fields = %v, want %v", gotDetails, wantDetails)
+			}
+		})
+	}
+}
+
 func TestRemainingFieldComposition(t *testing.T) {
-	value := cuecontext.New().CompileBytes([]byte(`
+	source := []byte(`
 		#contact :{
 			one: string
 			another: string
 			...
 		}
 
-	 	#contact & {
+		[...#contact] & [{
 			one: "ok"
 			another: "ok"
 			two: "ok"
-		}
-	`))
-	if err := value.Err(); err != nil {
+		}]
+	`)
+	book, err := New(source)
+	if err != nil {
 		t.Fatal(err)
 	}
+	value := book.Value.LookupPath(cue.MakePath(cue.Index(0)))
 
 	iterator, err := value.Fields()
 	if err != nil {
@@ -80,7 +161,7 @@ func TestRemainingFieldComposition(t *testing.T) {
 		t.Log("field found:", iterator.Selector().String(), iterator.Value().IsConcrete())
 	}
 
-	entry, err := NewEntry(value)
+	entry, err := book.GetEntry(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,8 +183,8 @@ func requirePresentFieldDefinitions(source []byte, expectedCount int) func(*test
 			t.Fatal("unable to compile Cue source:", err)
 		}
 		count := 0
-		for selector, field := range EachFieldDefinition(book) {
-			t.Log(selector.String(), field.Value())
+		for definition := range EachFieldDefinition(book) {
+			t.Log(definition.Selector.String(), definition.Value)
 			count++
 		}
 		if count != expectedCount {
@@ -266,11 +347,11 @@ func TestEachFieldDefinitionUsesAbstractListConjunct(t *testing.T) {
 			}
 
 			var got []string
-			for selector, field := range EachFieldDefinition(value) {
-				name := selector.Unquoted()
+			for definition := range EachFieldDefinition(value) {
+				name := definition.Selector.Unquoted()
 				got = append(got, name)
-				if name == test.kindField && field.IncompleteKind() != test.wantKind {
-					t.Errorf("%s definition kind = %s, want %s", name, field.IncompleteKind(), test.wantKind)
+				if name == test.kindField && definition.Value.IncompleteKind() != test.wantKind {
+					t.Errorf("%s definition kind = %s, want %s", name, definition.Value.IncompleteKind(), test.wantKind)
 				}
 			}
 			slices.Sort(got)

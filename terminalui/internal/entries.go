@@ -124,7 +124,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case entry.CreateEvent:
 		return l, entry.NewCreateForm(l.book.Source, l.book.Document.Value)
 	case entrySelected:
-		selected, err := cuebook.NewEntry(l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(int(msg)))))
+		selected, err := l.book.Document.GetEntry(int(msg))
 		if err != nil {
 			return l, func() tea.Msg { return err } // TODO: fails on empty list?
 		}
@@ -161,7 +161,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			index -= 1
 			l.selected--
 			return l, func() tea.Msg {
-				entry, err := cuebook.NewEntry(l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(index))))
+				entry, err := l.book.Document.GetEntry(index)
 				if err != nil {
 					return err
 				}

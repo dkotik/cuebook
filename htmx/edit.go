@@ -55,14 +55,11 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 	if entryIndex < 0 {
 		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
 	}
-	entryValue, err := document.GetValue(entryIndex)
+	entry, err := document.GetEntry(entryIndex)
 	if err != nil {
 		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
 	}
-	entry, err := cuebook.NewEntry(entryValue)
-	if err != nil {
-		return editFormResponse{}, errors.New("Unable to read this entry.")
-	}
+	entryValue := entry.Value
 	field, ok := entry.GetFieldByName(request.Field)
 	if !ok || request.Field == "" {
 		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
@@ -131,14 +128,11 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 	if entryIndex < 0 {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
-	entryValue, err := document.GetValue(entryIndex)
+	entry, err := document.GetEntry(entryIndex)
 	if err != nil {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
-	entry, err := cuebook.NewEntry(entryValue)
-	if err != nil {
-		return editResponse{}, errors.New("Unable to read this entry.")
-	}
+	entryValue := entry.Value
 	fieldName := request.Field
 	field, ok := entry.GetFieldByName(fieldName)
 	if !ok || fieldName == "" {

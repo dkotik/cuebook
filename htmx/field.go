@@ -95,9 +95,10 @@ func splitAddFieldViews(fields []addFieldView) (required, optional []addFieldVie
 func entryFieldDefinitions(document cuebook.Book) []entryFieldDefinition {
 	var result []entryFieldDefinition
 	entry := document.Value.LookupPath(cue.MakePath(cue.Index(0)))
-	for selector, value := range cuebook.EachFieldDefinition(document.Value) {
+	for definition := range cuebook.EachFieldDefinition(document.Value) {
+		selector := definition.Selector
 		result = append(result, entryFieldDefinition{
-			Field:    cuebook.NewField(selector.Unquoted(), value),
+			Field:    cuebook.NewField(selector.Unquoted(), definition.Value),
 			Optional: selector.ConstraintType() == cue.OptionalConstraint || entryFieldOptional(entry, selector.Unquoted()),
 		})
 	}

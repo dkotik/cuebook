@@ -49,6 +49,17 @@ func TestNewPopulatesFieldsFromFirstDisjunct(t *testing.T) {
 			if len(book.Fields) != len(tt.fieldNames) {
 				t.Fatalf("got %d fields, want %d", len(book.Fields), len(tt.fieldNames))
 			}
+			if len(book.Definitions) != len(tt.fieldNames) {
+				t.Fatalf("got %d field definitions, want %d", len(book.Definitions), len(tt.fieldNames))
+			}
+			for i, definition := range book.Definitions {
+				if name := definition.Selector.Unquoted(); name != tt.fieldNames[i] {
+					t.Errorf("definition %d selector = %q, want %q", i, name, tt.fieldNames[i])
+				}
+				if definition.Value.Kind() != tt.fieldKinds[i] {
+					t.Errorf("definition %q kind = %s, want %s", definition.Selector, definition.Value.Kind(), tt.fieldKinds[i])
+				}
+			}
 			for i, field := range book.Fields {
 				if field.Name != tt.fieldNames[i] {
 					t.Errorf("field %d name = %q, want %q", i, field.Name, tt.fieldNames[i])
@@ -73,19 +84,24 @@ func TestNewPopulatesFieldsFromFirstDisjunct(t *testing.T) {
 
 func TestEachEntryOrdersFieldsByBookFields(t *testing.T) {
 	tests := []struct {
-		name   string
-		source string
-		want   [][]string
+		name        string
+		source      string
+		wantFields  [][]string
+		wantDetails [][]string
 	}{
 		{
-			name: "known fields follow book order and unknown fields stay stable",
+			name: "known fields follow book order and unknown fields become details",
 			source: `[
 				{ first: "book first", second: "book second" },
 				{ unlistedZ: "z", second: "entry second", unlistedA: "a", first: "entry first" },
 			]`,
-			want: [][]string{
+			wantFields: [][]string{
 				{"first", "second"},
-				{"first", "second", "unlistedZ", "unlistedA"},
+				{"first", "second"},
+			},
+			wantDetails: [][]string{
+				{},
+				{"unlistedZ", "unlistedA"},
 			},
 		},
 	}
@@ -99,7 +115,7 @@ func TestEachEntryOrdersFieldsByBookFields(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			var got [][]string
+			var gotFields, gotDetails [][]string
 			for entry, err := range book.EachEntry() {
 				if err != nil {
 					t.Fatal(err)
@@ -108,10 +124,18 @@ func TestEachEntryOrdersFieldsByBookFields(t *testing.T) {
 				for i, field := range entry.Fields {
 					fieldNames[i] = field.Name
 				}
-				got = append(got, fieldNames)
+				detailNames := make([]string, len(entry.Details))
+				for i, field := range entry.Details {
+					detailNames[i] = field.Name
+				}
+				gotFields = append(gotFields, fieldNames)
+				gotDetails = append(gotDetails, detailNames)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("entry field order = %#v, want %#v", got, tt.want)
+			if !reflect.DeepEqual(gotFields, tt.wantFields) {
+				t.Errorf("entry field order = %#v, want %#v", gotFields, tt.wantFields)
+			}
+			if !reflect.DeepEqual(gotDetails, tt.wantDetails) {
+				t.Errorf("entry details = %#v, want %#v", gotDetails, tt.wantDetails)
 			}
 		})
 	}

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"cuelang.org/go/cue"
-	"github.com/dkotik/cuebook/metadata"
 )
 
 // EntryNotFoundError reports that a requested entry does not exist.
@@ -33,42 +32,6 @@ type Entry struct {
 	Value   cue.Value
 	Fields  []Field
 	Details []Field // TODO: drop fields and details in favor of using iterators
-}
-
-func NewEntry(v cue.Value) (entry Entry, err error) {
-	entry.Value = v
-	if !v.IsConcrete() || v.IsNull() {
-		return entry, errors.New("cannot load an abstract value as structured object")
-	}
-	if k := v.Kind(); k != cue.StructKind {
-		return entry, fmt.Errorf("value is not a structured object: %s", k)
-	}
-
-	iterator, err := v.Value().Fields(cue.Optional(true))
-	if err != nil {
-		return entry, fmt.Errorf("unable to iterate through fields of a structured object: %w", err)
-	}
-	for iterator.Next() {
-		value := iterator.Value()
-		if metadata.IsTitleField(value) && value.IsConcrete() {
-			entry.title = metadata.ValueToString(value)
-		}
-		if metadata.IsDetailField(value) {
-			entry.Details = append(entry.Details, NewField(iterator.Selector().Unquoted(), value))
-			continue
-		}
-		entry.Fields = append(entry.Fields, NewField(iterator.Selector().Unquoted(), value))
-	}
-
-	if entry.title == "" {
-		for _, field := range entry.Fields {
-			if field.Value.IsConcrete() && field.String() != "" {
-				entry.title = field.String()
-				break
-			}
-		}
-	}
-	return entry, nil
 }
 
 func (e Entry) GetTitle() string {
