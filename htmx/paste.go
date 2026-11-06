@@ -3,14 +3,13 @@ package htmx
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
+	"github.com/dkotik/cuebook"
 )
 
 type pasteRequest struct {
@@ -25,29 +24,29 @@ func (*pasteRequest) Validate(context.Context) error { return nil }
 
 func (a *handler) paste(ctx context.Context, request *pasteRequest) (listResponse, error) {
 	if a.files == nil {
-		return listResponse{}, errors.New("This source is read-only.")
+		return listResponse{}, ErrSourceReadOnly
 	}
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return listResponse{}, errors.New("Unable to list CUE files.")
+		return listResponse{}, ErrUnableToListCueFiles
 	}
-	raw, _, status, message := a.readDocument(request.File, fileNames)
-	if status != http.StatusOK {
-		return listResponse{}, documentReadError(request.File, status, message)
+	raw, _, err := a.readDocument(request.File, fileNames)
+	if err != nil {
+		return listResponse{}, err
 	}
 	if strings.TrimSpace(request.Source) == "" {
-		return listResponse{}, errors.New("The pasted source is empty.")
+		return listResponse{}, ErrPastedSourceEmpty
 	}
 	entry := cuecontext.New().CompileString(request.Source)
 	if err := entry.Err(); err != nil {
-		return listResponse{}, errors.New("Unable to parse the pasted CUE struct: " + err.Error())
+		return listResponse{}, CauseError{Code: ErrUnableToParsePastedCUEStruct, Cause: err}
 	}
 	if entry.IncompleteKind() != cue.StructKind {
-		return listResponse{}, errors.New("The pasted source must be a CUE struct.")
+		return listResponse{}, cuebook.ErrEntryValueNotStruct
 	}
 	if request.CutFile != "" || request.CutEntry != "" || request.CutFingerprint != "" {
 		if request.CutFile == "" || request.CutEntry == "" || request.CutFingerprint == "" {
-			return listResponse{}, errors.New("The cut information is incomplete. Copy or cut the entry again.")
+			return listResponse{}, ErrIncompleteCutInformation
 		}
 		// A clipboard changed outside Cuebook must not move the previously cut entry.
 		if entrySourceFingerprint(request.Source) == request.CutFingerprint {
@@ -64,19 +63,19 @@ func (a *handler) paste(ctx context.Context, request *pasteRequest) (listRespons
 func (a *handler) pasteCut(ctx context.Context, request *pasteRequest, fileNames []string) (listResponse, error) {
 	index, err := strconv.Atoi(request.CutEntry)
 	if err != nil || index < 0 {
-		return listResponse{}, errors.New("The cut entry position is invalid. Cut the entry again.")
+		return listResponse{}, ErrInvalidCutEntryPosition
 	}
-	raw, document, status, message := a.readDocument(request.CutFile, fileNames)
-	if status != http.StatusOK {
-		return listResponse{}, documentReadError(request.CutFile, status, message)
+	raw, document, err := a.readDocument(request.CutFile, fileNames)
+	if err != nil {
+		return listResponse{}, err
 	}
 	value, err := document.GetValue(index)
 	if err != nil {
-		return listResponse{}, errors.New("The cut entry no longer exists. Copy or cut the entry again.")
+		return listResponse{}, cuebook.ErrBookEntryIndexOutOfRange
 	}
 	source, err := entryCUESource(value)
 	if err != nil || entrySourceFingerprint(source) != request.CutFingerprint {
-		return listResponse{}, errors.New("The cut entry changed or moved. Copy or cut the entry again.")
+		return listResponse{}, ErrCutEntryChangedOrMoved
 	}
 	data, err := a.transferEntry(ctx, request.CutFile, request.File, raw, document, index, fileNames)
 	return listResponse{pageData: data}, err

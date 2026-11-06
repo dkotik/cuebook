@@ -14,7 +14,6 @@ package htmx
 
 import (
 	"embed"
-	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -58,14 +57,14 @@ func New(source fs.FS, opts ...Option) (http.Handler, error) {
 // configure route registration and mounting.
 func NewWithFileSystem(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Handler, error) {
 	if files == nil {
-		return nil, errors.New("htmx: file system is nil")
+		return nil, ErrFileSystemNil
 	}
 	return newHandler(source, files, opts...)
 }
 
 func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Handler, error) {
 	if source == nil {
-		return nil, errors.New("htmx: source filesystem is nil")
+		return nil, ErrSourceFileSystemNil
 	}
 	config, err := resolveOptions(opts)
 	if err != nil {
@@ -77,12 +76,12 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 		},
 	}).ParseFS(templateFiles, "templates/*.html")
 	if err != nil {
-		return nil, fmt.Errorf("htmx: parse page templates: %w", err)
+		return nil, err
 	}
 
 	searchableSource, err := search.NewFS(source)
 	if err != nil {
-		return nil, fmt.Errorf("htmx: wrap source filesystem for search: %w", err)
+		return nil, err
 	}
 	mux := config.ServeMux
 	app := &handler{

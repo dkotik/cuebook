@@ -1,7 +1,9 @@
 package htmx
 
 import (
+	"errors"
 	"html"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,8 +12,65 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"cuelang.org/go/cue/cuecontext"
 	"github.com/dkotik/cuebook"
 )
+
+func TestReadDocumentMissingFileReturnsFileSystemError(t *testing.T) {
+	tests := []struct {
+		name      string
+		knownFile bool
+	}{
+		{name: "not listed"},
+		{name: "disappeared after listing", knownFile: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			knownFiles := []string(nil)
+			if test.knownFile {
+				knownFiles = []string{"missing.cue"}
+			}
+			a := handler{source: fstest.MapFS{}}
+			_, _, err := a.readDocument("missing.cue", knownFiles)
+			if err == nil {
+				t.Fatal("readDocument() error = nil, want file-not-found error")
+			}
+			var fileSystemError cuebook.FileSystemError
+			if !errors.As(err, &fileSystemError) {
+				t.Fatalf("readDocument() error type = %T, want FileSystemError in error chain", err)
+			}
+			if fileSystemError != cuebook.ErrFileSystemFileNotFound {
+				t.Errorf("FileSystemError = %v, want %v", fileSystemError, cuebook.ErrFileSystemFileNotFound)
+			}
+			if !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("readDocument() error = %v, want errors.Is(err, fs.ErrNotExist)", err)
+			}
+		})
+	}
+}
+
+func TestMakeEntryViewsErrorIsFileSystemPathError(t *testing.T) {
+	t.Parallel()
+	document := cuebook.Book{Value: cuecontext.New().CompileString("[1]")}
+	_, err := makeEntryViews(document, "book.cue", true)
+	if err == nil {
+		t.Fatal("makeEntryViews() error = nil, want error")
+	}
+	var pathError *cuebook.FileSystemPathError
+	if !errors.As(err, &pathError) {
+		t.Fatalf("makeEntryViews() error type = %T, want FileSystemPathError", err)
+	}
+	if pathError.Path != "book.cue" {
+		t.Errorf("FileSystemPathError path = %q, want %q", pathError.Path, "book.cue")
+	}
+	if !errors.Is(err, cuebook.ErrEntryValueNotStruct) {
+		t.Errorf("makeEntryViews() error = %v, want the entry error to remain in the chain", err)
+	}
+	if strings.Contains(err.Error(), "entry 0") {
+		t.Errorf("makeEntryViews() error = %v, should not include an entry index", err)
+	}
+}
 
 func TestIndexEntryLinksOpenMatchingEntry(t *testing.T) {
 	t.Parallel()

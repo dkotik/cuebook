@@ -2,9 +2,7 @@ package htmx
 
 import (
 	"context"
-	"errors"
 	"io/fs"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -30,30 +28,30 @@ type archiveResponse struct {
 
 func (a *handler) archive(ctx context.Context, request *archiveRequest) (archiveResponse, error) {
 	if a.files == nil {
-		return archiveResponse{}, errors.New("This source is read-only.")
+		return archiveResponse{}, ErrSourceReadOnly
 	}
 
 	fileName := request.File
 	if strings.HasPrefix(fileName, archiveDirectory) {
-		return archiveResponse{}, errors.New("Entries in the archive cannot be archived again.")
+		return archiveResponse{}, ErrEntryAlreadyArchived
 	}
 
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return archiveResponse{}, errors.New("Unable to list CUE files.")
+		return archiveResponse{}, ErrUnableToListCueFiles
 	}
-	raw, document, status, message := a.readDocument(fileName, fileNames)
-	if status != http.StatusOK {
-		return archiveResponse{}, documentReadError(fileName, status, message)
+	raw, document, err := a.readDocument(fileName, fileNames)
+	if err != nil {
+		return archiveResponse{}, err
 	}
 
 	from, err := strconv.Atoi(request.Entry)
 	if err != nil {
-		return archiveResponse{}, errors.New("The entry position is invalid.")
+		return archiveResponse{}, ErrInvalidEntryPosition
 	}
 	length, lengthErr := document.Len()
 	if lengthErr != nil {
-		return archiveResponse{}, errors.New("Unable to read the entry count.")
+		return archiveResponse{}, CauseError{Code: ErrUnableToReadEntryCount, Cause: lengthErr}
 	}
 	if from < 0 || from >= length {
 		return archiveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
@@ -61,12 +59,12 @@ func (a *handler) archive(ctx context.Context, request *archiveRequest) (archive
 
 	archiveName := cuebook.ArchiveFileName(time.Now())
 	if err := a.createFileIfNotExists(ctx, archiveName, []byte(cuebook.EmptyArchiveSource)); err != nil {
-		return archiveResponse{}, errors.New("Unable to create the archive file.")
+		return archiveResponse{}, CauseError{Code: ErrUnableToCreateArchiveFile, Cause: err}
 	}
 
 	fileNames, err = a.fileNames()
 	if err != nil {
-		return archiveResponse{}, errors.New("Unable to list CUE files.")
+		return archiveResponse{}, ErrUnableToListCueFiles
 	}
 	if !containsFile(fileNames, archiveName) {
 		return archiveResponse{}, &cuebook.FileSystemPathError{PathError: &fs.PathError{

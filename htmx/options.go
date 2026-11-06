@@ -1,7 +1,6 @@
 package htmx
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"path"
@@ -34,10 +33,10 @@ type Option func(*options) error
 func WithAgent(agent AgentHandler) Option {
 	return func(options *options) error {
 		if agent == nil {
-			return errors.New("htmx: agent handler is nil")
+			return ErrAgentHandlerNil
 		}
 		if options.Agent != nil {
-			return errors.New("htmx: agent handler is already set")
+			return ErrAgentAlreadyConfigured
 		}
 		options.Agent = agent
 		return nil
@@ -50,10 +49,10 @@ func WithAgent(agent AgentHandler) Option {
 func WithGitChanges(linker gitview.FileLinker) Option {
 	return func(options *options) error {
 		if linker == nil {
-			return errors.New("htmx: Git file linker is nil")
+			return ErrGitFileLinkerNil
 		}
 		if options.GitFileLinker != nil {
-			return errors.New("htmx: Git changes view is already configured")
+			return ErrGitChangesAlreadyConfigured
 		}
 		options.GitFileLinker = linker
 		return nil
@@ -63,10 +62,10 @@ func WithGitChanges(linker gitview.FileLinker) Option {
 func WithAdaptor(adaptor *htadaptor.Adaptor) Option {
 	return func(options *options) error {
 		if adaptor == nil {
-			return errors.New("htmx: adaptor is nil")
+			return ErrAdaptorNil
 		}
 		if options.Adaptor != nil {
-			return errors.New("htmx: adaptor is already set")
+			return ErrAdaptorAlreadyConfigured
 		}
 		options.Adaptor = adaptor
 		return nil
@@ -78,10 +77,10 @@ func WithAdaptor(adaptor *htadaptor.Adaptor) Option {
 func WithServeMux(mux *http.ServeMux) Option {
 	return func(options *options) error {
 		if mux == nil {
-			return errors.New("htmx: serve mux is nil")
+			return ErrServeMuxNil
 		}
 		if options.Adaptor != nil {
-			return errors.New("htmx: adaptor is already set")
+			return ErrAdaptorAlreadyConfigured
 		}
 		options.ServeMux = mux
 		return nil
@@ -94,7 +93,7 @@ func WithServeMux(mux *http.ServeMux) Option {
 func WithServeMuxPrefix(prefix string) Option {
 	return func(options *options) error {
 		if options.ServeMux != nil {
-			return errors.New("htmx: serve mux is already set")
+			return ErrServeMuxAlreadyConfigured
 		}
 		normalized := strings.TrimSpace(prefix)
 		if normalized == "" || normalized == "/" {

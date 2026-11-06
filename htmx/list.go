@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"net/http"
 	"net/url"
 	"path"
 	"sort"
@@ -22,15 +21,6 @@ import (
 	markdownhtml "github.com/yuin/goldmark/v2/renderer/html"
 	"github.com/yuin/goldmark/v2/util"
 )
-
-func documentReadError(filePath string, status int, message string) error {
-	if status == http.StatusNotFound {
-		return &cuebook.FileSystemPathError{PathError: &fs.PathError{
-			Path: filePath, Err: cuebook.ErrFileSystemFileNotFound,
-		}}
-	}
-	return errors.New(message)
-}
 
 type pageData struct {
 	AgentEnabled      bool
@@ -95,44 +85,40 @@ type listResponse struct {
 
 func (a *handler) list(_ context.Context, request *listRequest) (listResponse, error) {
 	var data pageData
-	var status int
-	fileOrFolder := request.File
+	var err error
 	if request.File == "" {
-		fileOrFolder = request.Folder
-		data, status = a.loadFolderPage(request.Folder, "")
+		data, err = a.loadFolderPage(request.Folder, "")
 	} else {
-		data, status = a.loadPage(request.File, "")
+		data, err = a.loadPage(request.File, "")
 	}
-	if status != http.StatusOK {
-		message := data.Error
-		if message == "" {
-			message = data.DocumentError
-		}
-		return listResponse{}, documentReadError(fileOrFolder, status, message)
+	if err != nil {
+		return listResponse{}, err
 	}
 	return listResponse{pageData: data}, nil
 }
 
-func (a *handler) loadFolderPage(folder, notice string) (pageData, int) {
+func (a *handler) loadFolderPage(folder, notice string) (pageData, error) {
 	fileNames, err := a.fileNames()
 	if err != nil {
 		data := a.basePage(nil, folder, notice)
-		data.Error = "Unable to list CUE files."
-		return data, http.StatusInternalServerError
+		data.Error = ErrUnableToListCueFiles.Error()
+		return data, ErrUnableToListCueFiles
 	}
 	data := a.basePage(fileNames, folder, notice)
 	items, ok := folderContents(makeFileTree(fileNames, ""), folder)
 	if !ok {
 		data.DocumentError = "Folder not found."
-		return data, http.StatusNotFound
+		return data, &cuebook.FileSystemPathError{PathError: &fs.PathError{
+			Path: folder, Err: cuebook.ErrFileSystemFileNotFound,
+		}}
 	}
 	data.FolderView = true
 	data.FolderBreadcrumb = makeFolderBreadcrumb(folder)
 	data.FolderItems = items
-	return data, http.StatusOK
+	return data, nil
 }
 
-func (a *handler) loadPage(fileName, notice string) (pageData, int) {
+func (a *handler) loadPage(fileName, notice string) (pageData, error) {
 	data := pageData{
 		ReadOnly:     a.files == nil,
 		Error:        notice,
@@ -142,35 +128,34 @@ func (a *handler) loadPage(fileName, notice string) (pageData, int) {
 	}
 	fileNames, err := a.fileNames()
 	if err != nil {
-		data.Error = "Unable to list CUE files."
-		return data, http.StatusInternalServerError
+		data.Error = ErrUnableToListCueFiles.Error()
+		return data, ErrUnableToListCueFiles
 	}
 	data.Files = makeSidebarTree(fileNames, fileName)
 	data.ArchiveSelected = fileName == archiveFolder || strings.HasPrefix(fileName, archiveDirectory)
 
 	if fileName == "" {
-		return data, http.StatusOK
+		return data, nil
 	}
 	data.Selected = fileName
-	raw, document, status, message := a.readDocument(fileName, fileNames)
+	raw, document, err := a.readDocument(fileName, fileNames)
 	setFileFrontmatter(&data, raw)
 	data.FileBreadcrumb = makeFileBreadcrumb(fileName)
-	if status != http.StatusOK {
-		data.DocumentError = message
-		return data, status
+	if err != nil {
+		data.DocumentError = err.Error()
+		return data, err
 	}
 	if !data.ReadOnly {
 		data.AddFields = makeAddFieldViews(document)
 		data.RequiredAddFields, data.OptionalAddFields = splitAddFieldViews(data.AddFields)
-
 	}
 	entries, err := makeEntryViews(document, fileName, data.ReadOnly)
 	if err != nil {
 		data.DocumentError = "Unable to display this CUE document: " + err.Error()
-		return data, http.StatusUnprocessableEntity
+		return data, fmt.Errorf("Unable to display this CUE document: %w", err)
 	}
 	data.Entries = entries
-	return data, http.StatusOK
+	return data, nil
 }
 
 func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]entryView, error) {
@@ -178,11 +163,15 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 	index := 0
 	for entry, err := range document.EachEntry() {
 		if err != nil {
-			return nil, fmt.Errorf("entry %d: %w", index, err)
+			return nil, &cuebook.FileSystemPathError{PathError: &fs.PathError{
+				Op: "read", Path: fileName, Err: err,
+			}}
 		}
 		entryRange, err := cuebook.NewByteRange(entry.Value)
 		if err != nil {
-			return nil, fmt.Errorf("entry %d: unable to locate entry in CUE file: %w", index, err)
+			return nil, &cuebook.FileSystemPathError{PathError: &fs.PathError{
+				Op: "read", Path: fileName, Err: err,
+			}}
 		}
 		view := makeEntryView(entry, fileName, index, entryRange, readOnly, false)
 		for fieldIndex := range view.Fields {
@@ -265,22 +254,31 @@ func (a *handler) fileNames() ([]string, error) {
 	return names, nil
 }
 
-func (a *handler) readDocument(name string, knownFiles []string) ([]byte, cuebook.Book, int, string) {
+func (a *handler) readDocument(name string, knownFiles []string) ([]byte, cuebook.Book, error) {
+	fileNotFound := &cuebook.FileSystemPathError{PathError: &fs.PathError{
+		Path: name, Err: cuebook.ErrFileSystemFileNotFound,
+	}}
 	if !validFileName(name) || !containsFile(knownFiles, name) {
-		return nil, cuebook.Book{}, http.StatusNotFound, "CUE file not found."
+		return nil, cuebook.Book{}, fileNotFound
 	}
 	raw, err := fs.ReadFile(a.source, name)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, cuebook.Book{}, http.StatusNotFound, "CUE file not found."
+			return nil, cuebook.Book{}, fileNotFound
 		}
-		return nil, cuebook.Book{}, http.StatusInternalServerError, "Unable to read this CUE file."
+		var pathError *fs.PathError
+		if errors.As(err, &pathError) {
+			return nil, cuebook.Book{}, &cuebook.FileSystemPathError{PathError: pathError}
+		}
+		return nil, cuebook.Book{}, &cuebook.FileSystemPathError{PathError: &fs.PathError{
+			Op: "read", Path: name, Err: err,
+		}}
 	}
 	document, err := cuebook.New(raw)
 	if err != nil {
-		return raw, cuebook.Book{}, http.StatusUnprocessableEntity, "Unable to parse or validate this CUE document: " + err.Error()
+		return raw, cuebook.Book{}, fmt.Errorf("Unable to parse or validate this CUE document: %w", err)
 	}
-	return raw, document, http.StatusOK, ""
+	return raw, document, nil
 }
 
 func validFileName(name string) bool {

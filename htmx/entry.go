@@ -2,9 +2,7 @@ package htmx
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 
@@ -67,7 +65,7 @@ func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryRespo
 	head, headErr := strconv.Atoi(input.Head)
 	tail, tailErr := strconv.Atoi(input.Tail)
 	if headErr != nil || tailErr != nil || head < 0 || tail <= head || filePath == "" {
-		return entryResponse{}, errors.New("The entry request is invalid.")
+		return entryResponse{}, ErrInvalidEntryRequest
 	}
 	return a.loadEntryPage(filePath, cuebook.ByteRange{Head: head, Tail: tail}, -1)
 }
@@ -75,22 +73,22 @@ func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryRespo
 func (a *handler) loadEntryPage(filePath string, requestedRange cuebook.ByteRange, requestedIndex int) (entryResponse, error) {
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return entryResponse{}, errors.New("Unable to list CUE files.")
+		return entryResponse{}, ErrUnableToListCueFiles
 	}
-	raw, document, status, message := a.readDocument(filePath, fileNames)
-	if status != http.StatusOK {
-		return entryResponse{}, documentReadError(filePath, status, message)
+	raw, document, err := a.readDocument(filePath, fileNames)
+	if err != nil {
+		return entryResponse{}, err
 	}
 
 	var selected *entryView
 	index := 0
 	for entry, err := range document.EachEntry() {
 		if err != nil {
-			return entryResponse{}, errors.New("Unable to display this CUE document.")
+			return entryResponse{}, CauseError{Code: ErrUnableToDisplayCUEDocument, Cause: err}
 		}
 		entryRange, err := cuebook.NewByteRange(entry.Value)
 		if err != nil {
-			return entryResponse{}, errors.New("Unable to locate this entry in the CUE file.")
+			return entryResponse{}, CauseError{Code: ErrUnableToLocateEntry, Cause: err}
 		}
 		if (requestedIndex >= 0 && index == requestedIndex) || (requestedIndex < 0 && entryRange == requestedRange) {
 			view := makeEntryView(entry, filePath, index, entryRange, a.files == nil, true)

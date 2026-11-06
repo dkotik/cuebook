@@ -3,7 +3,6 @@ package htmx
 import (
 	"context"
 	"errors"
-	"net/http"
 	"strconv"
 
 	"cuelang.org/go/cue"
@@ -26,26 +25,26 @@ type moveResponse struct {
 
 func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse, error) {
 	if a.files == nil {
-		return moveResponse{}, errors.New("This source is read-only.")
+		return moveResponse{}, ErrSourceReadOnly
 	}
 
 	fileName := request.File
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return moveResponse{}, errors.New("Unable to list CUE files.")
+		return moveResponse{}, ErrUnableToListCueFiles
 	}
-	raw, document, status, message := a.readDocument(fileName, fileNames)
-	if status != http.StatusOK {
-		return moveResponse{}, documentReadError(fileName, status, message)
+	raw, document, err := a.readDocument(fileName, fileNames)
+	if err != nil {
+		return moveResponse{}, err
 	}
 
 	from, err := strconv.Atoi(request.From)
 	if err != nil {
-		return moveResponse{}, errors.New("The entry position is invalid.")
+		return moveResponse{}, ErrInvalidEntryPosition
 	}
 	length, err := document.Len()
 	if err != nil {
-		return moveResponse{}, errors.New("Unable to read the entry count.")
+		return moveResponse{}, CauseError{Code: ErrUnableToReadEntryCount, Cause: err}
 	}
 	if from < 0 || from >= length {
 		return moveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
@@ -57,7 +56,7 @@ func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse,
 
 	to, err := strconv.Atoi(request.To)
 	if err != nil {
-		return moveResponse{}, errors.New("The entry position is invalid.")
+		return moveResponse{}, ErrInvalidEntryPosition
 	}
 	if to < 0 || to >= length {
 		return moveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
@@ -69,14 +68,14 @@ func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse,
 
 	change, err := entryMovePatch(raw, from, to)
 	if err != nil {
-		return moveResponse{}, errors.New("The entries could not be reordered.")
+		return moveResponse{}, CauseError{Code: ErrUnableToReorderEntries, Cause: err}
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
 		return moveResponse{}, err
 	}
 	if _, err := cuebook.New(candidate); err != nil {
-		return moveResponse{}, errors.New("The reordered document does not satisfy the CUE constraints.")
+		return moveResponse{}, CauseError{Code: ErrReorderedDocumentConstraintViolation, Cause: err}
 	}
 	if err := a.commitFile(ctx, fileName, change); err != nil {
 		return moveResponse{}, err
@@ -90,9 +89,9 @@ func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName
 		return a.renderEditedFile(sourceName)
 	}
 
-	destinationRaw, _, status, message := a.readDocument(destinationName, fileNames)
-	if status != http.StatusOK {
-		return pageData{}, documentReadError(destinationName, status, message)
+	destinationRaw, _, err := a.readDocument(destinationName, fileNames)
+	if err != nil {
+		return pageData{}, err
 	}
 	sourceEntryValue, err := sourceDocument.GetValue(from)
 	if err != nil {
@@ -100,24 +99,24 @@ func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName
 	}
 	transfer, err := cuebook.PrepareEntryTransfer(sourceRaw, destinationRaw, sourceEntryValue)
 	if err != nil {
-		return pageData{}, errors.New("The entry transfer could not be prepared.")
+		return pageData{}, CauseError{Code: ErrUnableToPrepareEntryTransfer, Cause: err}
 	}
 	appendChange := transfer.DestinationPatch
 	destinationCandidate, err := appendChange.ApplyToCueSource(destinationRaw)
 	if err != nil {
-		return pageData{}, errors.New("The destination file changed before the entry could be added. Reload and try again.")
+		return pageData{}, CauseError{Code: ErrDestinationChangedBeforeTransfer, Cause: err}
 	}
 	if _, err := cuebook.New(destinationCandidate); err != nil {
-		return pageData{}, errors.New("The entry does not satisfy the destination file's CUE constraints.")
+		return pageData{}, CauseError{Code: ErrDestinationConstraintViolation, Cause: err}
 	}
 
 	deleteChange := transfer.SourcePatch
 	sourceCandidate, err := deleteChange.ApplyToCueSource(sourceRaw)
 	if err != nil {
-		return pageData{}, errors.New("The source file changed before the entry could be removed. Reload and try again.")
+		return pageData{}, CauseError{Code: ErrSourceChangedBeforeTransfer, Cause: err}
 	}
 	if _, err := cuebook.New(sourceCandidate); err != nil {
-		return pageData{}, errors.New("Removing the entry does not satisfy the source file's CUE constraints.")
+		return pageData{}, CauseError{Code: ErrSourceConstraintViolation, Cause: err}
 	}
 
 	if err := a.commitFile(ctx, destinationName, cuebook.Validated(appendChange)); err != nil {

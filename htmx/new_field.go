@@ -3,7 +3,6 @@ package htmx
 import (
 	"context"
 	"errors"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -64,20 +63,20 @@ func makeNewFieldKindViews() []newFieldKindView {
 // empty value becomes the zero value of the kind.
 func (a *handler) newField(ctx context.Context, request *newFieldRequest) (editResponse, error) {
 	if a.files == nil {
-		return editResponse{}, errors.New("This source is read-only.")
+		return editResponse{}, ErrSourceReadOnly
 	}
 	fileName := request.File
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return editResponse{}, errors.New("Unable to list CUE files.")
+		return editResponse{}, ErrUnableToListCueFiles
 	}
-	raw, document, status, message := a.readDocument(fileName, fileNames)
-	if status != http.StatusOK {
-		return editResponse{}, documentReadError(fileName, status, message)
+	raw, document, err := a.readDocument(fileName, fileNames)
+	if err != nil {
+		return editResponse{}, err
 	}
 	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil {
-		return editResponse{}, errors.New("The entry index is invalid.")
+		return editResponse{}, ErrInvalidEntryIndex
 	}
 	if entryIndex < 0 {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
@@ -87,7 +86,7 @@ func (a *handler) newField(ctx context.Context, request *newFieldRequest) (editR
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 	if !metadata.IsOpen(entryValue) {
-		return editResponse{}, errors.New("This entry does not accept new fields.")
+		return editResponse{}, ErrEntryDoesNotAcceptFields
 	}
 
 	// Surrounding spaces in a field name are almost always accidental.
@@ -96,24 +95,24 @@ func (a *handler) newField(ctx context.Context, request *newFieldRequest) (editR
 	change, err := cuebook.AddField(raw, entryValue, name, kind, request.value())
 	switch {
 	case errors.Is(err, cuebook.ErrFieldNameEmpty):
-		return editResponse{}, errors.New("The field name is required.")
+		return editResponse{}, ErrFieldNameRequired
 	case errors.Is(err, cuebook.ErrFieldExists):
-		return editResponse{}, errors.New("The field " + name + " already exists.")
+		return editResponse{}, FieldError{Code: ErrFieldAlreadyExists, Field: name}
 	case errors.Is(err, cuebook.ErrUnknownFieldKind):
-		return editResponse{}, errors.New("Choose a field type.")
+		return editResponse{}, ErrFieldKindRequired
 	case errors.Is(err, cuebook.ErrInvalidFieldValue) && kind == cuebook.FieldKindNumber:
-		return editResponse{}, errors.New("The value of field " + name + " is not a number.")
+		return editResponse{}, FieldError{Code: ErrFieldValueNotNumber, Field: name}
 	case errors.Is(err, cuebook.ErrInvalidFieldValue):
-		return editResponse{}, errors.New("The value of field " + name + " is invalid.")
+		return editResponse{}, FieldError{Code: ErrFieldValueInvalid, Field: name}
 	case err != nil:
-		return editResponse{}, errors.New("The field could not be added to this entry.")
+		return editResponse{}, CauseError{Code: ErrUnableToAddField, Cause: err}
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		return editResponse{}, errors.New("The entry changed before the field could be added. Reload and try again.")
+		return editResponse{}, CauseError{Code: ErrDocumentChangedBeforeFieldAdd, Cause: err}
 	}
 	if _, err = cuebook.New(candidate); err != nil {
-		return editResponse{}, errors.New("The new field does not satisfy the CUE constraints: " + err.Error())
+		return editResponse{}, CauseError{Code: ErrNewFieldConstraintViolation, Cause: err}
 	}
 	if err = a.commitFile(ctx, fileName, change); err != nil {
 		return editResponse{}, err

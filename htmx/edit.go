@@ -5,7 +5,6 @@ import (
 	"errors"
 	"html/template"
 	"io/fs"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -37,21 +36,21 @@ type editFormResponse struct {
 
 func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFormResponse, error) {
 	if a.files == nil {
-		return editFormResponse{}, errors.New("This source is read-only.")
+		return editFormResponse{}, ErrSourceReadOnly
 	}
 
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return editFormResponse{}, errors.New("Unable to list CUE files.")
+		return editFormResponse{}, ErrUnableToListCueFiles
 	}
-	_, document, status, message := a.readDocument(request.File, fileNames)
-	if status != http.StatusOK {
-		return editFormResponse{}, documentReadError(request.File, status, message)
+	_, document, err := a.readDocument(request.File, fileNames)
+	if err != nil {
+		return editFormResponse{}, err
 	}
 
 	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil {
-		return editFormResponse{}, errors.New("The entry index is invalid.")
+		return editFormResponse{}, ErrInvalidEntryIndex
 	}
 	if entryIndex < 0 {
 		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
@@ -105,26 +104,26 @@ func (response editErrorResponse) GetFlashMessage() (string, bool) {
 
 func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {
 	if a.files == nil {
-		return editResponse{}, errors.New("This source is read-only.")
+		return editResponse{}, ErrSourceReadOnly
 	}
 	if request.Value == nil {
-		return editResponse{}, errors.New("The edit request is invalid.")
+		return editResponse{}, ErrInvalidEditRequest
 	}
 	value := *request.Value
 
 	fileName := request.File
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return editResponse{}, errors.New("Unable to list CUE files.")
+		return editResponse{}, ErrUnableToListCueFiles
 	}
-	raw, document, status, message := a.readDocument(fileName, fileNames)
-	if status != http.StatusOK {
-		return editResponse{}, documentReadError(fileName, status, message)
+	raw, document, err := a.readDocument(fileName, fileNames)
+	if err != nil {
+		return editResponse{}, err
 	}
 
 	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil {
-		return editResponse{}, errors.New("The entry index is invalid.")
+		return editResponse{}, ErrInvalidEntryIndex
 	}
 	if entryIndex < 0 {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
@@ -140,7 +139,7 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 	if metadata.IsLockedField(field.Value) {
-		return editResponse{}, errors.New("The field " + fieldName + " is locked and cannot be changed.")
+		return editResponse{}, FieldError{Code: ErrFieldLocked, Field: fieldName}
 	}
 	if isSecretField(field.Value) && value == "" && field.String() != "" {
 		return a.renderEditResponse(request, entryIndex)
@@ -154,25 +153,25 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 		change, err = cuebook.UpdateFieldValue(raw, entryValue, field.Value, value)
 	}
 	if err != nil {
-		return editResponse{}, errors.New("The field value could not be formatted.")
+		return editResponse{}, CauseError{Code: ErrFieldValueFormatFailed, Cause: err}
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		return editResponse{}, errors.New("The entry changed before the edit could be applied. Reload and try again.")
+		return editResponse{}, CauseError{Code: ErrDocumentChangedBeforeEdit, Cause: err}
 	}
 	if unset {
 		// Inspect the field after omission: a populated optional field has a regular
 		// selector, and a required field with a default may still validate.
 		omitted := cuecontext.New().CompileBytes(candidate).LookupPath(cue.MakePath(cue.Index(entryIndex)))
 		if !optionalField(omitted, fieldName) {
-			return editResponse{}, errors.New("The required boolean field " + fieldName + " cannot be unset.")
+			return editResponse{}, FieldError{Code: ErrRequiredBooleanFieldUnset, Field: fieldName}
 		}
 		if !entryValue.LookupPath(cue.MakePath(cue.Str(fieldName))).Exists() {
 			return a.renderEditResponse(request, entryIndex)
 		}
 	}
 	if _, err = cuebook.New(candidate); err != nil {
-		return editResponse{}, errors.New("The submitted value does not satisfy the CUE constraints: " + err.Error())
+		return editResponse{}, CauseError{Code: ErrSubmittedValueConstraintViolation, Cause: err}
 	}
 	if err = a.commitFile(ctx, fileName, change); err != nil {
 		return editResponse{}, err
@@ -196,14 +195,12 @@ func (a *handler) renderEditResponse(request *editRequest, entryIndex int) (edit
 }
 
 func (a *handler) renderEditedFile(fileName string) (pageData, error) {
-	data, status := a.loadPage(fileName, "")
-	if status == http.StatusNotFound {
-		return pageData{}, &cuebook.FileSystemPathError{PathError: &fs.PathError{
-			Path: fileName, Err: cuebook.ErrFileSystemFileNotFound,
-		}}
-	}
-	if status != http.StatusOK {
-		return pageData{}, errors.New("The edit was saved, but the updated document could not be displayed.")
+	data, err := a.loadPage(fileName, "")
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return pageData{}, err
+		}
+		return pageData{}, ErrEditSavedButDisplayFailed
 	}
 	return data, nil
 }

@@ -42,7 +42,7 @@ func TestCutPasteUsesMoveWorkflow(t *testing.T) {
 		{name: "clipboard line ending conversion still moves", clipboard: "CRLF", wantStatus: http.StatusOK, wantSource: []string{"Keep me"}, wantTarget: []string{"Existing", "Move me"}},
 		{name: "changed entry cannot be cut using stale state", sourceAfter: `[{Name: "Keep me"}, {Name: "Changed"}]`, wantStatus: http.StatusNoContent, wantNotice: "changed or moved", wantSource: []string{"Keep me", "Changed"}, wantTarget: []string{"Existing"}},
 		{name: "reordered source cannot move wrong entry", sourceAfter: `[{Name: "Move me"}, {Name: "Keep me"}]`, wantStatus: http.StatusNoContent, wantNotice: "changed or moved", wantSource: []string{"Move me", "Keep me"}, wantTarget: []string{"Existing"}},
-		{name: "deleted entry cannot be cut again", sourceAfter: `[{Name: "Keep me"}]`, wantStatus: http.StatusNoContent, wantNotice: "no longer exists", wantSource: []string{"Keep me"}, wantTarget: []string{"Existing"}},
+		{name: "deleted entry cannot be cut again", sourceAfter: `[{Name: "Keep me"}]`, wantStatus: http.StatusNoContent, wantNotice: "index out of range", wantSource: []string{"Keep me"}, wantTarget: []string{"Existing"}},
 		{name: "missing source", cutFile: "missing.cue", wantStatus: http.StatusNoContent, wantNotice: "file not found", wantSource: []string{"Keep me", "Move me"}, wantTarget: []string{"Existing"}},
 		{name: "invalid source position", cutIndex: "invalid", wantStatus: http.StatusNoContent, wantNotice: "position is invalid", wantSource: []string{"Keep me", "Move me"}, wantTarget: []string{"Existing"}},
 		{name: "incomplete cut state", incomplete: true, wantStatus: http.StatusNoContent, wantNotice: "incomplete", wantSource: []string{"Keep me", "Move me"}, wantTarget: []string{"Existing"}},

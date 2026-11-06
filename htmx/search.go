@@ -133,10 +133,10 @@ func (*searchRequest) Validate(context.Context) error { return nil }
 
 func (a *handler) search(_ context.Context, request *searchRequest) (searchResponse, error) {
 	if a.searchFS == nil || !a.searchFS.IndexReady() {
-		return searchResponse{}, errors.New("The search index is still being built.")
+		return searchResponse{}, ErrSearchIndexBuilding
 	}
-	if a.searchFS.IndexError() != nil {
-		return searchResponse{}, errors.New("Unable to build the search index.")
+	if err := a.searchFS.IndexError(); err != nil {
+		return searchResponse{}, CauseError{Code: ErrUnableToBuildSearchIndex, Cause: err}
 	}
 
 	query := strings.TrimSpace(request.Query)
@@ -144,12 +144,12 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 		query = strings.TrimSpace(request.Alt)
 	}
 	if query == "" {
-		return searchResponse{}, errors.New("A search query is required.")
+		return searchResponse{}, ErrSearchQueryRequired
 	}
 
 	results, err := a.searchFS.Query(query)
 	if err != nil {
-		return searchResponse{}, errors.New("The search query is invalid.")
+		return searchResponse{}, CauseError{Code: ErrSearchQueryInvalid, Cause: err}
 	}
 	view := searchResultsView{Query: query, Results: make([]searchResultView, 0, len(results))}
 	positionsByFile := make(map[string]map[cuebook.ByteRange]searchEntryPosition)

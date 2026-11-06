@@ -2,8 +2,6 @@ package htmx
 
 import (
 	"context"
-	"errors"
-	"net/http"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
@@ -30,17 +28,17 @@ type addResponse struct {
 
 func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, error) {
 	if a.files == nil {
-		return addResponse{}, errors.New("This source is read-only.")
+		return addResponse{}, ErrSourceReadOnly
 	}
 
 	fileName := request.File
 	fileNames, err := a.fileNames()
 	if err != nil {
-		return addResponse{}, errors.New("Unable to list CUE files.")
+		return addResponse{}, ErrUnableToListCueFiles
 	}
-	raw, document, status, message := a.readDocument(fileName, fileNames)
-	if status != http.StatusOK {
-		return addResponse{}, documentReadError(fileName, status, message)
+	raw, document, err := a.readDocument(fileName, fileNames)
+	if err != nil {
+		return addResponse{}, err
 	}
 	fieldNames := make([]string, len(request.Entries))
 	values := make([]string, len(request.Entries))
@@ -51,10 +49,10 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 
 	definitions := entryFieldDefinitions(document)
 	if len(definitions) == 0 {
-		return addResponse{}, errors.New("This document has no entry fields to add.")
+		return addResponse{}, ErrNoEntryFieldsToAdd
 	}
 	if len(fieldNames) == 0 || len(fieldNames) != len(values) {
-		return addResponse{}, errors.New("The add-entry fields are invalid.")
+		return addResponse{}, ErrInvalidAddEntryFields
 	}
 
 	knownFields := make(map[string]entryFieldDefinition, len(definitions))
@@ -64,10 +62,10 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 	submitted := make(map[string]string, len(fieldNames))
 	for i, name := range fieldNames {
 		if _, ok := knownFields[name]; !ok {
-			return addResponse{}, errors.New("The add-entry form contains an unknown field.")
+			return addResponse{}, ErrUnknownAddEntryField
 		}
 		if _, exists := submitted[name]; exists {
-			return addResponse{}, errors.New("The add-entry form contains a duplicate field.")
+			return addResponse{}, ErrDuplicateAddEntryField
 		}
 		submitted[name] = values[i]
 	}
@@ -83,11 +81,11 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 			if optional {
 				continue
 			}
-			return addResponse{}, errors.New("A required entry field is missing.")
+			return addResponse{}, ErrRequiredEntryFieldMissing
 		}
 		if value == "not_set" && boolean {
 			if !optional {
-				return addResponse{}, errors.New("The required boolean field " + field.Name + " cannot be unset.")
+				return addResponse{}, FieldError{Code: ErrRequiredBooleanFieldUnset, Field: field.Name}
 			}
 			continue
 		}
@@ -96,25 +94,25 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 		}
 		declaration, err := addFieldDeclaration(field, value)
 		if err != nil {
-			return addResponse{}, errors.New("The value for field " + field.Name + " is invalid.")
+			return addResponse{}, FieldError{Code: ErrAddFieldValueInvalid, Field: field.Name}
 		}
 		declarations = append(declarations, declaration)
 	}
 
 	entry := cuecontext.New().BuildExpr(ast.NewStruct(declarations...))
 	if err := entry.Err(); err != nil {
-		return addResponse{}, errors.New("The submitted entry is invalid.")
+		return addResponse{}, CauseError{Code: ErrSubmittedEntryInvalid, Cause: err}
 	}
 	entryIndex, err := document.Len()
 	if err != nil {
-		return addResponse{}, errors.New("Unable to determine where to add the entry.")
+		return addResponse{}, CauseError{Code: ErrUnableToDetermineEntryPosition, Cause: err}
 	}
 	if err := a.appendEntry(ctx, fileName, raw, entry); err != nil {
 		return addResponse{}, err
 	}
 	addedEntry, err := a.loadEntryPage(fileName, cuebook.ByteRange{}, entryIndex)
 	if err != nil {
-		return addResponse{}, errors.New("The entry was saved, but the updated document could not be displayed.")
+		return addResponse{}, ErrEntrySavedButDisplayFailed
 	}
 	return addResponse{pageData: addedEntry.pageData}, nil
 }
@@ -122,14 +120,14 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 func (a *handler) appendEntry(ctx context.Context, fileName string, raw []byte, entry cue.Value) error {
 	change, err := cuebook.AppendToStructList(raw, entry)
 	if err != nil {
-		return errors.New("The entry could not be added to this CUE document.")
+		return CauseError{Code: ErrUnableToAddEntry, Cause: err}
 	}
 	candidate, err := change.ApplyToCueSource(raw)
 	if err != nil {
-		return errors.New("The document changed before the entry could be added. Reload and try again.")
+		return CauseError{Code: ErrDocumentChangedBeforeEntryAdd, Cause: err}
 	}
 	if _, err := cuebook.New(candidate); err != nil {
-		return errors.New("The submitted entry does not satisfy the CUE constraints: " + err.Error())
+		return CauseError{Code: ErrSubmittedEntryConstraintViolation, Cause: err}
 	}
 	if err := a.commitFile(ctx, fileName, change); err != nil {
 		return err
@@ -152,7 +150,7 @@ func addFieldDeclaration(field cuebook.Field, input string) (ast.Decl, error) {
 	}
 	expression, ok := compiled.Syntax().(ast.Expr)
 	if !ok {
-		return nil, errors.New("field value is not a CUE expression")
+		return nil, ErrFieldValueNotCUEExpression
 	}
 	return &ast.Field{
 		Label: ast.NewString(field.Name),

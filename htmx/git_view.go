@@ -2,9 +2,7 @@ package htmx
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 
 	gitview "github.com/dkotik/cuebook/htmx/git"
 )
@@ -19,19 +17,19 @@ type gitChangesResponse struct {
 
 func (a *handler) changes(_ context.Context, _ *gitChangesRequest) (gitChangesResponse, error) {
 	if a.gitFileLinker == nil {
-		return gitChangesResponse{}, errors.New("The Git changes view is not configured.")
+		return gitChangesResponse{}, ErrGitChangesViewNotConfigured
 	}
 	changes, err := gitview.New(a.gitSource, gitview.WithFileLinker(a.gitFileLinker))
 	if err != nil {
 		return gitChangesResponse{}, fmt.Errorf("Unable to load Git changes: %w", err)
 	}
 
-	data, status := a.loadPage("", "")
-	if status != http.StatusOK {
+	data, err := a.loadPage("", "")
+	if err != nil {
 		if data.Error != "" {
-			return gitChangesResponse{}, errors.New(data.Error)
+			return gitChangesResponse{}, err
 		}
-		return gitChangesResponse{}, errors.New("Unable to load the Git changes view.")
+		return gitChangesResponse{}, ErrUnableToLoadGitChangesView
 	}
 	data.GitSelected = true
 	data.GitLostLines = changes.LostLines()
