@@ -71,7 +71,7 @@ func loadFields(cueEntry cuebook.Entry, selectedIndex int) tea.Cmd {
 		knownFieldNames := make([]string, 0, expectedTotal)
 		fields := make([]tea.Model, 0, expectedTotal)
 		// fields = append(fields, list.Title{
-		// 	Text:  entry.GetTitle() + fmt.Sprintf(" › %d/%d", index+1, total),
+		// 	Text:  entry.Title + fmt.Sprintf(" › %d/%d", index+1, total),
 		// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		// })
 		order := append(
@@ -360,7 +360,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 						Other: "Entry `{{.Title}}` updated.",
 					},
 					TemplateData: map[string]interface{}{
-						"Title": p.Entry.GetTitle(), // TODO: old title, obtain new using swapFieldPatch algorithm
+						"Title": p.Entry.Title, // TODO: old title, obtain new using swapFieldPatch algorithm
 					},
 				}),
 				func() tea.Msg { return window.BackEvent{} },

@@ -464,7 +464,7 @@ func entryTitles(source []byte) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		titles = append(titles, entry.GetTitle())
+		titles = append(titles, entry.Title)
 	}
 	return titles, nil
 }

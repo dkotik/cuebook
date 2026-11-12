@@ -90,7 +90,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				return err
 			}
 			return entry.ArchiveEntryCompletedEvent{
-				Title:        msg.Entry.GetTitle(),
+				Title:        msg.Entry.Title,
 				Result:       result,
 				ReturnToList: msg.ReturnToList,
 			}
@@ -255,7 +255,7 @@ func LoadEntries(r cuebook.Result, selectionIndex int) tea.Cmd {
 				result.Cards,
 				Entry{
 					Model: card.New(card.Configuration{
-						Title:       entry.GetTitle(),
+						Title:       entry.Title,
 						Description: entry.GetDescription(),
 					}),
 					Index: index,

@@ -154,7 +154,7 @@ func (a *handler) search(_ context.Context, request *searchRequest) (searchRespo
 	view := searchResultsView{Query: query, Results: make([]searchResultView, 0, len(results))}
 	positionsByFile := make(map[string]map[cuebook.ByteRange]searchEntryPosition)
 	for _, result := range results {
-		title := result.Entry.GetTitle()
+		title := result.Entry.Title
 		if title == "" {
 			title = "Untitled entry"
 		}

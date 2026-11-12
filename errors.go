@@ -12,20 +12,14 @@ type Error uint8
 const (
 	// ErrUnknownCuebookError is the zero value for an unspecified cuebook error.
 	ErrUnknownCuebookError Error = iota
-	_                            // Retains subsequent Error values after removing the parse code.
-	_                            // Retains subsequent Error values after removing the validation code.
 	// ErrNotCueList occurs when the root CUE value is not a list.
 	ErrNotCueList
-	_ // Retains subsequent Error values after removing unused list iteration code.
 	// ErrCannotLoadAbstractEntry occurs when an abstract or null list item is loaded as an entry.
 	ErrCannotLoadAbstractEntry
 	// ErrEntryValueNotStruct occurs when a list item is not a structured object.
 	ErrEntryValueNotStruct
-	_ // Retains subsequent Error values after removing the field-iteration code.
 	// ErrBookEntryIndexOutOfRange occurs when a requested entry index is invalid.
 	ErrBookEntryIndexOutOfRange
-	_ // Retains subsequent Error values after removing the unused value lookup code.
-	_ // Retains subsequent Error values after removing the unused list-length code.
 	// ErrFieldIndexOutOfRange occurs when a field index is negative or exceeds an entry's fields.
 	ErrFieldIndexOutOfRange
 )

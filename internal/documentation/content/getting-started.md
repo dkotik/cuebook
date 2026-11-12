@@ -78,7 +78,7 @@ func main() {
         if err != nil {
             log.Fatal(err)
         }
-        fmt.Println(entry.GetTitle())
+        fmt.Println(entry.Title)
         for _, field := range entry.Fields {
             fmt.Printf("  %s: %s\n", field.Name, field.String())
         }

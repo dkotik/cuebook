@@ -357,7 +357,7 @@ func archiveTitles(t *testing.T, source []byte) []string {
 		if err != nil {
 			t.Fatal(err)
 		}
-		titles = append(titles, entry.GetTitle())
+		titles = append(titles, entry.Title)
 	}
 	return titles
 }

@@ -24,7 +24,7 @@ An `Entry` retains its underlying CUE value in `Value` and exposes its concrete 
 - `Fields` contains ordinary fields.
 - `Details` contains fields marked with `@cuebook(detail)`.
 
-`GetTitle()` returns the entry title. A field marked `@cuebook(title)` supplies it; if no title is marked, Cuebook falls back to the string representation of the first ordinary field. `GetDescription()` returns ordinary field values as strings and omits the first value when it duplicates the title.
+`Title` exposes the entry title. A field marked `@cuebook(title)` supplies it; if no title is marked, Cuebook falls back to the string representation of the first ordinary field. `GetDescription()` returns ordinary field values as strings and omits the first value when it duplicates the title.
 
 Use `GetField(index)` to access a field by position across both slices, or `GetFieldByName(name)` to look it up by name. `EachEntry` can return an error for a list item that is not a concrete struct, so check the error yielded for every item.
 

@@ -26,7 +26,7 @@ func (e *EntryNotFoundError) HyperTextStatusCode() int {
 }
 
 type Entry struct {
-	title            string
+	Title            string
 	Value            cue.Value
 	Fields           []Field
 	Details          []Field
@@ -45,10 +45,6 @@ func (e Entry) originalSourceRange() (ByteRange, error) {
 		return ByteRange{}, ErrByteRangeNotFound
 	}
 	return e.sourceRange, nil
-}
-
-func (e Entry) GetTitle() string {
-	return e.title
 }
 
 func (e Entry) GetDescription() (description []string) {

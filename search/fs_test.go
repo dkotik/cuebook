@@ -87,7 +87,7 @@ func TestSearchFSIndexesCUEFilesRecursively(t *testing.T) {
 			if results[0].Path != test.wantPath {
 				t.Errorf("result path = %q, want %q", results[0].Path, test.wantPath)
 			}
-			if title := results[0].Entry.GetTitle(); title != test.wantTitle {
+			if title := results[0].Entry.Title; title != test.wantTitle {
 				t.Errorf("result title = %q, want %q", title, test.wantTitle)
 			}
 		})
@@ -128,7 +128,7 @@ func TestSearchFSUpdateFileReplacesIndexedEntries(t *testing.T) {
 	if len(newResults) != 1 {
 		t.Fatalf("updated result count = %d, want 1", len(newResults))
 	}
-	if newResults[0].Path != filePath || newResults[0].Entry.GetTitle() != "Updated record" {
+	if newResults[0].Path != filePath || newResults[0].Entry.Title != "Updated record" {
 		t.Errorf("updated result = %+v, want path %q and title %q", newResults[0], filePath, "Updated record")
 	}
 }

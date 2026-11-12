@@ -13,7 +13,18 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"github.com/dkotik/cuebook/metadata"
+	"github.com/dkotik/cuebook/metadata/identifier"
 )
+
+type IdentifierGenerator interface {
+	GenerateIdentifier() (string, error)
+}
+
+type identifierGeneratorFunc func() (string, error)
+
+func (generate identifierGeneratorFunc) GenerateIdentifier() (string, error) {
+	return generate()
+}
 
 // Book holds a list of structured data entries.
 type Book struct {
@@ -21,7 +32,9 @@ type Book struct {
 	Fields      []Field
 	Definitions []FieldDefinition
 
-	source []byte
+	source                         []byte
+	entryUniqueIdentifierFieldName string
+	entryUniqueIdentifierGenerator IdentifierGenerator
 }
 
 func New(source []byte) (book Book, err error) {
@@ -46,7 +59,24 @@ func New(source []byte) (book Book, err error) {
 		book.Definitions = append(book.Definitions, definition)
 		book.Fields = append(book.Fields, NewField(definition.Selector.Unquoted(), definition.Value))
 	}
+	book.configureEntryUniqueIdentifier()
 	return book, nil
+}
+
+func (book *Book) configureEntryUniqueIdentifier() {
+	for _, definition := range book.Definitions {
+		attribute, ok := metadata.GetFieldAttributes(definition.Value, "cuebook").GetFirstOf("uuid")
+		if !ok {
+			continue
+		}
+
+		book.entryUniqueIdentifierFieldName = definition.Selector.Unquoted()
+		parameters := attribute.Query
+		book.entryUniqueIdentifierGenerator = identifierGeneratorFunc(func() (string, error) {
+			return identifier.GenerateUUID("", parameters)
+		})
+		return
+	}
 }
 
 func (d Book) EachEntry() iter.Seq2[Entry, error] {
@@ -104,7 +134,7 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 					for fields.Next() {
 						fieldValue := fields.Value()
 						if metadata.IsTitleField(fieldValue) && fieldValue.IsConcrete() {
-							entry.title = metadata.ValueToString(fieldValue)
+							entry.Title = metadata.ValueToString(fieldValue)
 						}
 						name := fields.Selector().Unquoted()
 						_, isDefinition := fieldOrder[name]
@@ -121,10 +151,10 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 				return
 			}
 
-			if entry.title == "" {
+			if entry.Title == "" {
 				for _, field := range entry.Fields {
 					if field.Value.IsConcrete() && field.String() != "" {
-						entry.title = field.String()
+						entry.Title = field.String()
 						break
 					}
 				}

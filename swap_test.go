@@ -72,7 +72,7 @@ func TestMoveEntryPatchAllowsUnrelatedEditsOutsideItsTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := first.GetTitle(); got != "two" {
+	if got := first.Title; got != "two" {
 		t.Fatalf("first moved entry title = %q, want %q", got, "two")
 	}
 }

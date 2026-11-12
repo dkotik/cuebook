@@ -194,7 +194,7 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 		File:        fileName,
 		FileURL:     fileURL(fileName),
 		EntryURL:    entryURL(fileName, entryRange),
-		Title:       entry.GetTitle(),
+		Title:       entry.Title,
 		CanMove:     !readOnly,
 		CanArchive:  !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
 		CanAddField: !readOnly && metadata.IsOpen(entry.Value),
@@ -212,7 +212,7 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 		}
 	}
 	for fieldIndex, field := range entry.Fields {
-		if !includeTitleField && (metadata.IsTitleField(field.Value) || (!hasTitleField && fieldIndex == 0 && entry.GetTitle() != "")) {
+		if !includeTitleField && (metadata.IsTitleField(field.Value) || (!hasTitleField && fieldIndex == 0 && entry.Title != "")) {
 			continue
 		}
 		fieldView := makeFieldView(field, fileName, index, readOnly, includeTitleField)

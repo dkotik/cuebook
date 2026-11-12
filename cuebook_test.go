@@ -3,7 +3,9 @@ package cuebook
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
+	"uuid"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
@@ -81,6 +83,70 @@ func TestNewPopulatesFieldsFromFirstDisjunct(t *testing.T) {
 				if string(gotJSON) != tt.fieldJSON[i] {
 					t.Errorf("field %q value = %s, want %s", field.Name, gotJSON, tt.fieldJSON[i])
 				}
+			}
+		})
+	}
+}
+
+func TestNewConfiguresEntryUniqueIdentifier(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        string
+		wantFieldName string
+		wantPrefix    string
+	}{
+		{
+			name:   "no UUID field",
+			source: `[{Name: "Ada"}]`,
+		},
+		{
+			name: "first UUID field and its parameters",
+			source: `#entry: {
+				FirstID: string @cuebook(uuid=UUID?prefix=first-)
+				SecondID: string @cuebook(uuid=UUID?prefix=second-)
+			}
+			[...#entry] & [{FirstID: "one", SecondID: "two"}]`,
+			wantFieldName: "FirstID",
+			wantPrefix:    "first-",
+		},
+		{
+			name: "default UUID generator",
+			source: `#entry: {ID: string @cuebook(uuid)}
+			[...#entry] & [{ID: "existing"}]`,
+			wantFieldName: "ID",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			book, err := New([]byte(tt.source))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if book.entryUniqueIdentifierFieldName != tt.wantFieldName {
+				t.Errorf("entryUniqueIdentifierFieldName = %q, want %q", book.entryUniqueIdentifierFieldName, tt.wantFieldName)
+			}
+			if tt.wantFieldName == "" {
+				if book.entryUniqueIdentifierGenerator != nil {
+					t.Fatal("entryUniqueIdentifierGenerator is set without a UUID field")
+				}
+				return
+			}
+			if book.entryUniqueIdentifierGenerator == nil {
+				t.Fatal("entryUniqueIdentifierGenerator is nil")
+			}
+
+			generated, err := book.entryUniqueIdentifierGenerator.GenerateIdentifier()
+			if err != nil {
+				t.Fatalf("GenerateIdentifier(): %v", err)
+			}
+			if !strings.HasPrefix(generated, tt.wantPrefix) {
+				t.Fatalf("generated identifier %q does not have prefix %q", generated, tt.wantPrefix)
+			}
+			if _, err := uuid.Parse(strings.TrimPrefix(generated, tt.wantPrefix)); err != nil {
+				t.Errorf("generated identifier %q does not contain a valid UUID: %v", generated, err)
 			}
 		})
 	}
