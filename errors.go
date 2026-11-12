@@ -22,6 +22,8 @@ const (
 	ErrBookEntryIndexOutOfRange
 	// ErrFieldIndexOutOfRange occurs when a field index is negative or exceeds an entry's fields.
 	ErrFieldIndexOutOfRange
+	// ErrBookEntryNotFound occurs when an entry with the requested identifier does not exist.
+	ErrBookEntryNotFound
 )
 
 func (e Error) Error() string {
@@ -32,6 +34,8 @@ func (e Error) Error() string {
 		return "cannot load an abstract value as structured object"
 	case ErrEntryValueNotStruct:
 		return "value is not a structured object"
+	case ErrBookEntryNotFound:
+		return "book entry not found"
 	case ErrBookEntryIndexOutOfRange, ErrFieldIndexOutOfRange:
 		return "not found: index out of range"
 	default:
@@ -50,6 +54,8 @@ func (e Error) LocalizeWith(localizer *i18n.Localizer) (string, error) {
 		message = i18n.Message{ID: "cuebook.entryValueNotStruct", Other: "value is not a structured object"}
 	case ErrBookEntryIndexOutOfRange:
 		message = i18n.Message{ID: "cuebook.entryIndexOutOfRange", Other: "not found: index out of range"}
+	case ErrBookEntryNotFound:
+		message = i18n.Message{ID: "cuebook.entryNotFound", Other: "book entry not found"}
 	case ErrFieldIndexOutOfRange:
 		message = i18n.Message{ID: "entry.fieldIndexOutOfRange", Other: "not found: index out of range"}
 	default:

@@ -69,7 +69,7 @@ func (a *handler) pasteCut(ctx context.Context, request *pasteRequest, fileNames
 	if err != nil {
 		return listResponse{}, err
 	}
-	value, err := document.GetValue(index)
+	value, err := document.GetValueByIndex(index)
 	if err != nil {
 		return listResponse{}, cuebook.ErrBookEntryIndexOutOfRange
 	}

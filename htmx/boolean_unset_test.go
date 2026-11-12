@@ -81,7 +81,7 @@ func TestEditBooleanUnset(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					entry, err := book.GetValue(0)
+					entry, err := book.GetValueByIndex(0)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -107,7 +107,7 @@ func TestEditBooleanUnset(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetValue(0)
+			entry, err := book.GetValueByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -187,7 +187,7 @@ func TestAddBooleanUnset(t *testing.T) {
 			if length != wantLength || storage.calls != 1 {
 				t.Fatalf("length = %d, commits = %d; want %d, 1", length, storage.calls, wantLength)
 			}
-			entry, err := book.GetValue(length - 1)
+			entry, err := book.GetValueByIndex(length - 1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -237,11 +237,11 @@ func TestFieldViewBooleanUnset(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			value, err := book.GetValue(0)
+			value, err := book.GetValueByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(0)
+			entry, err := book.GetEntryByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -301,7 +301,7 @@ func TestLiteralNotSetBooleanUnset(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetValue(0)
+			entry, err := book.GetValueByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}

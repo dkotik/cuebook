@@ -113,7 +113,7 @@ func TestRemoveFieldValue(t *testing.T) {
 			if err != nil {
 				t.Fatalf("invalid result: %v\n%s", err, updated)
 			}
-			value, err := book.GetValue(1)
+			value, err := book.GetValueByIndex(1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -130,7 +130,7 @@ func TestRemoveFieldValue(t *testing.T) {
 				t.Fatalf("Secret = %q, err = %v", got, err)
 			}
 			if !tt.unchanged {
-				first, err := book.GetValue(0)
+				first, err := book.GetValueByIndex(0)
 				if err != nil {
 					t.Fatal(err)
 				}

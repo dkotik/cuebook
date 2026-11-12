@@ -31,7 +31,7 @@ func TestEntryRefTargetsAnonymousDuplicateByOccurrence(t *testing.T) {
 		t.Fatal(err)
 	}
 	for index, want := range []string{"same", "target"} {
-		entry, err := updatedBook.GetEntry(index)
+		entry, err := updatedBook.GetEntryByIndex(index)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -55,7 +55,7 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 	if entryIndex < 0 {
 		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
 	}
-	entry, err := document.GetEntry(entryIndex)
+	entry, err := document.GetEntryByIndex(entryIndex)
 	if err != nil {
 		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
 	}

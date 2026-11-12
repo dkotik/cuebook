@@ -519,7 +519,7 @@ func TestWritableDirectoryCommitsEdits(t *testing.T) {
 			if err != nil {
 				t.Fatalf("saved source is invalid: %v", err)
 			}
-			entry, err := document.GetEntry(0)
+			entry, err := document.GetEntryByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -577,7 +577,7 @@ func TestEditCanUpdateDetailFieldsWithoutRemovingTheirMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("saved source is invalid: %v", err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -616,7 +616,7 @@ func TestEditCanPopulateAbsentOptionalDetailFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("saved source is invalid: %v", err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}

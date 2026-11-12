@@ -53,7 +53,7 @@ func TestPasteEntry(t *testing.T) {
 			if count, err := document.Len(); err != nil || count != tt.wantCount {
 				t.Fatalf("entry count = %d, err = %v; want %d", count, err, tt.wantCount)
 			}
-			value, err := document.GetValue(tt.wantCount - 1)
+			value, err := document.GetValueByIndex(tt.wantCount - 1)
 			if err != nil {
 				t.Fatal(err)
 			}

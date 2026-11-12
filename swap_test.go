@@ -68,7 +68,7 @@ func TestMoveEntryPatchAllowsUnrelatedEditsOutsideItsTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, err := updatedBook.GetEntry(0)
+	first, err := updatedBook.GetEntryByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}

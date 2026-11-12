@@ -106,7 +106,7 @@ func firstEntryURL(t *testing.T, source []byte, filePath string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, err := book.GetValue(0)
+	value, err := book.GetValueByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}

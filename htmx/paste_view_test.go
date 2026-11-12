@@ -17,7 +17,7 @@ func TestPasteAvailableOnlyInWritableListView(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, err := document.GetValue(0)
+	value, err := document.GetValueByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}

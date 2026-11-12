@@ -137,7 +137,7 @@ func TestEntryValueWithoutConstraints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetValue(0)
+	entry, err := book.GetValueByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}

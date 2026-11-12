@@ -163,7 +163,19 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 	}
 }
 
-func (d Book) GetEntry(atIndex int) (Entry, error) {
+func (d Book) GetEntryByUUID(uuid string) (Entry, error) {
+	for entry, err := range d.EachEntry() {
+		if err != nil {
+			return entry, err
+		}
+		if entry.UUID == uuid {
+			return entry, nil
+		}
+	}
+	return Entry{}, ErrBookEntryNotFound
+}
+
+func (d Book) GetEntryByIndex(atIndex int) (Entry, error) {
 	if atIndex < 0 {
 		return Entry{}, ErrBookEntryIndexOutOfRange
 	}
@@ -181,20 +193,12 @@ func (d Book) GetEntry(atIndex int) (Entry, error) {
 	return Entry{}, ErrBookEntryIndexOutOfRange
 }
 
-func (d Book) GetValue(atIndex int) (cue.Value, error) {
+func (d Book) GetValueByIndex(atIndex int) (cue.Value, error) {
 	value := d.Value.LookupPath(cue.MakePath(cue.Index(atIndex)))
 	if err := value.Err(); err != nil {
 		return value, err
 	}
 	return value, nil
-}
-
-func (d Book) GetField(atIndex, fieldIndex int) (f Field, err error) {
-	entry, err := d.GetEntry(atIndex)
-	if err != nil {
-		return
-	}
-	return entry.GetField(fieldIndex)
 }
 
 func (d Book) Len() (int, error) {

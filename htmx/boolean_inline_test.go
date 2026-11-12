@@ -255,7 +255,7 @@ func TestInlineBooleanSubmission(t *testing.T) {
 			if err != nil {
 				t.Fatalf("invalid saved document: %v", err)
 			}
-			updated, err := book.GetValue(1)
+			updated, err := book.GetValueByIndex(1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -346,7 +346,7 @@ func inlineBooleanEntryURL(t *testing.T, files fstest.MapFS, index int, prefix s
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetValue(index)
+	entry, err := book.GetValueByIndex(index)
 	if err != nil {
 		t.Fatal(err)
 	}

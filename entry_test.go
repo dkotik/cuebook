@@ -44,7 +44,7 @@ func TestEntryGetDescriptionIncludesAllFieldsAndUsesPlaceholders(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(0)
+			entry, err := book.GetEntryByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -105,7 +105,7 @@ func TestBookEntryClassifiesFieldsOutsideDefinitionsAsDetails(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			entry, err := book.GetEntry(test.entryIndex)
+			entry, err := book.GetEntryByIndex(test.entryIndex)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -184,7 +184,7 @@ func TestRemainingFieldComposition(t *testing.T) {
 		t.Log("field found:", iterator.Selector().String(), iterator.Value().IsConcrete())
 	}
 
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}

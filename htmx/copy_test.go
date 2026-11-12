@@ -52,7 +52,7 @@ func TestEntryCopyRoundTripsThroughPaste(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			original, err := book.GetValue(tt.index)
+			original, err := book.GetValueByIndex(tt.index)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -122,7 +122,7 @@ func TestEntryCopyRoundTripsThroughPaste(t *testing.T) {
 			if after != before+1 {
 				t.Fatalf("entry count = %d, want %d", after, before+1)
 			}
-			newEntry, err := updated.GetValue(after - 1)
+			newEntry, err := updated.GetValueByIndex(after - 1)
 			if err != nil {
 				t.Fatal(err)
 			}

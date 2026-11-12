@@ -167,7 +167,7 @@ func TestBooleanEditSubmission(t *testing.T) {
 			if err != nil {
 				t.Fatalf("saved source is invalid: %v", err)
 			}
-			entry, err := document.GetValue(0)
+			entry, err := document.GetValueByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -217,7 +217,7 @@ func TestBooleanAddSubmission(t *testing.T) {
 			if length, err := document.Len(); err != nil || length != 1 {
 				t.Fatalf("entry count = %d, err = %v; want 1", length, err)
 			}
-			entry, err := document.GetValue(0)
+			entry, err := document.GetValueByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}

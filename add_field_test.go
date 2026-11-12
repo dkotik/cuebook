@@ -193,14 +193,14 @@ func TestAddFieldLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	updatedEntry, err := updatedBook.GetEntry(2)
+	updatedEntry, err := updatedBook.GetEntryByIndex(2)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if field, ok := updatedEntry.GetFieldByName("Role"); !ok || field.String() != "dev" {
 		t.Fatalf("updated Role field = (%q, %t), want (dev, true)", field.String(), ok)
 	}
-	firstEntry, err := updatedBook.GetEntry(0)
+	firstEntry, err := updatedBook.GetEntryByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}

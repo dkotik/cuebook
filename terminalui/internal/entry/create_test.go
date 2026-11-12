@@ -80,7 +80,7 @@ func TestCreateFormUsesSubmittedValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	created, err := updatedBook.GetEntry(1)
+	created, err := updatedBook.GetEntryByIndex(1)
 	if err != nil {
 		t.Fatal(err)
 	}

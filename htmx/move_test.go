@@ -208,7 +208,7 @@ func TestEntryValueWithoutConstraintsRoundTripsPlainJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entryValue, err := document.GetValue(0)
+	entryValue, err := document.GetValueByIndex(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +460,7 @@ func entryTitles(source []byte) ([]string, error) {
 	}
 	titles := make([]string, 0, length)
 	for index := 0; index < length; index++ {
-		entry, err := document.GetEntry(index)
+		entry, err := document.GetEntryByIndex(index)
 		if err != nil {
 			return nil, err
 		}

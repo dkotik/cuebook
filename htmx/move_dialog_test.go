@@ -53,7 +53,7 @@ func TestEntryMoveDialog(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			value, err := book.GetValue(1)
+			value, err := book.GetValueByIndex(1)
 			if err != nil {
 				t.Fatal(err)
 			}

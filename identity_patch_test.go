@@ -274,7 +274,7 @@ func TestMergeFieldValuesLatchesToUUIDEntry(t *testing.T) {
 		t.Fatalf("updated source is invalid: %v\n%s", err, updated)
 	}
 	for index, want := range []string{"other", "left", "after"} {
-		current, err := updatedBook.GetEntry(index)
+		current, err := updatedBook.GetEntryByIndex(index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -365,7 +365,7 @@ func TestMergeFieldValuesAndRemoveLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("updated source is invalid: %v\n%s", err, updated)
 	}
-	target, err := updatedBook.GetEntry(2)
+	target, err := updatedBook.GetEntryByIndex(2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -375,7 +375,7 @@ func TestMergeFieldValuesAndRemoveLatchesToUUIDEntry(t *testing.T) {
 	if target.Value.LookupPath(cue.ParsePath("Extra")).Exists() {
 		t.Fatalf("Extra was not removed:\n%s", updated)
 	}
-	if got, err := updatedBook.GetEntry(0); err != nil {
+	if got, err := updatedBook.GetEntryByIndex(0); err != nil {
 		t.Fatal(err)
 	} else if name, err := got.Value.LookupPath(cue.ParsePath("Name")).String(); err != nil || name != "other" {
 		t.Fatalf("unrelated entry Name = %q, err = %v; want other", name, err)
@@ -456,7 +456,7 @@ func TestRemoveFieldValueLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("updated source is invalid: %v\n%s", err, updated)
 	}
-	target, err := updatedBook.GetEntry(2)
+	target, err := updatedBook.GetEntryByIndex(2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -591,7 +591,7 @@ func TestSwapFieldsLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("updated source is invalid: %v\n%s", err, updated)
 	}
-	target, err := updatedBook.GetEntry(2)
+	target, err := updatedBook.GetEntryByIndex(2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -667,7 +667,7 @@ func TestUpdateFieldValueLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("updated source is invalid: %v\n%s", err, updated)
 	}
-	target, err := updatedBook.GetEntry(2)
+	target, err := updatedBook.GetEntryByIndex(2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -784,7 +784,7 @@ func TestMoveEntryLatchesToUUIDAndDestination(t *testing.T) {
 		t.Fatalf("updated source is invalid: %v\n%s", err, updated)
 	}
 	for index, want := range []string{"b", "c", "a"} {
-		entry, err := updatedBook.GetEntry(index)
+		entry, err := updatedBook.GetEntryByIndex(index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -805,7 +805,7 @@ func TestMoveEntryLatchesToUUIDAndDestination(t *testing.T) {
 		t.Fatalf("restored source is invalid: %v\n%s", err, restored)
 	}
 	for index, want := range []string{"a", "b", "c"} {
-		entry, err := restoredBook.GetEntry(index)
+		entry, err := restoredBook.GetEntryByIndex(index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -813,7 +813,7 @@ func TestMoveEntryLatchesToUUIDAndDestination(t *testing.T) {
 			t.Fatalf("restored entry %d UUID = %q; want %q", index, entry.UUID, want)
 		}
 	}
-	b, err := restoredBook.GetEntry(1)
+	b, err := restoredBook.GetEntryByIndex(1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -844,7 +844,7 @@ func TestMoveEntryLatchesToUUIDAtListStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	for index, want := range []string{"c", "a", "b"} {
-		entry, err := updatedBook.GetEntry(index)
+		entry, err := updatedBook.GetEntryByIndex(index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -861,7 +861,7 @@ func TestMoveEntryLatchesToUUIDAtListStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	for index, want := range []string{"a", "b", "c"} {
-		entry, err := restoredBook.GetEntry(index)
+		entry, err := restoredBook.GetEntryByIndex(index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -957,7 +957,7 @@ func TestSwapEntriesLatchesToUUIDIdentities(t *testing.T) {
 		t.Fatalf("updated source is invalid: %v\n%s", err, updated)
 	}
 	for index, want := range []string{"c", "b", "a"} {
-		entry, err := updatedBook.GetEntry(index)
+		entry, err := updatedBook.GetEntryByIndex(index)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -965,7 +965,7 @@ func TestSwapEntriesLatchesToUUIDIdentities(t *testing.T) {
 			t.Fatalf("entry %d UUID = %q; want %q", index, entry.UUID, want)
 		}
 	}
-	middle, err := updatedBook.GetEntry(1)
+	middle, err := updatedBook.GetEntryByIndex(1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -985,7 +985,7 @@ func TestSwapEntriesLatchesToUUIDIdentities(t *testing.T) {
 		t.Fatalf("restored source is invalid: %v\n%s", err, restored)
 	}
 	for index, want := range []string{"a", "b", "c"} {
-		entry, err := restoredBook.GetEntry(index)
+		entry, err := restoredBook.GetEntryByIndex(index)
 		if err != nil {
 			t.Fatal(err)
 		}

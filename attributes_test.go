@@ -149,7 +149,7 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("invalid result: %v\n%s", err, updated)
 			}
-			writtenEntry, err := patched.GetValue(tt.index)
+			writtenEntry, err := patched.GetValueByIndex(tt.index)
 			if err != nil {
 				t.Fatal(err)
 			}

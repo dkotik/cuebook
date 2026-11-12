@@ -194,7 +194,7 @@ func TestEachEntryPopulatesUUIDOnlyFromPresentNonEmptyStringField(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(0)
+			entry, err := book.GetEntryByIndex(0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -275,6 +275,7 @@ func TestCuebookErrorCodes(t *testing.T) {
 		{name: "abstract entry", code: ErrCannotLoadAbstractEntry, want: "cannot load an abstract value as structured object"},
 		{name: "entry not struct", code: ErrEntryValueNotStruct, want: "value is not a structured object"},
 		{name: "entry index", code: ErrBookEntryIndexOutOfRange, want: "not found: index out of range"},
+		{name: "entry not found", code: ErrBookEntryNotFound, want: "book entry not found"},
 		{name: "field index", code: ErrFieldIndexOutOfRange, want: "not found: index out of range"},
 	}
 	localizer := i18n.NewLocalizer(i18n.NewBundle(language.AmericanEnglish))
@@ -342,13 +343,16 @@ func TestBookOperationsReturnModeledErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := book.GetEntry(-1); !errors.Is(err, ErrBookEntryIndexOutOfRange) {
+	if _, err := book.GetEntryByIndex(-1); !errors.Is(err, ErrBookEntryIndexOutOfRange) {
 		t.Errorf("GetEntry(-1) error = %v, want entry index error", err)
 	}
-	if _, err := book.GetEntry(0); !errors.Is(err, ErrBookEntryIndexOutOfRange) {
+	if _, err := book.GetEntryByIndex(0); !errors.Is(err, ErrBookEntryIndexOutOfRange) {
 		t.Errorf("GetEntry(0) error = %v, want entry index error", err)
 	}
-	if _, err := book.GetValue(0); err == nil {
+	if _, err := book.GetEntryByUUID("missing"); !errors.Is(err, ErrBookEntryNotFound) {
+		t.Errorf("GetEntryByUUID() error = %v, want entry not found error", err)
+	}
+	if _, err := book.GetValueByIndex(0); err == nil {
 		t.Error("GetValue(0) error = nil, want an error for an out-of-range entry")
 	}
 

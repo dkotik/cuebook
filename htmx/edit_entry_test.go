@@ -56,7 +56,7 @@ func TestEntryFieldSaveReplacesCurrentEntryURL(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			original, err := book.GetValue(1)
+			original, err := book.GetValueByIndex(1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -123,7 +123,7 @@ func TestEntryFieldSaveReplacesCurrentEntryURL(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			value, err := updated.GetValue(1)
+			value, err := updated.GetValueByIndex(1)
 			if err != nil {
 				t.Fatal(err)
 			}
