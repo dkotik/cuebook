@@ -88,7 +88,7 @@ func TestArchiveEntry(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = archiveEntry(context.Background(), files, sourceName, source, entry, date)
+			_, err = archiveEntry(context.Background(), files, sourceName, entry, date)
 			if test.wantError != "" {
 				if err == nil || !strings.Contains(err.Error(), test.wantError) {
 					t.Fatalf("archive error = %v, want containing %q", err, test.wantError)
@@ -222,7 +222,7 @@ func TestArchiveEntryDoesNotRemoveSourceWhenArchiveWriteFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	failingFiles := &writeFailureFileSystem{FileSystem: files, failName: archiveName}
-	if _, err := archiveEntry(context.Background(), failingFiles, sourceName, source, selected, date); err == nil {
+	if _, err := archiveEntry(context.Background(), failingFiles, sourceName, selected, date); err == nil {
 		t.Fatal("archiveEntry succeeded despite a failed archive write")
 	}
 
@@ -281,7 +281,7 @@ func TestArchiveEntryKeepsArchivedCopyWhenSourceWriteFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	failingFiles := &writeFailureFileSystem{FileSystem: files, failName: sourceName}
-	if _, err := archiveEntry(context.Background(), failingFiles, sourceName, source, selected, date); err == nil {
+	if _, err := archiveEntry(context.Background(), failingFiles, sourceName, selected, date); err == nil {
 		t.Fatal("archiveEntry succeeded despite a failed source write")
 	}
 

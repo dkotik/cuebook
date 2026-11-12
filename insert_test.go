@@ -39,7 +39,11 @@ func TestAppendToEmptyStructList(t *testing.T) {
 			if err := entry.Err(); err != nil {
 				t.Fatal(err)
 			}
-			change, err := AppendToStructList([]byte(tt.source), entry)
+			book, err := New([]byte(tt.source))
+			if err != nil {
+				t.Fatal(err)
+			}
+			change, err := book.AppendToStructList(entry)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -58,7 +62,7 @@ func TestAppendToEmptyStructList(t *testing.T) {
 	}
 }
 
-func TestAppendRejectsNonListSource(t *testing.T) {
+func TestAppendPatchRejectsDifferentSourceState(t *testing.T) {
 	tests := []struct {
 		name   string
 		source []byte
@@ -70,15 +74,19 @@ func TestAppendRejectsNonListSource(t *testing.T) {
 	if err := entry.Err(); err != nil {
 		t.Fatal(err)
 	}
+	book, err := New([]byte("[]"))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			change, err := AppendToStructList(test.source, entry)
-			if !errors.Is(err, ErrSourceIsNotList) {
-				t.Fatalf("AppendToStructList() error = %v, want %v", err, ErrSourceIsNotList)
+			change, err := book.AppendToStructList(entry)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if change != nil {
-				t.Fatalf("AppendToStructList() change = %v, want nil", change)
+			if _, err := change.ApplyToCueSource(test.source); !errors.Is(err, ErrPatchTargetConflict) {
+				t.Fatalf("ApplyToCueSource() error = %v, want %v", err, ErrPatchTargetConflict)
 			}
 		})
 	}
@@ -126,7 +134,11 @@ func TestInsertPatch(t *testing.T) {
 		{	two: "ok" },
 		{	two: "ok" }
 ]`)
-	patch, err := AppendToStructList(source, cuecontext.New().BuildExpr(
+	book, err := New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch, err := book.AppendToStructList(cuecontext.New().BuildExpr(
 		ast.NewStruct(
 			&ast.Field{
 				Label: ast.NewString("Name"),

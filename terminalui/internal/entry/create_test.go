@@ -42,7 +42,11 @@ func TestCreateFormUsesSubmittedValues(t *testing.T) {
 	if !ok {
 		t.Fatalf("emitCreateFormFields() returned %T, want createFormFields", fields)
 	}
-	model, _ := newCreateForm(source).Update(fields)
+	document, err := cuebook.New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	model, _ := newCreateForm(document).Update(fields)
 	form, ok := model.(createForm)
 	if !ok {
 		t.Fatalf("updated model = %T, want createForm", model)
@@ -96,7 +100,11 @@ func TestCreateFormUsesSubmittedValues(t *testing.T) {
 }
 
 func TestCreateFormIgnoresEscape(t *testing.T) {
-	model, cmd := newCreateForm(nil).Update(tea.KeyPressMsg{Code: tea.KeyEscape})
+	document, err := cuebook.New([]byte("[]"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	model, cmd := newCreateForm(document).Update(tea.KeyPressMsg{Code: tea.KeyEscape})
 	if _, ok := model.(createForm); !ok {
 		t.Fatalf("updated model = %T, want createForm", model)
 	}
@@ -120,7 +128,7 @@ func TestCreateForm(t *testing.T) {
 		t.Fatal("unable to parse test file:", err)
 	}
 
-	tm := teatest.NewTestModel(t, newCreateForm(nil))
+	tm := teatest.NewTestModel(t, newCreateForm(cuebook.Book{}))
 	tm.Send(emitCreateFormFields(book))
 	tm.Send(tea.WindowSizeMsg{Width: 20, Height: 20})
 	waitForString(t, tm, "Quit? (y/N)")

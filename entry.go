@@ -31,6 +31,20 @@ type Entry struct {
 	Fields           []Field
 	Details          []Field
 	FieldDefinitions []FieldDefinition
+
+	source                  []byte
+	sourceRange             ByteRange
+	hasSourceRange          bool
+	precedingSourceRange    ByteRange
+	hasPrecedingSourceRange bool
+	sourceAnchor            ByteAnchor
+}
+
+func (e Entry) originalSourceRange() (ByteRange, error) {
+	if !e.hasSourceRange || !validByteRange(e.sourceRange, e.source) {
+		return ByteRange{}, ErrByteRangeNotFound
+	}
+	return e.sourceRange, nil
 }
 
 func (e Entry) GetTitle() string {

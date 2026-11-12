@@ -162,13 +162,31 @@ func TestEntryMovePatchInverts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entryMovePatch(source, 2, 0)
+	document, err := cuebook.New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change, err := document.MoveEntry(2, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	moved, err := change.ApplyToCueSource(source)
 	if err != nil {
 		t.Fatal(err)
+	}
+	retried, err := change.ApplyToCueSource(moved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(retried, moved) {
+		t.Fatalf("reapplying move changed source:\n%s", retried)
+	}
+	movedBook, err := cuebook.New(moved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := (cuebook.Result{Document: movedBook, Source: moved, LastChange: change}).Match(change.Difference().Content); !ok {
+		t.Fatal("move difference did not identify the moved entry")
 	}
 	restored, err := change.Invert().ApplyToCueSource(moved)
 	if err != nil {

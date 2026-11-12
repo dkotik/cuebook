@@ -66,6 +66,14 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case historyPatch:
 		// ignore all patches issued by this component
 	case cuebook.Patch:
+		// Record only successful, non-no-op changes from cuebook.Result.
+	case cuebook.Result:
+		if msg.LastChange == nil {
+			return h, nil
+		}
+		if _, isHistoryPatch := msg.LastChange.(historyPatch); isHistoryPatch {
+			return h, nil
+		}
 		total := len(h.history)
 		if total > 0 {
 			if total > 5 {
@@ -76,7 +84,7 @@ func (h patchHistoryTracker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		h.cursor = len(h.history)
 		h.history = append(h.history, snapShot{
-			Patch:              msg,
+			Patch:              msg.LastChange,
 			SelectedEntryIndex: h.entryIndex,
 			SelectedFieldIndex: h.fieldIndex,
 		})

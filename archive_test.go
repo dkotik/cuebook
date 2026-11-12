@@ -2,6 +2,7 @@ package cuebook
 
 import (
 	"bytes"
+	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -68,12 +69,12 @@ func TestPrepareEntryTransfer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := sourceBook.GetValue(0)
+			entry, err := sourceBook.GetEntry(0)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			transfer, err := PrepareEntryTransfer(source, []byte(test.destination), entry)
+			transfer, err := PrepareEntryTransfer([]byte(test.destination), entry)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -84,6 +85,14 @@ func TestPrepareEntryTransfer(t *testing.T) {
 			updatedDestination, err := transfer.DestinationPatch.ApplyToCueSource([]byte(test.destination))
 			if err != nil {
 				t.Fatal(err)
+			}
+			retriedSource, err := transfer.SourcePatch.ApplyToCueSource(updatedSource)
+			if err != nil || !bytes.Equal(retriedSource, updatedSource) {
+				t.Fatalf("source transfer retry = %q, err = %v; want unchanged source", retriedSource, err)
+			}
+			retriedDestination, err := transfer.DestinationPatch.ApplyToCueSource(updatedDestination)
+			if err != nil || !bytes.Equal(retriedDestination, updatedDestination) {
+				t.Fatalf("destination transfer retry = %q, err = %v; want unchanged destination", retriedDestination, err)
 			}
 			if _, err := New(updatedSource); err != nil {
 				t.Fatalf("updated source is invalid: %v", err)
@@ -99,6 +108,23 @@ func TestPrepareEntryTransfer(t *testing.T) {
 				t.Errorf("destination titles = %q, want %q", got, test.wantDest)
 			}
 		})
+	}
+}
+
+func TestPrepareEntryTransferRejectsAmbiguousDuplicate(t *testing.T) {
+	source := []byte(`[{Name: "Move me"}]`)
+	book, err := New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := book.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = PrepareEntryTransfer([]byte(`[{Name: "Move me"}]`), entry)
+	if !errors.Is(err, ErrPatchTargetAmbiguous) {
+		t.Fatalf("PrepareEntryTransfer() error = %v, want %v", err, ErrPatchTargetAmbiguous)
 	}
 }
 

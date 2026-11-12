@@ -118,7 +118,11 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 }
 
 func (a *handler) appendEntry(ctx context.Context, fileName string, raw []byte, entry cue.Value) error {
-	change, err := cuebook.AppendToStructList(raw, entry)
+	book, err := cuebook.New(raw)
+	if err != nil {
+		return CauseError{Code: ErrUnableToAddEntry, Cause: err}
+	}
+	change, err := book.AppendToStructList(entry)
 	if err != nil {
 		return CauseError{Code: ErrUnableToAddEntry, Cause: err}
 	}

@@ -26,6 +26,60 @@ func commitInDirectory(t *testing.T, directory, name string, change Patch, swap 
 	return Commit(context.Background(), files, name, change)
 }
 
+type writeCountingFileSystem struct {
+	FileSystem
+	writes int
+}
+
+func (f *writeCountingFileSystem) WriteFile(ctx context.Context, name string, source []byte) error {
+	f.writes++
+	return f.FileSystem.WriteFile(ctx, name, source)
+}
+
+func TestCommitSkipsWriteWhenPatchWasAlreadyApplied(t *testing.T) {
+	directory := t.TempDir()
+	target := filepath.Join(directory, "book.cue")
+	source := []byte(`[{Name: "old"}]`)
+	if err := os.WriteFile(target, source, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	base, err := NewFileSystem(FileSystemConfig{Root: directory})
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := &writeCountingFileSystem{FileSystem: base}
+	book, err := New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := book.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch, err := entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := Commit(context.Background(), files, "book.cue", patch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.LastChange == nil {
+		t.Fatal("first Commit() LastChange = nil, want the applied patch")
+	}
+	second, err := Commit(context.Background(), files, "book.cue", patch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.LastChange != nil {
+		t.Fatal("retry Commit() LastChange is non-nil, want nil for a no-op")
+	}
+	if files.writes != 1 {
+		t.Fatalf("WriteFile calls = %d, want 1", files.writes)
+	}
+}
+
 func TestPatchApplication(t *testing.T) {
 	source := []byte(`[
 { one: "ok" },
@@ -40,7 +94,11 @@ func TestPatchApplication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := AppendToStructList(source, cuecontext.New().BuildExpr(
+	book, err := New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := book.AppendToStructList(cuecontext.New().BuildExpr(
 		ast.NewStruct(
 			&ast.Field{
 				Label: ast.NewString("Name"),
@@ -172,49 +230,56 @@ func ensureInversible(
 	}
 }
 
-func TestPatchApplyRejectsMissingAndMalformedAnchors(t *testing.T) {
+func TestPatchApplyRejectsMissingAndAmbiguousAnchors(t *testing.T) {
 	tests := []struct {
-		name  string
-		patch Patch
+		name   string
+		source string
+		patch  Patch
+		want   error
 	}{
 		{
-			name: "insert anchor out of bounds",
-			patch: insertAfter{
-				Preceeding: ByteAnchor{Content: []byte("x"), PreceedingDuplicates: 3},
-			},
-		},
-		{
-			name: "delete anchor out of bounds",
-			patch: deletePatch{
-				Target: ByteAnchor{Content: []byte("x"), PreceedingDuplicates: 3},
-			},
-		},
-		{
-			name: "replacement anchor out of bounds",
+			name:   "target does not match either state",
+			source: "abc",
 			patch: replacePatch{
-				Target: ByteAnchor{Content: []byte("x"), PreceedingDuplicates: 3},
+				Target:      ByteAnchor{Content: []byte("missing")},
+				Replacement: ByteAnchor{Content: []byte("replacement")},
 			},
+			want: ErrPatchTargetConflict,
 		},
 		{
-			name: "negative duplicate count",
-			patch: deletePatch{
-				Target: ByteAnchor{Content: []byte("x"), PreceedingDuplicates: -1},
+			name:   "target duplicate count is out of bounds",
+			source: "abc",
+			patch: replacePatch{
+				Target:      ByteAnchor{Content: []byte("x"), PreceedingDuplicates: 3},
+				Replacement: ByteAnchor{Content: []byte("y")},
 			},
+			want: ErrPatchTargetConflict,
 		},
 		{
-			name: "swap anchor missing",
-			patch: swapPatch{
-				Earlier: ByteAnchor{Content: []byte("missing")},
-				Later:   ByteAnchor{Content: []byte("x")},
+			name:   "negative duplicate count",
+			source: "abc",
+			patch: replacePatch{
+				Target:      ByteAnchor{Content: []byte("x"), PreceedingDuplicates: -1},
+				Replacement: ByteAnchor{Content: []byte("y"), PreceedingDuplicates: -1},
 			},
+			want: ErrPatchTargetConflict,
+		},
+		{
+			name:   "ambiguous target",
+			source: "aba",
+			patch: replacePatch{
+				Target:      ByteAnchor{Content: []byte("a")},
+				Replacement: ByteAnchor{Content: []byte("x")},
+			},
+			want: ErrPatchTargetAmbiguous,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := test.patch.ApplyToCueSource([]byte("abc"))
-			if !errors.Is(err, ErrByteRangeNotFound) {
-				t.Fatalf("ApplyToCueSource() error = %v, want %v", err, ErrByteRangeNotFound)
+			_, err := test.patch.ApplyToCueSource([]byte(test.source))
+			if !errors.Is(err, test.want) {
+				t.Fatalf("ApplyToCueSource() error = %v, want %v", err, test.want)
 			}
 		})
 	}
@@ -255,8 +320,8 @@ func TestByteAnchorMatchFallsBackToLastRemainingDuplicate(t *testing.T) {
 }
 
 func TestUpdateRangeRejectsInvalidByteRange(t *testing.T) {
-	_, err := UpdateRange([]byte("abc"), ByteRange{Head: 4, Tail: 5}, []byte("x"))
-	if !errors.Is(err, ErrByteRangeNotFound) {
+	target := (ByteRange{Head: 4, Tail: 5}).Anchor([]byte("abc"))
+	if _, err := UpdateRange(target, []byte("x")); !errors.Is(err, ErrByteRangeNotFound) {
 		t.Fatalf("UpdateRange() error = %v, want %v", err, ErrByteRangeNotFound)
 	}
 }
@@ -270,7 +335,15 @@ func TestSwapEntriesRejectsOverlappingByteRanges(t *testing.T) {
 	entry := document.LookupPath(cuePathIndex(0))
 	field := entry.LookupPath(cuePathName("Name"))
 
-	_, err := SwapEntries(source, entry, field)
+	entryRange, err := NewByteRange(entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fieldRange, err := NewByteRange(field)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = swapByteRanges(source, entryRange, fieldRange)
 	if !errors.Is(err, ErrByteRangesOverlap) {
 		t.Fatalf("SwapEntries() error = %v, want %v", err, ErrByteRangesOverlap)
 	}
@@ -278,38 +351,35 @@ func TestSwapEntriesRejectsOverlappingByteRanges(t *testing.T) {
 
 func TestPatchApplicationDoesNotMutateInput(t *testing.T) {
 	tests := []struct {
-		name  string
-		patch Patch
-		want  string
+		name      string
+		makePatch func([]byte) (Patch, error)
+		want      string
 	}{
 		{
 			name: "insert",
-			patch: insertAfter{
-				Preceeding: ByteAnchor{Content: []byte("a")},
-				Target:     ByteAnchor{Content: []byte("X")},
+			makePatch: func(source []byte) (Patch, error) {
+				return UpdateRange((ByteRange{Head: 1, Tail: 1}).Anchor(source), []byte("X"))
 			},
 			want: "aXbc",
 		},
 		{
 			name: "delete",
-			patch: deletePatch{
-				Target: ByteAnchor{Content: []byte("b")},
+			makePatch: func(source []byte) (Patch, error) {
+				return UpdateRange((ByteRange{Head: 1, Tail: 2}).Anchor(source), nil)
 			},
 			want: "ac",
 		},
 		{
 			name: "replace",
-			patch: replacePatch{
-				Target:      ByteAnchor{Content: []byte("b")},
-				Replacement: ByteAnchor{Content: []byte("X")},
+			makePatch: func(source []byte) (Patch, error) {
+				return UpdateRange((ByteRange{Head: 1, Tail: 2}).Anchor(source), []byte("X"))
 			},
 			want: "aXc",
 		},
 		{
 			name: "swap",
-			patch: swapPatch{
-				Earlier: ByteAnchor{Content: []byte("a")},
-				Later:   ByteAnchor{Content: []byte("c")},
+			makePatch: func(source []byte) (Patch, error) {
+				return swapByteRanges(source, ByteRange{Head: 0, Tail: 1}, ByteRange{Head: 2, Tail: 3})
 			},
 			want: "cba",
 		},
@@ -319,12 +389,23 @@ func TestPatchApplicationDoesNotMutateInput(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			source := []byte("abc")
 			original := bytes.Clone(source)
-			got, err := test.patch.ApplyToCueSource(source)
+			patch, err := test.makePatch(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := patch.ApplyToCueSource(source)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if string(got) != test.want {
 				t.Fatalf("result = %q, want %q", got, test.want)
+			}
+			retried, err := patch.ApplyToCueSource(got)
+			if err != nil {
+				t.Fatalf("retry failed: %v", err)
+			}
+			if !bytes.Equal(retried, got) {
+				t.Fatalf("retry result = %q, want unchanged %q", retried, got)
 			}
 			if !bytes.Equal(source, original) {
 				t.Fatalf("input source was modified: %q", source)
@@ -333,41 +414,225 @@ func TestPatchApplicationDoesNotMutateInput(t *testing.T) {
 	}
 }
 
-func TestAppendToEmptySourceCanBeInverted(t *testing.T) {
+func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
+	entryPatch := func(source []byte, index int, create func(Entry) (Patch, error)) (Patch, error) {
+		book, err := New(source)
+		if err != nil {
+			return nil, err
+		}
+		entry, err := book.GetEntry(index)
+		if err != nil {
+			return nil, err
+		}
+		return create(entry)
+	}
+	bookPatch := func(source []byte, create func(Book) (Patch, error)) (Patch, error) {
+		book, err := New(source)
+		if err != nil {
+			return nil, err
+		}
+		return create(book)
+	}
+	tests := []struct {
+		name      string
+		source    string
+		makePatch func([]byte) (Patch, error)
+	}{
+		{
+			name:   "replace entry",
+			source: `[{Name: "old"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
+					return entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
+				})
+			},
+		},
+		{
+			name:   "append entry",
+			source: `[{Name: "old"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return bookPatch(source, func(book Book) (Patch, error) {
+					value := cuecontext.New().CompileString(`{Name: "new"}`)
+					return book.AppendToStructList(value)
+				})
+			},
+		},
+		{
+			name:   "delete entry",
+			source: `[{Name: "one"}, {Name: "two"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return entryPatch(source, 1, func(entry Entry) (Patch, error) {
+					return entry.DeleteFromStructList()
+				})
+			},
+		},
+		{
+			name:   "update field",
+			source: `[{Name: "old"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
+					return entry.UpdateFieldValue("Name", "new")
+				})
+			},
+		},
+		{
+			name:   "merge fields",
+			source: `[{Name: "old"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
+					return entry.MergeFieldValues(map[string]string{"Name": "new"})
+				})
+			},
+		},
+		{
+			name:   "remove field",
+			source: `[{Name: "old", Extra: "remove"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
+					return entry.RemoveFieldValue("Extra")
+				})
+			},
+		},
+		{
+			name:   "add field",
+			source: `[{Name: "old"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
+					return entry.AddField("Extra", FieldKindString, "added")
+				})
+			},
+		},
+		{
+			name:   "swap entries",
+			source: `[{Name: "one"}, {Name: "two"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return bookPatch(source, func(book Book) (Patch, error) {
+					a, err := book.GetEntry(0)
+					if err != nil {
+						return nil, err
+					}
+					b, err := book.GetEntry(1)
+					if err != nil {
+						return nil, err
+					}
+					return book.SwapEntries(a, b)
+				})
+			},
+		},
+		{
+			name:   "swap fields",
+			source: `[{a: 1, b: 2}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
+					return entry.SwapFields("a", "b")
+				})
+			},
+		},
+		{
+			name:   "move entry",
+			source: `[{Name: "one"}, {Name: "two"}, {Name: "three"}]`,
+			makePatch: func(source []byte) (Patch, error) {
+				return bookPatch(source, func(book Book) (Patch, error) {
+					return book.MoveEntry(0, 2)
+				})
+			},
+		},
+		{
+			name:   "range replacement",
+			source: "abc",
+			makePatch: func(source []byte) (Patch, error) {
+				return UpdateRange((ByteRange{Head: 1, Tail: 2}).Anchor(source), []byte("X"))
+			},
+		},
+		{
+			name:   "empty source replacement",
+			source: "",
+			makePatch: func(source []byte) (Patch, error) {
+				return UpdateRange((ByteRange{}).Anchor(source), []byte("x"))
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			source := []byte(test.source)
+			patch, err := test.makePatch(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			inverse := patch.Invert()
+			updated, err := patch.ApplyToCueSource(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			retried, err := patch.ApplyToCueSource(updated)
+			if err != nil {
+				t.Fatalf("retry failed: %v", err)
+			}
+			if !bytes.Equal(retried, updated) {
+				t.Fatalf("retry changed source:\n%s\nwant unchanged:\n%s", retried, updated)
+			}
+			restored, err := inverse.ApplyToCueSource(updated)
+			if err != nil {
+				t.Fatalf("inverse created before application failed: %v", err)
+			}
+			if !bytes.Equal(restored, source) {
+				t.Fatalf("inverse result:\n%s\nwant original:\n%s", restored, source)
+			}
+		})
+	}
+}
+
+func TestAppendToEmptyListCanBeInvertedAndRetried(t *testing.T) {
+	source := []byte("[]")
 	value := cuecontext.New().CompileString(`{Name: "Added"}`)
 	if err := value.Err(); err != nil {
 		t.Fatal(err)
 	}
 
-	change, err := AppendToStructList(nil, value)
+	book, err := New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
-	updated, err := change.ApplyToCueSource(nil)
+	change, err := book.AppendToStructList(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := change.ApplyToCueSource(source)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := New(updated); err != nil {
 		t.Fatalf("appended source is invalid: %v\n%s", err, updated)
 	}
+	retried, err := change.ApplyToCueSource(updated)
+	if err != nil {
+		t.Fatalf("retry failed: %v", err)
+	}
+	if !bytes.Equal(retried, updated) {
+		t.Fatalf("retry changed source: %q, want %q", retried, updated)
+	}
 	restored, err := change.Invert().ApplyToCueSource(updated)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(restored) != 0 {
-		t.Fatalf("inverse result = %q, want empty source", restored)
+	if !bytes.Equal(restored, source) {
+		t.Fatalf("inverse result = %q, want %q", restored, source)
 	}
 }
 
 func TestDeleteDifferenceIdentifiesPrecedingContext(t *testing.T) {
 	source := []byte("[{Name: \"one\"}, {Name: \"two\"}]")
-	document := cuecontext.New().CompileBytes(source)
-	if err := document.Err(); err != nil {
+	document, err := New(source)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	value := document.LookupPath(cuePathIndex(1))
-	change, err := DeleteFromStructList(source, value)
+	entry, err := document.GetEntry(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change, err := entry.DeleteFromStructList()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,13 +643,16 @@ func TestDeleteDifferenceIdentifiesPrecedingContext(t *testing.T) {
 
 func TestResultMatchFindsChangedEntry(t *testing.T) {
 	source := []byte(`[{Name: "old"}]`)
-	document := cuecontext.New().CompileBytes(source)
-	if err := document.Err(); err != nil {
+	document, err := New(source)
+	if err != nil {
 		t.Fatal(err)
 	}
-	value := document.LookupPath(cuePathIndex(0))
+	entry, err := document.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
 	replacement := []byte(`{Name: "new"}`)
-	change, err := ReplaceStructListEntry(source, value, replacement)
+	change, err := entry.ReplaceStructListEntry(replacement)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +684,11 @@ func TestResultMatchFindsInsertedEntry(t *testing.T) {
 	if err := value.Err(); err != nil {
 		t.Fatal(err)
 	}
-	change, err := AppendToStructList(source, value)
+	book, err := New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change, err := book.AppendToStructList(value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -424,7 +696,7 @@ func TestResultMatchFindsInsertedEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	book, err := New(updated)
+	book, err = New(updated)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,11 +712,15 @@ func TestResultMatchFindsInsertedEntry(t *testing.T) {
 
 func TestResultMatchFindsPrecedingEntryAfterDeletion(t *testing.T) {
 	source := []byte(`[{Name: "one"}, {Name: "two"}]`)
-	document := cuecontext.New().CompileBytes(source)
-	if err := document.Err(); err != nil {
+	document, err := New(source)
+	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := DeleteFromStructList(source, document.LookupPath(cuePathIndex(1)))
+	entry, err := document.GetEntry(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change, err := entry.DeleteFromStructList()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -476,11 +752,15 @@ func TestCommitPreservesPermissionsAndCleansTemporaryFile(t *testing.T) {
 	if err := os.Chmod(target, 0o640); err != nil {
 		t.Fatal(err)
 	}
-	document := cuecontext.New().CompileBytes(source)
-	if err := document.Err(); err != nil {
+	document, err := New(source)
+	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := ReplaceStructListEntry(source, document.LookupPath(cuePathIndex(0)), []byte(`{Name: "new"}`))
+	entry, err := document.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change, err := entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -524,11 +804,15 @@ func TestCommitCleansTemporaryFileWhenRenameFails(t *testing.T) {
 	if err := os.WriteFile(target, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	document := cuecontext.New().CompileBytes(source)
-	if err := document.Err(); err != nil {
+	document, err := New(source)
+	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := ReplaceStructListEntry(source, document.LookupPath(cuePathIndex(0)), []byte(`{Name: "new"}`))
+	entry, err := document.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change, err := entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -583,11 +867,15 @@ func TestCommitLeavesOriginalUntouchedWhenSwapDirectoryIsMissing(t *testing.T) {
 	if err := os.WriteFile(target, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	document := cuecontext.New().CompileBytes(source)
-	if err := document.Err(); err != nil {
+	document, err := New(source)
+	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := ReplaceStructListEntry(source, document.LookupPath(cuePathIndex(0)), []byte(`{Name: "new"}`))
+	entry, err := document.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change, err := entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -626,10 +914,13 @@ func TestCommitLeavesOriginalUntouchedWhenPatchCannotApply(t *testing.T) {
 	if err := os.WriteFile(target, source, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	change := deletePatch{Target: ByteAnchor{Content: []byte("missing")}}
+	change := replacePatch{
+		Target:      ByteAnchor{Content: []byte("missing")},
+		Replacement: ByteAnchor{Content: []byte("replacement")},
+	}
 
-	if _, err := commitInDirectory(t, directory, "book.cue", change, nil); !errors.Is(err, ErrByteRangeNotFound) {
-		t.Fatalf("Commit() error = %v, want %v", err, ErrByteRangeNotFound)
+	if _, err := commitInDirectory(t, directory, "book.cue", change, nil); !errors.Is(err, ErrPatchTargetConflict) {
+		t.Fatalf("Commit() error = %v, want %v", err, ErrPatchTargetConflict)
 	}
 	got, err := os.ReadFile(target)
 	if err != nil {

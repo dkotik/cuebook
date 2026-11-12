@@ -90,10 +90,10 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 							_, _ = b.WriteRune('\n')
 						}
 						_, _ = b.WriteRune('\n') // skip a line after comments
-						p, err := cuebook.UpdateRange(source, cuebook.ByteRange{
+						p, err := cuebook.UpdateRange((cuebook.ByteRange{
 							Head: 0,
 							Tail: md.TailBytePosition,
-						}, b.Bytes())
+						}).Anchor(source), b.Bytes())
 						if err != nil {
 							return err
 						}

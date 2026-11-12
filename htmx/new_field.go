@@ -81,18 +81,18 @@ func (a *handler) newField(ctx context.Context, request *newFieldRequest) (editR
 	if entryIndex < 0 {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
-	entryValue, err := document.GetValue(entryIndex)
+	entry, err := document.GetEntry(entryIndex)
 	if err != nil {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
-	if !metadata.IsOpen(entryValue) {
+	if !metadata.IsOpen(entry.Value) {
 		return editResponse{}, ErrEntryDoesNotAcceptFields
 	}
 
 	// Surrounding spaces in a field name are almost always accidental.
 	name := strings.TrimSpace(request.Name)
 	kind := cuebook.FieldKind(request.Kind)
-	change, err := cuebook.AddField(raw, entryValue, name, kind, request.value())
+	change, err := entry.AddField(name, kind, request.value())
 	switch {
 	case errors.Is(err, cuebook.ErrFieldNameEmpty):
 		return editResponse{}, ErrFieldNameRequired

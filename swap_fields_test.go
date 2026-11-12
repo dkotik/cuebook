@@ -3,9 +3,6 @@ package cuebook
 import (
 	"errors"
 	"testing"
-
-	"cuelang.org/go/cue"
-	"cuelang.org/go/cue/cuecontext"
 )
 
 func TestSwapFields(t *testing.T) {
@@ -86,13 +83,19 @@ func TestSwapFields(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			source := []byte(tt.source)
-			document := cuecontext.New().CompileBytes(source)
-			if err := document.Err(); err != nil {
+			document, err := New(source)
+			if err != nil {
 				t.Fatal(err)
 			}
-			entry := document.LookupPath(cue.MakePath(cue.Index(tt.entry)))
+			entry, entryErr := document.GetEntry(tt.entry)
+			if entryErr != nil && !errors.Is(entryErr, ErrEntryValueNotStruct) {
+				t.Fatal(entryErr)
+			}
 
-			patch, err := SwapFields(source, entry, tt.a, tt.b)
+			patch, err := entry.SwapFields(tt.a, tt.b)
+			if tt.wantErr != nil && err == nil {
+				_, err = patch.ApplyToCueSource(source)
+			}
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Fatalf("SwapFields() error = %v, want %v", err, tt.wantErr)

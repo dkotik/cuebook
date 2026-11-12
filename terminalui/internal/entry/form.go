@@ -216,8 +216,8 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			values[name] = value
 		}
 		return f, func() tea.Msg {
-			return Update(func(state cuebook.Result) (cuebook.Patch, error) {
-				p, err := cuebook.MergeFieldValuesAndRemove(state.Source, f.Entry.Value, values, removals)
+			return Update(func(_ cuebook.Result) (cuebook.Patch, error) {
+				p, err := f.Entry.MergeFieldValuesAndRemove(values, removals)
 				if err != nil {
 					return nil, err
 				}
@@ -240,11 +240,10 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		if !ok {
 			return f, nil
 		}
-		entryValue := f.Entry.Value
 		selected := msg.DesiredIndex
 		return f, func() tea.Msg {
 			return Update(func(state cuebook.Result) (cuebook.Patch, error) {
-				p, err := cuebook.SwapFields(state.Source, entryValue, a.Name, b.Name)
+				p, err := f.Entry.SwapFields(a.Name, b.Name)
 				if err != nil {
 					return nil, err
 				}
@@ -279,12 +278,11 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		knownFields := slices.Clone(f.KnownFields)
 		return f, func() tea.Msg { return window.SwitchTo(newNewFieldForm(knownFields)) }
 	case addFieldEvent:
-		entryValue := f.Entry.Value
 		return f, tea.Sequence(
 			func() tea.Msg { return window.BackEvent{} },
 			func() tea.Msg {
 				return Update(func(state cuebook.Result) (cuebook.Patch, error) {
-					p, err := cuebook.AddField(state.Source, entryValue, msg.Name, msg.Kind, msg.Value)
+					p, err := f.Entry.AddField(msg.Name, msg.Kind, msg.Value)
 					if err != nil {
 						return nil, err
 					}
@@ -378,7 +376,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 // field that was just moved. [cuebook.Result.Match] does the reverse: it
 // finds an entry inside the anchored bytes.
 func entryContaining(r cuebook.Result, anchor cuebook.ByteAnchor) (cuebook.Entry, bool) {
-	target, err := anchor.Match(r.Source)
+	target, err := anchor.MatchUnique(r.Source)
 	if err != nil {
 		return cuebook.Entry{}, false
 	}
@@ -394,14 +392,14 @@ func entryContaining(r cuebook.Result, anchor cuebook.ByteAnchor) (cuebook.Entry
 	return cuebook.Entry{}, false
 }
 
-func displayFieldForm(source []byte, entry cuebook.Entry, field cuebook.Field) tea.Cmd {
+func displayFieldForm(entry cuebook.Entry, field cuebook.Field) tea.Cmd {
 	return func() tea.Msg {
 		form, err := textarea.New(textarea.Configuration{
 			Label: field.Name,
 			Value: field.String(),
 			OnSubmit: func(value string) tea.Cmd {
 				return func() tea.Msg {
-					p, err := cuebook.UpdateFieldValue(source, entry.Value, field.Value, value)
+					p, err := entry.UpdateFieldValue(field.Name, value)
 					if err != nil {
 						return err
 					}

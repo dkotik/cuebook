@@ -23,7 +23,7 @@ type createEntryPatch struct {
 
 type createForm struct {
 	tea.Model
-	Source      []byte
+	Document    cuebook.Book
 	Definitions []cuebook.FieldDefinition
 	Values      map[string]string
 }
@@ -91,17 +91,17 @@ func createFormItems(fields []tea.Model) []tea.Model {
 	return append(items, NewCreateEntryButton(), NewCancelButton())
 }
 
-func NewCreateForm(source []byte, value cue.Value) tea.Cmd {
+func NewCreateForm(document cuebook.Book) tea.Cmd {
 	return tea.Sequence(
 		func() tea.Msg {
-			return window.SwitchTo(newCreateForm(source))
+			return window.SwitchTo(newCreateForm(document))
 		},
-		emitCreateFormFields(value),
+		emitCreateFormFields(document.Value),
 	)
 }
 
-func newCreateForm(source []byte) createForm {
-	return createForm{Model: listForm.New(listForm.Configuration{}), Source: source}
+func newCreateForm(document cuebook.Book) createForm {
+	return createForm{Model: listForm.New(listForm.Configuration{}), Document: document}
 }
 
 func (f createForm) Init() tea.Cmd {
@@ -126,7 +126,7 @@ func (f createForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 		f.Values[msg.Name] = msg.Value
 	case cuebook.Result:
-		f.Source = msg.Source
+		f.Document = msg.Document
 		if _, ok := msg.LastChange.(createEntryPatch); ok {
 			return f, func() tea.Msg { return window.BackEvent{} }
 		}
@@ -158,7 +158,7 @@ func (f createForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if err := entry.Err(); err != nil {
 				return fmt.Errorf("unable to build entry: %w", err)
 			}
-			p, err := cuebook.AppendToStructList(f.Source, entry)
+			p, err := f.Document.AppendToStructList(entry)
 			if err != nil {
 				return err
 			}

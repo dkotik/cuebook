@@ -20,8 +20,9 @@ type Patch interface {
 
 // Result contains a validated document and the source revision produced by a patch.
 type Result struct {
-	Document   Book
-	Source     []byte
+	Document Book
+	Source   []byte
+	// LastChange is nil when applying the patch did not change the source.
 	LastChange Patch
 	Hash       uint64
 }
@@ -79,7 +80,7 @@ func (r Result) Match(difference []byte) (entry Entry, ok bool) {
 	if bytes.Equal(lastDifference.Content, difference) {
 		anchor = lastDifference
 	}
-	target, err := anchor.Match(r.Source)
+	target, err := anchor.MatchUnique(r.Source)
 	if err != nil {
 		return entry, false
 	}
@@ -119,6 +120,7 @@ func Commit(ctx context.Context, fs FileSystem, name string, p Patch) (r Result,
 		return r, err
 	}
 	r.Source = updated
+	changed := !bytes.Equal(source, updated)
 	r.Document, err = New(r.Source)
 	if err != nil {
 		return r, err
@@ -129,10 +131,12 @@ func Commit(ctx context.Context, fs FileSystem, name string, p Patch) (r Result,
 		return r, fmt.Errorf("unable to hash patch result: %w", err)
 	}
 	r.Hash = hash.Sum64()
-	r.LastChange = p
 
-	if err = fs.WriteFile(ctx, name, r.Source); err != nil {
-		return r, err
+	if changed {
+		r.LastChange = p
+		if err = fs.WriteFile(ctx, name, r.Source); err != nil {
+			return r, err
+		}
 	}
 	return r, nil
 }

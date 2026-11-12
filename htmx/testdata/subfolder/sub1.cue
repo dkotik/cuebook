@@ -11,11 +11,6 @@
 
 [...#contact] & [
   {
-		Email: "mr@sfsdf.com"
-		Name:  "Maria"
-		Notes: "sdfsdf"
-	},
-  {
 		Name:       "aFirst11111aaDD222Dzxa1"
 		Email:      "tes44taaa1ds1@testdo1zzzzain.com"
 		Password:   "$argon2id$v=19$m=65536,t=3,p=4$U4eAT5pyeRbmzJq/wd7aew$acreNZzsplw5F9gfGEhU9Mg+cLVuh8k7Y3nKIZFCbBg"
@@ -27,11 +22,16 @@
 
 
 
-			~~sdfsdfs~~
+			~~sdfsdfs44~~
 
 			~~112~~
 			""" @cuebook(multiline)
 		cxxcxcv: "sdfsdfsdf" @cuebook(multiline)
+	},
+  {
+		Email: "mr1@sfsdf.com"
+		Name:  "Maria"
+		Notes: "sdfsdf"
 	},
   {
 		Name:  "First11111aa1axx44"
@@ -70,11 +70,6 @@
   {
 		Name:  "2378"
 		Email: "sdf@sdf.com1"
-	},
-  {
-		Name:     "sdf"
-		Email:    "sdf@sdf.com"
-		Password: "$argon2id$v=19$m=65536,t=3,p=4$lFPpEgVBiY1UicU755JcKg$j+KEEZIwJPJafycCnfAS035HiGsiuaMns5npt2wZGlI"
 	},
   {
 		Name:     "ksjdhf"

@@ -1,10 +1,9 @@
 package cuebook
 
 import (
+	"bytes"
+	"strings"
 	"testing"
-
-	"cuelang.org/go/cue"
-	"cuelang.org/go/cue/cuecontext"
 )
 
 func TestSwapEntries(t *testing.T) {
@@ -17,31 +16,21 @@ func TestSwapEntries(t *testing.T) {
 		{	two: "ok" },
 		{	two: "ok" }
 ]`)
-	document := cuecontext.New().CompileBytes(source)
-	err := document.Err()
+	document, err := New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	aValues, err := document.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for aValues.Next() {
-		a := aValues.Value()
-		if err := a.Err(); err != nil {
-			t.Fatal("unable to parse entry:", err)
-		}
-		bValues, err := document.List()
+	var entries []Entry
+	for entry, err := range document.EachEntry() {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for bValues.Next() {
-			b := bValues.Value()
-			if err := b.Err(); err != nil {
-				t.Fatal("unable to parse entry:", err)
-			}
-			patch, err := SwapEntries(source, a, b)
+		entries = append(entries, entry)
+	}
+	for _, a := range entries {
+		for _, b := range entries {
+			patch, err := document.SwapEntries(a, b)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -54,8 +43,38 @@ func TestSwapEntries(t *testing.T) {
 			t.Run("reverse", ensureInversible(source, patch))
 		}
 	}
-	// a := document.LookupPath(cue.MakePath(cue.Index(0)))
-	// b := document.LookupPath(cue.MakePath(cue.Index(5)))
+}
+
+func TestMoveEntryPatchAllowsUnrelatedEditsOutsideItsTarget(t *testing.T) {
+	source := []byte("// " + strings.Repeat("a", 100) + "\n" + strings.Repeat("\n", 80) + `[{Name: "one"}, {Name: "two"}]` + strings.Repeat("\n", 80) + "// trailing comment\n")
+	book, err := New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch, err := book.MoveEntry(0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	freshSource := bytes.Replace(source, []byte("a"), []byte("b"), 1)
+	updated, err := patch.ApplyToCueSource(freshSource)
+	if err != nil {
+		t.Fatalf("move failed after an unrelated distant edit: %v", err)
+	}
+	if !bytes.Contains(updated, []byte("// b")) {
+		t.Fatalf("unrelated edit was lost: %q", updated)
+	}
+	updatedBook, err := New(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := updatedBook.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := first.GetTitle(); got != "two" {
+		t.Fatalf("first moved entry title = %q, want %q", got, "two")
+	}
 }
 
 func TestSwapDifference(t *testing.T) {
@@ -64,16 +83,21 @@ func TestSwapDifference(t *testing.T) {
 		{	two: "ok" },
 		{	two: "ok" }
 ]`)
-	document := cuecontext.New().CompileBytes(source)
-	err := document.Err()
+	document, err := New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	a := document.LookupPath(cue.MakePath(cue.Index(1)))
-	b := document.LookupPath(cue.MakePath(cue.Index(2)))
+	a, err := document.GetEntry(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := document.GetEntry(2)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	p, err := SwapEntries(source, a, b)
+	p, err := document.SwapEntries(a, b)
 	if err != nil {
 		t.Fatal(err)
 	}

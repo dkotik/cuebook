@@ -20,24 +20,17 @@ func TestUpdateStructInList(t *testing.T) {
 		{	two: "ok" },
 		{	two: "ok" }
 ]`)
-	document := cuecontext.New().CompileBytes(source)
-	err := document.Err()
+	document, err := New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// // last := document.LookupPath(cue.MakePath(cue.Index(2)))
 	replacement := []byte(`{ replacement: "replacement"}`)
-	values, err := document.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for values.Next() {
-		value := values.Value()
-		if err = value.Err(); err != nil {
+	for entry, err := range document.EachEntry() {
+		if err != nil {
 			t.Fatal(err)
 		}
-		patch, err := ReplaceStructListEntry(source, value, replacement)
+		patch, err := entry.ReplaceStructListEntry(replacement)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -62,14 +55,14 @@ func TestUpdateReturnsEntryNotStructError(t *testing.T) {
 		{
 			name: "update field",
 			call: func() error {
-				_, err := UpdateFieldValue(nil, entry, cue.Value{}, "value")
+				_, err := (Entry{Value: entry}).UpdateFieldValue("value", "value")
 				return err
 			},
 		},
 		{
 			name: "merge field values",
 			call: func() error {
-				_, err := MergeFieldValues(nil, entry, nil)
+				_, err := (Entry{Value: entry}).MergeFieldValues(nil)
 				return err
 			},
 		},
@@ -85,11 +78,9 @@ func TestUpdateReturnsEntryNotStructError(t *testing.T) {
 }
 
 func TestUpdateReturnsTargetFieldNotStructFieldError(t *testing.T) {
-	ctx := cuecontext.New()
-	entry := ctx.CompileBytes([]byte(`{name: "entry"}`))
-	field := ctx.CompileBytes([]byte(`"value"`))
+	entry := cuecontext.New().CompileString(`{name: "entry"}`)
 
-	_, err := UpdateFieldValue(nil, entry, field, "updated")
+	_, err := (Entry{Value: entry}).UpdateFieldValue("value", "updated")
 	if !errors.Is(err, ErrTargetFieldNotStructField) {
 		t.Fatalf("error = %v, want %v", err, ErrTargetFieldNotStructField)
 	}
@@ -101,7 +92,7 @@ func TestMergeFieldValuesReturnsFormattingError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := MergeFieldValues(nil, entry, map[string]string{"Name": ""})
+	_, err := (Entry{Value: entry}).MergeFieldValues(map[string]string{"Name": ""})
 	if err == nil {
 		t.Fatal("MergeFieldValues() error = nil, want a formatting error")
 	}
@@ -156,7 +147,7 @@ func TestUpdateStructField(t *testing.T) {
 	}
 	t.Log("field:", field.Name)
 
-	patch, err := UpdateFieldValue(source, target, field.Value, "value string sdkfjlsf lskdj;lsajfskajfsadjsakdljfadsfsakj ksadjl;sajflsaf \n\n\nkjshfadsjh")
+	patch, err := entry.UpdateFieldValue(field.Name, "value string sdkfjlsf lskdj;lsajfskajfsadjsakdljfadsfsakj ksadjl;sajflsaf \n\n\nkjshfadsjh")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +205,7 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	}
 	t.Log("field:", field.Name)
 
-	patch, err := MergeFieldValues(source, target, map[string]string{
+	patch, err := entry.MergeFieldValues(map[string]string{
 		"ID":          "",
 		"another":     "123",
 		"seriously":   "545445",
@@ -259,14 +250,41 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	}
 }
 
+func TestMergeFieldValuesEmptyIsNoOpWithoutSourceAnchor(t *testing.T) {
+	entry := Entry{Value: cuecontext.New().CompileString(`{Name: "value"}`)}
+	if err := entry.Value.Err(); err != nil {
+		t.Fatal(err)
+	}
+
+	patch, err := entry.MergeFieldValues(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source := []byte(`[{}]`)
+	updated, err := patch.ApplyToCueSource(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(updated, source) {
+		t.Fatalf("empty merge changed source: %s", updated)
+	}
+}
+
 func TestMergeFieldValuesAddsNewFieldsInStableOrder(t *testing.T) {
 	source := []byte(`[{}]`)
 	document := cuecontext.New().CompileBytes(source)
 	if err := document.Err(); err != nil {
 		t.Fatal(err)
 	}
-	entry := document.LookupPath(cue.MakePath(cue.Index(0)))
-	change, err := MergeFieldValues(source, entry, map[string]string{
+	book, err := New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := book.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	change, err := entry.MergeFieldValues(map[string]string{
 		"zField": "last",
 		"aField": "first",
 	})

@@ -50,23 +50,23 @@ func (k FieldKind) ValidateValue(value string) error {
 	return err
 }
 
-// AddField appends a new field to the end of an entry. An empty value
+// AddField appends a new field to the end of this entry. An empty value
 // becomes the zero value of the kind: an empty string, 0, or false. A
 // multiline string is marked with @cuebook(multiline) so that editors keep
 // treating it as multiline.
 //
-// The entry is rewritten from its own source, so its comments, formatting
-// within fields, and attributes are kept. The patch does not check whether
-// the entry's schema accepts the field: validate the patched source with
-// [New] or wrap the patch with [Validated].
-func AddField(source []byte, entry cue.Value, name string, kind FieldKind, value string) (Patch, error) {
+// The entry is rewritten from its source, so its comments, formatting within
+// fields, and attributes are kept. The patch does not check whether the entry's
+// schema accepts the field: validate the patched source with [New] or wrap the
+// patch with [Validated].
+func (e Entry) AddField(name string, kind FieldKind, value string) (Patch, error) {
 	if strings.TrimSpace(name) == "" {
 		return nil, ErrFieldNameEmpty
 	}
-	if entry.IncompleteKind() != cue.StructKind {
+	if e.Value.IncompleteKind() != cue.StructKind {
 		return nil, ErrEntryNotStruct
 	}
-	exists, err := hasField(entry, name)
+	exists, err := hasField(e.Value, name)
 	if err != nil {
 		return nil, err
 	}
@@ -77,11 +77,18 @@ func AddField(source []byte, entry cue.Value, name string, kind FieldKind, value
 	if err != nil {
 		return nil, err
 	}
-
-	entryRange, err := NewByteRange(entry)
+	entryRange, err := e.originalSourceRange()
 	if err != nil {
 		return nil, err
 	}
+	replacement, err := addFieldAtRange(e.source, entryRange, name, kind, field)
+	if err != nil {
+		return nil, err
+	}
+	return replaceByteRange(e.source, entryRange, replacement)
+}
+
+func addFieldAtRange(source []byte, entryRange ByteRange, name string, kind FieldKind, field *ast.Field) ([]byte, error) {
 	if !validByteRange(entryRange, source) {
 		return nil, ErrByteRangeNotFound
 	}
@@ -94,10 +101,18 @@ func AddField(source []byte, entry cue.Value, name string, kind FieldKind, value
 	if !ok {
 		return nil, ErrEntryNotStruct
 	}
+	for _, element := range fields.Elts {
+		writtenField, ok := element.(*ast.Field)
+		if !ok {
+			continue
+		}
+		label, _, err := ast.LabelName(writtenField.Label)
+		if err == nil && label == name {
+			return nil, ErrFieldExists
+		}
+	}
 	if !bytes.ContainsRune(written, '\n') {
 		if kind == FieldKindMultiLine {
-			// A multiline string cannot share a line with its siblings, so
-			// spread the whole entry over several lines.
 			for _, element := range fields.Elts {
 				ast.SetRelPos(element, token.Newline)
 			}
@@ -116,7 +131,7 @@ func AddField(source []byte, entry cue.Value, name string, kind FieldKind, value
 	if err != nil {
 		return nil, err
 	}
-	return UpdateRange(source, entryRange, content)
+	return content, nil
 }
 
 // hasField includes optional fields from the schema, because adding one of

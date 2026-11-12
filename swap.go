@@ -8,76 +8,125 @@ import (
 	"cuelang.org/go/cue/parser"
 )
 
-type swapPatch struct {
-	Earlier                ByteAnchor
-	Later                  ByteAnchor
-	EarlierIsTarget        bool
-	EarlierDuplicatesInGap int
-	LaterDuplicatesInGap   int
-}
-
-func (p swapPatch) Difference() ByteAnchor {
-	if p.EarlierIsTarget {
-		return p.Earlier
+// SwapEntries creates a patch that exchanges two entries in this book.
+func (book Book) SwapEntries(a, b Entry) (Patch, error) {
+	if book.Value.Kind() != cue.ListKind {
+		return nil, ErrSourceIsNotList
 	}
-	return p.Later
-}
-
-func (p swapPatch) ApplyToCueSource(source []byte) ([]byte, error) {
-	earlier, err := p.Earlier.Match(source)
+	aRange, err := a.sourceAnchor.MatchUnique(book.source)
 	if err != nil {
 		return nil, err
 	}
-	p.Later.PreceedingDuplicates += p.LaterDuplicatesInGap
-	later, err := p.Later.Match(source)
+	bRange, err := b.sourceAnchor.MatchUnique(book.source)
 	if err != nil {
 		return nil, err
 	}
-	if !validByteRange(earlier, source) || !validByteRange(later, source) {
-		return nil, ErrByteRangeNotFound
-	}
-	if earlier.Head > later.Head || earlier.Tail > later.Head {
-		return nil, ErrByteRangesOverlap
-	}
-
-	result := make([]byte, 0, len(source))
-	result = append(result, source[:earlier.Head]...)
-	result = append(result, source[later.Head:later.Tail]...)
-	result = append(result, source[earlier.Tail:later.Head]...)
-	result = append(result, source[earlier.Head:earlier.Tail]...)
-	result = append(result, source[later.Tail:]...)
-	return result, nil
+	return swapByteRanges(book.source, aRange, bRange)
 }
 
-func (p swapPatch) Invert() Patch {
-	return swapPatch{
-		Earlier:                p.Later,
-		Later:                  p.Earlier,
-		EarlierIsTarget:        !p.EarlierIsTarget,
-		EarlierDuplicatesInGap: p.LaterDuplicatesInGap,
-		LaterDuplicatesInGap:   p.EarlierDuplicatesInGap,
+// MoveEntry creates one immutable transition to the requested entry order.
+// Unlike composing swaps, the resulting patch can be retried idempotently.
+func (book Book) MoveEntry(from, to int) (Patch, error) {
+	if book.Value.Kind() != cue.ListKind {
+		return nil, ErrSourceIsNotList
 	}
+	length, err := book.Len()
+	if err != nil {
+		return nil, err
+	}
+	if from < 0 || from >= length || to < 0 || to >= length {
+		return nil, ErrBookEntryIndexOutOfRange
+	}
+	originalEntry, err := book.GetEntry(from)
+	if err != nil {
+		return nil, err
+	}
+	if from == to {
+		return nothingPatch{A: originalEntry.sourceAnchor, B: originalEntry.sourceAnchor}, nil
+	}
+
+	entries := make([]ByteRange, 0, length)
+	for entry, err := range book.EachEntry() {
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry.sourceRange)
+	}
+
+	targetRange := ByteRange{
+		Head: entries[min(from, to)].Head,
+		Tail: entries[max(from, to)].Tail,
+	}
+	current := bytes.Clone(book.source)
+	direction := 1
+	if from > to {
+		direction = -1
+	}
+	for index := from; index != to; index += direction {
+		next := index + direction
+		change, err := swapByteRanges(current, entries[index], entries[next])
+		if err != nil {
+			return nil, err
+		}
+		current, err = change.ApplyToCueSource(current)
+		if err != nil {
+			return nil, err
+		}
+		newA, newB := rangesAfterSwap(entries[index], entries[next])
+		entries[index], entries[next] = newB, newA
+	}
+	if bytes.Equal(current, book.source) {
+		return nothingPatch{A: originalEntry.sourceAnchor, B: originalEntry.sourceAnchor}, nil
+	}
+
+	movedAnchor := entries[to].Anchor(current)
+	change, err := replaceByteRangeWithDifference(
+		book.source,
+		targetRange,
+		current[targetRange.Head:targetRange.Tail],
+		movedAnchor,
+	)
+	if err != nil {
+		return nil, err
+	}
+	change.BeforeDifferenceAnchor = cloneByteAnchor(originalEntry.sourceAnchor)
+	return change, nil
 }
 
-func SwapEntries(source []byte, a, b cue.Value) (Patch, error) {
-	aRange, err := NewByteRange(a)
-	if err != nil {
-		return nil, err
+func rangesAfterSwap(a, b ByteRange) (ByteRange, ByteRange) {
+	aWasEarlier := a.Head < b.Head
+	earlier, later := a, b
+	if !aWasEarlier {
+		earlier, later = b, a
 	}
-	bRange, err := NewByteRange(b)
-	if err != nil {
-		return nil, err
+	gap := later.Head - earlier.Tail
+	if aWasEarlier {
+		bHead := earlier.Head
+		aHead := bHead + later.Tail - later.Head + gap
+		return ByteRange{Head: aHead, Tail: aHead + a.Tail - a.Head},
+			ByteRange{Head: bHead, Tail: bHead + b.Tail - b.Head}
 	}
-	return swapByteRanges(source, aRange, bRange)
+	aHead := earlier.Head
+	bHead := aHead + later.Tail - later.Head + gap
+	return ByteRange{Head: aHead, Tail: aHead + a.Tail - a.Head},
+		ByteRange{Head: bHead, Tail: bHead + b.Tail - b.Head}
 }
 
-// SwapFields exchanges two field declarations, including their labels and
-// attributes, inside one struct entry. Separators and comments stay in place.
-func SwapFields(source []byte, entry cue.Value, a, b string) (Patch, error) {
-	entryRange, err := NewByteRange(entry)
+// SwapFields creates a patch exchanging two written fields in this entry.
+func (e Entry) SwapFields(a, b string) (Patch, error) {
+	if e.Value.IncompleteKind() != cue.StructKind {
+		return nil, ErrEntryNotStruct
+	}
+	entryRange, err := e.originalSourceRange()
 	if err != nil {
 		return nil, err
 	}
+	return swapFieldsAtRange(e.source, entryRange, a, b)
+}
+
+// swapFieldsAtRange exchanges two written field declarations, including their
+// labels and attributes. Separators and comments stay in place.
+func swapFieldsAtRange(source []byte, entryRange ByteRange, a, b string) (Patch, error) {
 	if !validByteRange(entryRange, source) {
 		return nil, ErrByteRangeNotFound
 	}
@@ -123,34 +172,37 @@ func swapByteRanges(source []byte, aRange, bRange ByteRange) (Patch, error) {
 		return nil, ErrByteRangeNotFound
 	}
 	if bytes.Equal(source[aRange.Head:aRange.Tail], source[bRange.Head:bRange.Tail]) {
-		if aRange.Head > bRange.Head {
-			return nothingPatch{
-				A: bRange.Anchor(source),
-				B: aRange.Anchor(source),
-			}, nil
-		}
-		return nothingPatch{
-			A: aRange.Anchor(source),
-			B: bRange.Anchor(source),
-		}, nil
+		return nothingPatch{A: aRange.Anchor(source), B: bRange.Anchor(source)}, nil
 	}
 
-	p := swapPatch{}
-	if aRange.Head > bRange.Head {
-		aRange, bRange = bRange, aRange
-	} else {
-		p.EarlierIsTarget = true
+	aWasEarlier := aRange.Head < bRange.Head
+	earlier, later := aRange, bRange
+	if !aWasEarlier {
+		earlier, later = bRange, aRange
 	}
-	if aRange.Tail > bRange.Head {
+	if earlier.Tail > later.Head {
 		return nil, ErrByteRangesOverlap
 	}
-	p.Earlier = aRange.Anchor(source)
-	p.Later = bRange.Anchor(source)
-	if aRange.Tail < bRange.Head {
-		gap := source[aRange.Tail:bRange.Head]
-		p.EarlierDuplicatesInGap = bytes.Count(gap, p.Earlier.Content)
-		p.LaterDuplicatesInGap = bytes.Count(gap, p.Later.Content)
-		p.Later.PreceedingDuplicates -= p.LaterDuplicatesInGap
+
+	afterSegment := make([]byte, 0, later.Tail-earlier.Head)
+	afterSegment = append(afterSegment, source[later.Head:later.Tail]...)
+	afterSegment = append(afterSegment, source[earlier.Tail:later.Head]...)
+	afterSegment = append(afterSegment, source[earlier.Head:earlier.Tail]...)
+	afterSource, err := spliceRange(source, ByteRange{Head: earlier.Head, Tail: later.Tail}, afterSegment)
+	if err != nil {
+		return nil, err
 	}
-	return p, nil
+
+	targetAHead := earlier.Head
+	if aWasEarlier {
+		targetAHead += later.Tail - later.Head + later.Head - earlier.Tail
+	}
+	targetARange := ByteRange{Head: targetAHead, Tail: targetAHead + aRange.Tail - aRange.Head}
+	difference := targetARange.Anchor(afterSource)
+	return replaceByteRangeWithDifference(
+		source,
+		ByteRange{Head: earlier.Head, Tail: later.Tail},
+		afterSegment,
+		difference,
+	)
 }

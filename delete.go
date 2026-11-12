@@ -1,37 +1,17 @@
 package cuebook
 
-import (
-	"unicode"
+import "unicode"
 
-	"cuelang.org/go/cue"
-)
-
-type deletePatch struct {
-	Preceeding ByteAnchor
-	Target     ByteAnchor
-}
-
-func (p deletePatch) Difference() ByteAnchor {
-	return p.Preceeding
-}
-
-func (p deletePatch) ApplyToCueSource(source []byte) ([]byte, error) {
-	r, err := p.Target.Match(source)
+// DeleteFromStructList creates a patch that removes this entry from its list.
+func (e Entry) DeleteFromStructList() (Patch, error) {
+	r, err := e.originalSourceRange()
 	if err != nil {
 		return nil, err
 	}
-	return spliceRange(source, r, nil)
+	return deleteByteRange(e.source, r, e.precedingSourceRange, e.hasPrecedingSourceRange)
 }
 
-func (p deletePatch) Invert() Patch {
-	return insertAfter(p)
-}
-
-func DeleteFromStructList(source []byte, value cue.Value) (Patch, error) {
-	r, err := NewByteRange(value)
-	if err != nil {
-		return nil, err
-	}
+func deleteByteRange(source []byte, r, precedingRange ByteRange, hasPrecedingRange bool) (Patch, error) {
 	if !validByteRange(r, source) {
 		return nil, ErrByteRangeNotFound
 	}
@@ -69,13 +49,13 @@ func DeleteFromStructList(source []byte, value cue.Value) (Patch, error) {
 		}
 	}
 
-	preceeding := r.PreceedingEntryAnchor(source)
-	target, err := anchorForRange(r, source)
-	if err != nil {
-		return nil, err
+	var difference ByteAnchor
+	if hasPrecedingRange && validByteRange(precedingRange, source) {
+		updated, err := spliceRange(source, r, nil)
+		if err != nil {
+			return nil, err
+		}
+		difference = precedingRange.Anchor(updated)
 	}
-	return deletePatch{
-		Preceeding: preceeding,
-		Target:     target,
-	}, nil
+	return replaceByteRangeWithDifference(source, r, nil, difference)
 }

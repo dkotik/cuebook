@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"errors"
@@ -10,7 +9,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/terminalui/event"
@@ -87,7 +85,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if err != nil {
 				return err
 			}
-			result, err := archiveEntry(context.Background(), files, sourceName, l.book.Source, msg.Entry, time.Now())
+			result, err := archiveEntry(context.Background(), files, sourceName, msg.Entry, time.Now())
 			if err != nil {
 				return err
 			}
@@ -139,7 +137,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			updateCmd,
 		)
 	case entry.CreateEvent:
-		return l, entry.NewCreateForm(l.book.Source, l.book.Document.Value)
+		return l, entry.NewCreateForm(l.book.Document)
 	case entrySelected:
 		selected, err := l.book.Document.GetEntry(int(msg))
 		if err != nil {
@@ -151,15 +149,15 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			return l, nil // the title card at index 0 is not an entry
 		}
 		return l, func() tea.Msg {
-			a := l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(msg.CurrentIndex - 1)))
-			if a.Kind() == cue.BottomKind {
+			a, err := l.book.Document.GetEntry(msg.CurrentIndex - 1)
+			if err != nil {
 				return nil // does not exist
 			}
-			b := l.book.Document.Value.LookupPath(cue.MakePath(cue.Index(msg.DesiredIndex - 1)))
-			if b.Kind() == cue.BottomKind {
+			b, err := l.book.Document.GetEntry(msg.DesiredIndex - 1)
+			if err != nil {
 				return nil // does not exist
 			}
-			p, err := cuebook.SwapEntries(l.book.Source, a, b)
+			p, err := l.book.Document.SwapEntries(a, b)
 			if err != nil {
 				return err
 			}
@@ -186,7 +184,7 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if msg.Key().Mod != tea.ModCtrl {
 				break
 			}
-			return l, entry.NewCreateForm(l.book.Source, l.book.Document.Value)
+			return l, entry.NewCreateForm(l.book.Document)
 		}
 		l.Model, cmd = l.Model.Update(msg)
 		return l, cmd
@@ -230,36 +228,27 @@ func LoadEntries(r cuebook.Result, selectionIndex int) tea.Cmd {
 		result.Cards = append(result.Cards, title)
 
 		var (
-			index                          int
-			lastChangePreceedingDuplicates int
-			lastChange                     []byte
+			index         int
+			selectedRange cuebook.ByteRange
+			hasSelection  bool
 		)
 		if r.LastChange != nil {
-			diff := r.LastChange.Difference()
-			lastChange = diff.Content
-			if firstBrace := bytes.IndexByte(lastChange, '{'); firstBrace > 0 && firstBrace < 10 {
-				lastChange = lastChange[firstBrace:]
+			if selected, ok := r.Match(r.LastChange.Difference().Content); ok {
+				selectedRange, err = cuebook.NewByteRange(selected.Value)
+				hasSelection = err == nil
 			}
-			if lastBrace := bytes.LastIndexByte(lastChange, '}'); lastBrace > 0 && lastBrace > len(lastChange)-10 {
-				lastChange = lastChange[:lastBrace+1]
-			}
-			lastChangePreceedingDuplicates = diff.PreceedingDuplicates
 		}
 		for entry, err := range r.Document.EachEntry() {
 			if err != nil {
 				return err
 			}
-			if lastChange != nil {
+			if hasSelection {
 				at, err := cuebook.NewByteRange(entry.Value)
 				if err != nil {
 					return err
 				}
-				if lastChangePreceedingDuplicates < 0 {
-					lastChange = nil // stop tracking
-				}
-				if bytes.Equal(lastChange, r.Source[at.Head:at.Tail]) {
+				if at == selectedRange {
 					result.SelectedIndex = index + 1
-					lastChangePreceedingDuplicates--
 				}
 			}
 			result.Cards = append(

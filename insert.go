@@ -9,28 +9,11 @@ import (
 	"cuelang.org/go/cue/format"
 )
 
-type insertAfter struct {
-	Preceeding ByteAnchor
-	Target     ByteAnchor
-}
-
-func (p insertAfter) Difference() ByteAnchor {
-	return p.Target
-}
-
-func (p insertAfter) ApplyToCueSource(source []byte) ([]byte, error) {
-	r, err := p.Preceeding.Match(source)
-	if err != nil {
-		return nil, err
+// AppendToStructList creates a patch that appends a value to a CUE list.
+func (b Book) AppendToStructList(value cue.Value) (Patch, error) {
+	if b.Value.Kind() != cue.ListKind {
+		return nil, ErrSourceIsNotList
 	}
-	return spliceAt(source, r.Tail, p.Target.Content)
-}
-
-func (p insertAfter) Invert() Patch {
-	return deletePatch(p)
-}
-
-func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 	content, err := format.Node(
 		value.Syntax(entrySyntaxOptions...),
 		format.Simplify(),
@@ -40,24 +23,17 @@ func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
+	return appendToStructList(b.source, bytes.Clone(content))
+}
 
+func appendToStructList(source []byte, content []byte) (Patch, error) {
 	if len(source) < 2 {
 		if len(bytes.TrimSpace(source)) != 0 {
 			return nil, ErrSourceIsNotList
 		}
 		inserted := append([]byte("[\n  "), content...)
 		inserted = append(inserted, []byte("\n]\n")...)
-		preceding, err := anchorForRange(ByteRange{}, source)
-		if err != nil {
-			return nil, err
-		}
-		return insertAfter{
-			Preceeding: preceding,
-			Target: ByteAnchor{
-				Content:              inserted,
-				PreceedingDuplicates: bytes.Count(source, inserted),
-			},
-		}, nil
+		return replaceByteRange(source, ByteRange{Tail: len(source)}, inserted)
 	}
 
 	compiled := cuecontext.New().CompileBytes(source)
@@ -74,20 +50,7 @@ func AppendToStructList(source []byte, value cue.Value) (Patch, error) {
 	} else {
 		content = append([]byte(",\n  "), content...)
 	}
-	preceding, err := anchorForRange(ByteRange{
-		Head: max(0, listEnd-1000),
-		Tail: listEnd,
-	}, source)
-	if err != nil {
-		return nil, err
-	}
-	return insertAfter{
-		Preceeding: preceding,
-		Target: ByteAnchor{
-			Content:              content,
-			PreceedingDuplicates: bytes.Count(source[:listEnd], content),
-		},
-	}, nil
+	return replaceByteRange(source, ByteRange{Head: listEnd, Tail: listEnd}, content)
 }
 
 func locateRootListEnd(source []byte) (i int, commaFound, empty bool, err error) {

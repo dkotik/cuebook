@@ -10,7 +10,7 @@ import (
 	"github.com/dkotik/cuebook"
 )
 
-func archiveEntry(ctx context.Context, files cuebook.FileSystem, sourceName string, source []byte, entry cuebook.Entry, date time.Time) (result cuebook.Result, err error) {
+func archiveEntry(ctx context.Context, files cuebook.FileSystem, sourceName string, entry cuebook.Entry, date time.Time) (result cuebook.Result, err error) {
 	archiveName := cuebook.ArchiveFileName(date)
 	archiveSource, err := files.ReadFile(ctx, archiveName)
 	createArchive := errors.Is(err, fs.ErrNotExist)
@@ -21,7 +21,7 @@ func archiveEntry(ctx context.Context, files cuebook.FileSystem, sourceName stri
 		archiveSource = []byte(cuebook.EmptyArchiveSource)
 	}
 
-	transfer, err := cuebook.PrepareEntryTransfer(source, archiveSource, entry.Value)
+	transfer, err := cuebook.PrepareEntryTransfer(archiveSource, entry)
 	if err != nil {
 		return result, err
 	}

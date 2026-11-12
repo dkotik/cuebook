@@ -4,6 +4,7 @@ Package cuebook provides a structured data model and parsing utilities for CUE (
 package cuebook
 
 import (
+	"bytes"
 	"errors"
 	"iter"
 	"log/slog"
@@ -19,10 +20,13 @@ type Book struct {
 	Value       cue.Value
 	Fields      []Field
 	Definitions []FieldDefinition
+
+	source []byte
 }
 
 func New(source []byte) (book Book, err error) {
-	book.Value = cuecontext.New().CompileBytes(source)
+	book.source = bytes.Clone(source)
+	book.Value = cuecontext.New().CompileBytes(book.source)
 	if err = book.Value.Err(); err != nil {
 		return book, err
 	}
@@ -61,13 +65,31 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 			}
 		}
 
+		var precedingRange ByteRange
+		hasPrecedingRange := false
 		for next.Next() {
 			value := next.Value()
 			entry := Entry{
-				Value:            value,
-				FieldDefinitions: d.Definitions,
+				Value:                   value,
+				FieldDefinitions:        d.Definitions,
+				source:                  d.source,
+				precedingSourceRange:    precedingRange,
+				hasPrecedingSourceRange: hasPrecedingRange,
 			}
 			var entryErr error
+			entryRange, rangeErr := NewByteRange(value)
+			if rangeErr == nil {
+				entry.sourceRange = entryRange
+				entry.hasSourceRange = true
+				entry.sourceAnchor, rangeErr = anchorForRange(entryRange, d.source)
+			}
+			if rangeErr == nil {
+				precedingRange = entryRange
+				hasPrecedingRange = true
+			}
+			if rangeErr != nil {
+				entryErr = errors.Join(entryErr, rangeErr)
+			}
 			if !value.IsConcrete() || value.IsNull() {
 				entryErr = ErrCannotLoadAbstractEntry
 			} else if kind := value.Kind(); kind != cue.StructKind {

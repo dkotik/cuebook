@@ -85,6 +85,10 @@ const (
 	ErrFieldExists
 	ErrUnknownFieldKind
 	ErrInvalidFieldValue
+	// ErrPatchTargetConflict occurs when a patch target matches neither its before- nor after-state.
+	ErrPatchTargetConflict
+	// ErrPatchTargetAmbiguous occurs when source context identifies multiple patch targets.
+	ErrPatchTargetAmbiguous
 )
 
 // Localizable represents errors that can return localized messages.
@@ -118,6 +122,10 @@ func (e PatchError) Error() string {
 		return "unknown field kind"
 	case ErrInvalidFieldValue:
 		return "field value does not match its kind"
+	case ErrPatchTargetConflict:
+		return "patch target does not match its expected state"
+	case ErrPatchTargetAmbiguous:
+		return "patch target is ambiguous"
 	default:
 		return fmt.Sprintf("unknown patch error code #%d", e)
 	}
@@ -150,6 +158,10 @@ func (e PatchError) LocalizeWith(localizer *i18n.Localizer) (string, error) {
 		message = i18n.Message{ID: "patch.unknownFieldKind", Other: "unknown field kind"}
 	case ErrInvalidFieldValue:
 		message = i18n.Message{ID: "patch.invalidFieldValue", Other: "field value does not match its kind"}
+	case ErrPatchTargetConflict:
+		message = i18n.Message{ID: "patch.targetConflict", Other: "patch target does not match its expected state"}
+	case ErrPatchTargetAmbiguous:
+		message = i18n.Message{ID: "patch.targetAmbiguous", Other: "patch target is ambiguous"}
 	default:
 		message = i18n.Message{ID: "patch.unknownError", Other: "unknown patch error code #{{.Code}}"}
 	}

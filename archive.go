@@ -1,6 +1,7 @@
 package cuebook
 
 import (
+	"bytes"
 	"time"
 
 	"cuelang.org/go/cue"
@@ -20,7 +21,9 @@ func ArchiveFileName(date time.Time) string {
 }
 
 // EntryTransfer contains the reversible source and destination changes needed
-// to move one entry between CUE lists.
+// to move one entry between CUE lists. Retain and reuse these exact patches when
+// retrying. Preparing a new transfer while a previous one may have completed
+// only one side is ambiguous, so duplicate destination entries are rejected.
 type EntryTransfer struct {
 	SourcePatch      Patch
 	DestinationPatch Patch
@@ -29,18 +32,39 @@ type EntryTransfer struct {
 // PrepareEntryTransfer creates patches to append entry to the destination list
 // and remove it from the source list. The caller is responsible for validating
 // and committing both documents together.
-func PrepareEntryTransfer(source, destination []byte, entry cue.Value) (EntryTransfer, error) {
+func PrepareEntryTransfer(destination []byte, entry Entry) (EntryTransfer, error) {
 	var transfer EntryTransfer
 
-	unconstrained, _, err := EntryValueWithoutConstraints(entry)
+	unconstrained, _, err := EntryValueWithoutConstraints(entry.Value)
 	if err != nil {
 		return transfer, err
 	}
-	transfer.DestinationPatch, err = AppendToStructList(destination, unconstrained)
+	destinationBook, err := New(destination)
 	if err != nil {
 		return transfer, err
 	}
-	transfer.SourcePatch, err = DeleteFromStructList(source, entry)
+	transferredJSON, err := unconstrained.MarshalJSON()
+	if err != nil {
+		return transfer, err
+	}
+	destinationValues, err := destinationBook.Value.List()
+	if err != nil {
+		return transfer, err
+	}
+	for destinationValues.Next() {
+		existingJSON, err := destinationValues.Value().MarshalJSON()
+		if err != nil {
+			return transfer, err
+		}
+		if bytes.Equal(existingJSON, transferredJSON) {
+			return transfer, ErrPatchTargetAmbiguous
+		}
+	}
+	transfer.DestinationPatch, err = destinationBook.AppendToStructList(unconstrained)
+	if err != nil {
+		return transfer, err
+	}
+	transfer.SourcePatch, err = entry.DeleteFromStructList()
 	if err != nil {
 		return transfer, err
 	}

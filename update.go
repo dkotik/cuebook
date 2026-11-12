@@ -2,6 +2,7 @@ package cuebook
 
 import (
 	"bytes"
+	"errors"
 	"sort"
 
 	"cuelang.org/go/cue"
@@ -15,40 +16,75 @@ import (
 )
 
 type replacePatch struct {
-	Target      ByteAnchor
-	Replacement ByteAnchor
+	Target                 ByteAnchor
+	Replacement            ByteAnchor
+	DifferenceAnchor       ByteAnchor
+	BeforeDifferenceAnchor ByteAnchor
 }
 
 func (p replacePatch) Difference() ByteAnchor {
-	return p.Replacement
+	if !isZeroByteAnchor(p.DifferenceAnchor) {
+		return cloneByteAnchor(p.DifferenceAnchor)
+	}
+	return cloneByteAnchor(p.Replacement)
+}
+
+func isZeroByteAnchor(anchor ByteAnchor) bool {
+	return len(anchor.Content) == 0 && len(anchor.Prefix) == 0 && len(anchor.Suffix) == 0 && anchor.PreceedingDuplicates == 0
 }
 
 func (p replacePatch) ApplyToCueSource(source []byte) ([]byte, error) {
-	r, err := p.Target.Match(source)
-	if err != nil {
-		return nil, err
+	before, beforeErr := p.Target.MatchUnique(source)
+	after, afterErr := p.Replacement.MatchUnique(source)
+
+	if beforeErr == nil && afterErr == nil {
+		if before == after && bytes.Equal(p.Target.Content, p.Replacement.Content) {
+			return source, nil
+		}
+		return nil, ErrPatchTargetAmbiguous
 	}
-	return spliceRange(source, r, p.Replacement.Content)
+	if beforeErr == nil {
+		if errors.Is(afterErr, ErrPatchTargetAmbiguous) {
+			return nil, ErrPatchTargetAmbiguous
+		}
+		return spliceRange(source, before, p.Replacement.Content)
+	}
+	if afterErr == nil {
+		return source, nil
+	}
+	if errors.Is(beforeErr, ErrPatchTargetAmbiguous) || errors.Is(afterErr, ErrPatchTargetAmbiguous) {
+		return nil, ErrPatchTargetAmbiguous
+	}
+	return nil, ErrPatchTargetConflict
 }
 
 func (p replacePatch) Invert() Patch {
+	beforeDifference := p.BeforeDifferenceAnchor
+	if isZeroByteAnchor(beforeDifference) {
+		beforeDifference = p.Target
+	}
 	return replacePatch{
-		Target:      p.Replacement,
-		Replacement: p.Target,
+		Target:                 cloneByteAnchor(p.Replacement),
+		Replacement:            cloneByteAnchor(p.Target),
+		DifferenceAnchor:       cloneByteAnchor(beforeDifference),
+		BeforeDifferenceAnchor: cloneByteAnchor(p.Difference()),
 	}
 }
 
-func UpdateRange(source []byte, r ByteRange, replacement []byte) (Patch, error) {
-	target, err := anchorForRange(r, source)
-	if err != nil {
-		return nil, err
+// UpdateRange creates a patch that replaces the byte range identified by target.
+// The anchor must have been created from the source containing the range.
+func UpdateRange(target ByteAnchor, replacement []byte) (Patch, error) {
+	if len(target.Content) == 0 && target.PreceedingDuplicates == 0 && len(target.Prefix) == 0 && len(target.Suffix) == 0 {
+		return nil, ErrByteRangeNotFound
 	}
+	target = cloneByteAnchor(target)
+	after := cloneByteAnchor(target)
+	after.Content = bytes.Clone(replacement)
 	return replacePatch{
-		Target: target,
-		Replacement: ByteAnchor{
-			Content:              replacement,
-			PreceedingDuplicates: bytes.Count(source[:r.Head], replacement),
-		},
+		Target:                 target,
+		Replacement:            after,
+		DifferenceAnchor:       cloneByteAnchor(after),
+		BeforeDifferenceAnchor: cloneByteAnchor(target),
 	}, nil
 }
 
@@ -58,25 +94,17 @@ func UpdateRange(source []byte, r ByteRange, replacement []byte) (Patch, error) 
 // with similar schemas.
 var entrySyntaxOptions = []cue.Option{cue.Concrete(true), cue.Attributes(false)}
 
-// entrySyntax exports an entry for an in-place rewrite. Attributes inherited
-// from the schema are omitted, but attributes written in the entry's own source
-// are restored so that rewriting one field keeps the author's metadata, such as
-// locked or detail markers, on every field.
-func entrySyntax(source []byte, entry cue.Value) (*ast.StructLit, error) {
+func entrySyntaxFromWrittenSource(entry cue.Value, written []byte) (*ast.StructLit, error) {
 	fields, ok := entry.Syntax(entrySyntaxOptions...).(*ast.StructLit)
 	if !ok {
 		return nil, ErrEntryNotStruct
 	}
-	r, err := NewByteRange(entry)
-	if err != nil || !validByteRange(r, source) {
-		return fields, nil
-	}
-	written, err := parser.ParseExpr("", source[r.Head:r.Tail])
+	expression, err := parser.ParseExpr("", written)
 	if err != nil {
 		return fields, nil
 	}
-	if written, ok := written.(*ast.StructLit); ok {
-		restoreWrittenAttributes(fields, written)
+	if writtenFields, ok := expression.(*ast.StructLit); ok {
+		restoreWrittenAttributes(fields, writtenFields)
 	}
 	return fields, nil
 }
@@ -120,38 +148,64 @@ func restoreWrittenAttributes(exported, written *ast.StructLit) {
 	exported.Elts = append(declarations, exported.Elts...)
 }
 
-func ReplaceStructListEntry(source []byte, value cue.Value, replacement []byte) (Patch, error) {
-	r, err := NewByteRange(value)
+// ReplaceStructListEntry creates a patch that replaces this entry's source.
+func (e Entry) ReplaceStructListEntry(replacement []byte) (Patch, error) {
+	r, err := e.originalSourceRange()
 	if err != nil {
 		return nil, err
 	}
+	return replaceByteRange(e.source, r, bytes.Clone(replacement))
+}
+
+func replaceByteRange(source []byte, r ByteRange, replacement []byte) (Patch, error) {
+	return replaceByteRangeWithDifference(source, r, replacement, ByteAnchor{})
+}
+
+func replaceByteRangeWithDifference(source []byte, r ByteRange, replacement []byte, difference ByteAnchor) (replacePatch, error) {
 	target, err := anchorForRange(r, source)
 	if err != nil {
-		return nil, err
+		return replacePatch{}, err
+	}
+	after := cloneByteAnchor(target)
+	after.Content = bytes.Clone(replacement)
+	after.PreceedingDuplicates = bytes.Count(source[:r.Head], replacement)
+	if isZeroByteAnchor(difference) {
+		difference = after
 	}
 	return replacePatch{
-		Target: target,
-		Replacement: ByteAnchor{
-			Content:              replacement,
-			PreceedingDuplicates: bytes.Count(source[:r.Head], replacement),
-		},
+		Target:                 target,
+		Replacement:            after,
+		DifferenceAnchor:       cloneByteAnchor(difference),
+		BeforeDifferenceAnchor: cloneByteAnchor(target),
 	}, nil
 }
 
-func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patch, error) {
-	fields, err := entrySyntax(source, entry)
-	if err != nil {
-		return nil, err
+// UpdateFieldValue creates a patch that changes a field in this entry.
+func (e Entry) UpdateFieldValue(fieldName, value string) (Patch, error) {
+	if e.Value.IncompleteKind() != cue.StructKind {
+		return nil, ErrEntryNotStruct
 	}
-	search, ok := field.Label()
+	field, exists := e.GetFieldByName(fieldName)
+	if !exists {
+		return nil, ErrTargetFieldNotStructField
+	}
+	search, ok := field.Value.Label()
 	if !ok {
 		return nil, ErrTargetFieldNotStructField
 	}
-	replacement, err := metadata.FormatFieldValue(search, field, value)
+	replacement, err := metadata.FormatFieldValue(search, field.Value, value)
 	if err != nil {
 		return nil, err
 	}
 
+	entryRange, err := e.originalSourceRange()
+	if err != nil {
+		return nil, err
+	}
+	fields, err := entrySyntaxFromWrittenSource(e.Value, e.source[entryRange.Head:entryRange.Tail])
+	if err != nil {
+		return nil, err
+	}
 	found := false
 	for _, element := range fields.Elts {
 		sourceField, ok := element.(*ast.Field)
@@ -169,7 +223,6 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	if !found {
 		fields.Elts = append(fields.Elts, replacement)
 	}
-
 	content, err := format.Node(
 		fields,
 		format.Simplify(),
@@ -179,13 +232,21 @@ func UpdateFieldValue(source []byte, entry, field cue.Value, value string) (Patc
 	if err != nil {
 		return nil, err
 	}
-	return ReplaceStructListEntry(source, entry, content)
+	return replaceByteRange(e.source, entryRange, content)
 }
 
-// RemoveFieldValue omits a field from an entry's concrete values without
-// materializing optional fields or changing the surrounding document.
-func RemoveFieldValue(source []byte, entry cue.Value, fieldName string) (Patch, error) {
-	fields, err := entrySyntax(source, entry)
+// RemoveFieldValue creates a patch that omits a field from this entry's
+// concrete values without materializing optional fields or changing the
+// surrounding document.
+func (e Entry) RemoveFieldValue(fieldName string) (Patch, error) {
+	if e.Value.IncompleteKind() != cue.StructKind {
+		return nil, ErrEntryNotStruct
+	}
+	entryRange, err := e.originalSourceRange()
+	if err != nil {
+		return nil, err
+	}
+	fields, err := entrySyntaxFromWrittenSource(e.Value, e.source[entryRange.Head:entryRange.Tail])
 	if err != nil {
 		return nil, err
 	}
@@ -214,32 +275,64 @@ func RemoveFieldValue(source []byte, entry cue.Value, fieldName string) (Patch, 
 	if err != nil {
 		return nil, err
 	}
-	return ReplaceStructListEntry(source, entry, content)
+	return replaceByteRange(e.source, entryRange, content)
 }
 
-func MergeFieldValues(source []byte, entry cue.Value, values map[string]string) (Patch, error) {
-	return MergeFieldValuesAndRemove(source, entry, values, nil)
+// MergeFieldValues creates a patch that merges field values into this entry.
+func (e Entry) MergeFieldValues(values map[string]string) (Patch, error) {
+	return e.MergeFieldValuesAndRemove(values, nil)
 }
 
 // MergeFieldValuesAndRemove merges field values and removes named fields in one
 // entry rewrite. Removal takes precedence if a field appears in both arguments.
-func MergeFieldValuesAndRemove(source []byte, entry cue.Value, values map[string]string, removals []string) (_ Patch, err error) {
-	fields, err := entrySyntax(source, entry)
-	if err != nil {
-		return nil, err
+func (e Entry) MergeFieldValuesAndRemove(values map[string]string, removals []string) (Patch, error) {
+	if e.Value.IncompleteKind() != cue.StructKind {
+		return nil, ErrEntryNotStruct
 	}
 
 	all := make(map[string]cue.Value)
-	allFields, err := entry.Fields(cue.All())
+	allFields, err := e.Value.Fields(cue.All())
 	if err != nil {
 		return nil, err
 	}
 	for allFields.Next() {
 		all[allFields.Selector().Unquoted()] = allFields.Value()
 	}
+	if len(values) == 0 && len(removals) == 0 {
+		return nothingPatch{}, nil
+	}
 	remove := make(map[string]struct{}, len(removals))
 	for _, label := range removals {
 		remove[label] = struct{}{}
+	}
+
+	labels := make([]string, 0, len(values))
+	for label := range values {
+		if _, shouldRemove := remove[label]; !shouldRemove {
+			labels = append(labels, label)
+		}
+	}
+	sort.Strings(labels)
+
+	formattedValues := make(map[string]string, len(labels))
+	for _, label := range labels {
+		value := values[label]
+		if known, ok := all[label]; ok {
+			value, err = metadata.FormatAccordingToAttributes(known, value)
+			if err != nil {
+				return nil, err
+			}
+		}
+		formattedValues[label] = value
+	}
+
+	entryRange, err := e.originalSourceRange()
+	if err != nil {
+		return nil, err
+	}
+	fields, err := entrySyntaxFromWrittenSource(e.Value, e.source[entryRange.Head:entryRange.Tail])
+	if err != nil {
+		return nil, err
 	}
 
 	existing := make(map[string]*ast.Field, len(fields.Elts))
@@ -263,27 +356,12 @@ func MergeFieldValuesAndRemove(source []byte, entry cue.Value, values map[string
 	}
 	fields.Elts = kept
 
-	labels := make([]string, 0, len(values))
-	for label := range values {
-		if _, shouldRemove := remove[label]; !shouldRemove {
-			labels = append(labels, label)
-		}
-	}
-	sort.Strings(labels)
 	for _, label := range labels {
-		value := values[label]
-		if known, ok := all[label]; ok {
-			value, err = metadata.FormatAccordingToAttributes(known, value)
-			if err != nil {
-				return nil, err
-			}
-		}
-
 		updated := ast.NewLit(
 			token.STRING,
 			literal.String.
 				WithOptionalTabIndent(1).
-				Quote(value),
+				Quote(formattedValues[label]),
 		)
 		if field, ok := existing[label]; ok {
 			field.Value = updated
@@ -309,5 +387,5 @@ func MergeFieldValuesAndRemove(source []byte, entry cue.Value, values map[string
 	if err != nil {
 		return nil, err
 	}
-	return ReplaceStructListEntry(source, entry, content)
+	return replaceByteRange(e.source, entryRange, content)
 }

@@ -148,9 +148,9 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 	unset := value == "not_set" && field.Value.IncompleteKind() == cue.BoolKind && !isSecretField(field.Value)
 	var change cuebook.Patch
 	if unset {
-		change, err = cuebook.RemoveFieldValue(raw, entryValue, fieldName)
+		change, err = entry.RemoveFieldValue(fieldName)
 	} else {
-		change, err = cuebook.UpdateFieldValue(raw, entryValue, field.Value, value)
+		change, err = entry.UpdateFieldValue(fieldName, value)
 	}
 	if err != nil {
 		return editResponse{}, CauseError{Code: ErrFieldValueFormatFailed, Cause: err}

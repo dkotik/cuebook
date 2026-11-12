@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"regexp"
 	"testing"
-
-	"cuelang.org/go/cue"
 )
 
 func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
@@ -47,7 +45,7 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		// destination is the schema of the file that receives the patch. The
 		// entry always comes from a file using sourceSchema.
 		destination string
-		patch       func(destination []byte, entry cue.Value) (Patch, error)
+		patch       func(destination []byte, entry Entry) (Patch, error)
 		// index and want describe the written entry in the patched file.
 		index int
 		want  string
@@ -57,8 +55,12 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "append entry",
 			destination: sourceSchema,
-			patch: func(destination []byte, entry cue.Value) (Patch, error) {
-				return AppendToStructList(destination, entry)
+			patch: func(destination []byte, entry Entry) (Patch, error) {
+				book, err := New(destination)
+				if err != nil {
+					return nil, err
+				}
+				return book.AppendToStructList(entry.Value)
 			},
 			index: 2,
 			want:  `{"Name": "second", "Notes": "old", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -66,8 +68,12 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "append entry to file with similar schema",
 			destination: destinationSchema,
-			patch: func(destination []byte, entry cue.Value) (Patch, error) {
-				return AppendToStructList(destination, entry)
+			patch: func(destination []byte, entry Entry) (Patch, error) {
+				book, err := New(destination)
+				if err != nil {
+					return nil, err
+				}
+				return book.AppendToStructList(entry.Value)
 			},
 			index: 2,
 			want:  `{"Name": "second", "Notes": "old", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -75,8 +81,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "update field",
 			destination: sourceSchema,
-			patch: func(destination []byte, entry cue.Value) (Patch, error) {
-				return UpdateFieldValue(destination, entry, entry.LookupPath(cue.ParsePath("Name")), "renamed")
+			patch: func(_ []byte, entry Entry) (Patch, error) {
+				return entry.UpdateFieldValue("Name", "renamed")
 			},
 			index:      1,
 			want:       `{"Name": "renamed", "Notes": "old", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -85,8 +91,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "update multiline field",
 			destination: sourceSchema,
-			patch: func(destination []byte, entry cue.Value) (Patch, error) {
-				return UpdateFieldValue(destination, entry, entry.LookupPath(cue.ParsePath("Notes")), "line one\nline two")
+			patch: func(_ []byte, entry Entry) (Patch, error) {
+				return entry.UpdateFieldValue("Notes", "line one\nline two")
 			},
 			index:      1,
 			want:       `{"Name": "second", "Notes": "line one\nline two", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -95,8 +101,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "remove field",
 			destination: sourceSchema,
-			patch: func(destination []byte, entry cue.Value) (Patch, error) {
-				return RemoveFieldValue(destination, entry, "Notes")
+			patch: func(destination []byte, entry Entry) (Patch, error) {
+				return entry.RemoveFieldValue("Notes")
 			},
 			index:      1,
 			want:       `{"Name": "second", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -105,8 +111,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "merge field values",
 			destination: sourceSchema,
-			patch: func(destination []byte, entry cue.Value) (Patch, error) {
-				return MergeFieldValues(destination, entry, map[string]string{
+			patch: func(_ []byte, entry Entry) (Patch, error) {
+				return entry.MergeFieldValues(map[string]string{
 					"Name":  "merged",
 					"Notes": "line one\nline two",
 				})
@@ -123,7 +129,7 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetValue(1)
+			entry, err := book.GetEntry(1)
 			if err != nil {
 				t.Fatal(err)
 			}

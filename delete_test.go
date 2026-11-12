@@ -15,22 +15,16 @@ func TestDeleteStructFromList(t *testing.T) {
 		{ one: "ok" },
 		{	two: "ok" },
 ]`)
-	document := cuecontext.New().CompileBytes(source)
-	err := document.Err()
+	document, err := New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	values, err := document.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for values.Next() {
-		value := values.Value()
-		if err = value.Err(); err != nil {
+	for entry, err := range document.EachEntry() {
+		if err != nil {
 			t.Fatal(err)
 		}
-		patch, err := DeleteFromStructList(source, value)
+		patch, err := entry.DeleteFromStructList()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -39,10 +33,14 @@ func TestDeleteStructFromList(t *testing.T) {
 	}
 
 	// TODO: multiple delete and insert cycles leave whitespace artifacts
-	last := document.LookupPath(cue.MakePath(cue.Index(1)))
+	last, err := document.GetEntry(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	book := document
 	changed := slices.Clone(source)
 	for range 5 {
-		inverse, err := AppendToStructList(changed, last)
+		inverse, err := book.AppendToStructList(last.Value)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -51,7 +49,15 @@ func TestDeleteStructFromList(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		patch, err := DeleteFromStructList(changed, last)
+		updatedBook, err := New(changed)
+		if err != nil {
+			t.Fatal(err)
+		}
+		last, err = updatedBook.GetEntry(2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		patch, err := last.DeleteFromStructList()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,11 +95,11 @@ func TestRemoveFieldValue(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetValue(1)
+			entry, err := book.GetEntry(1)
 			if err != nil {
 				t.Fatal(err)
 			}
-			change, err := RemoveFieldValue(source, entry, tt.field)
+			change, err := entry.RemoveFieldValue(tt.field)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -108,20 +114,20 @@ func TestRemoveFieldValue(t *testing.T) {
 			if err != nil {
 				t.Fatalf("invalid result: %v\n%s", err, updated)
 			}
-			entry, err = book.GetValue(1)
+			value, err := book.GetValue(1)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if entry.LookupPath(cue.MakePath(cue.Str(tt.field))).Exists() {
+			if value.LookupPath(cue.MakePath(cue.Str(tt.field))).Exists() {
 				t.Fatalf("removed field still exists: %s", updated)
 			}
-			if entry.LookupPath(cue.ParsePath("Missing")).Exists() {
+			if value.LookupPath(cue.ParsePath("Missing")).Exists() {
 				t.Fatal("unrelated optional default was materialized")
 			}
-			if got, err := entry.LookupPath(cue.ParsePath("Other")).Bool(); err != nil || got {
+			if got, err := value.LookupPath(cue.ParsePath("Other")).Bool(); err != nil || got {
 				t.Fatalf("Other = %v, err = %v; want false", got, err)
 			}
-			if got, err := entry.LookupPath(cue.ParsePath("Secret")).String(); err != nil || got != "stored-secret" {
+			if got, err := value.LookupPath(cue.ParsePath("Secret")).String(); err != nil || got != "stored-secret" {
 				t.Fatalf("Secret = %q, err = %v", got, err)
 			}
 			if !tt.unchanged {
@@ -146,7 +152,7 @@ func TestRemoveFieldValue(t *testing.T) {
 
 func TestRemoveFieldValueRejectsNonStruct(t *testing.T) {
 	t.Parallel()
-	_, err := RemoveFieldValue(nil, cuecontext.New().CompileString(`"not a struct"`), "Enabled")
+	_, err := (Entry{Value: cuecontext.New().CompileString(`"not a struct"`)}).RemoveFieldValue("Enabled")
 	if !errors.Is(err, ErrEntryNotStruct) {
 		t.Fatalf("error = %v, want %v", err, ErrEntryNotStruct)
 	}
