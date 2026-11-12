@@ -533,6 +533,19 @@ h1.title.document-title {
   white-space: pre-wrap;
 }
 
+/* Goldmark task items have no class; tight items hold the checkbox directly
+   and loose items wrap it in a paragraph. */
+:is(.field-markdown, .file-description) li:has(> input[type="checkbox"]:first-child, > p:first-child > input[type="checkbox"]:first-child) {
+  list-style: none;
+}
+
+:is(.field-markdown, .file-description) li input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  margin: 0 0.4em 0 0;
+  vertical-align: middle;
+}
+
 .field-value-edit {
   flex: 0 1 auto;
   max-width: 100%;
@@ -816,6 +829,27 @@ textarea[data-markdown-editor][hidden] {
   overflow-x: auto;
   border-radius: 0.25rem;
   background-color: var(--bulma-scheme-main-ter);
+}
+
+.markdown-editor-content ul[data-type="taskList"] {
+  margin-left: 0;
+  list-style: none;
+}
+
+.markdown-editor-content li[data-type="taskItem"] {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+}
+
+.markdown-editor-content li[data-type="taskItem"] > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.markdown-editor-content li[data-type="taskItem"] input[type="checkbox"] {
+  width: auto;
+  padding: 0;
 }
 
 .markdown-editor-content blockquote {

@@ -26,10 +26,14 @@
 
 			~~112~~
 
-			- \\[ \\] dsf
-			- \\[ \\] sdfsdf
-			- \\[ \\] sdfsdf
-			- \\[ \\] sfsdfsdf
+
+
+			&nbsp;
+
+			- [ ] dsf
+			- [ ] sdfsdf
+			- [ ] sdfsdf
+			- [ ] sfsdfsdf
 
 
 			""" @cuebook(multiline)

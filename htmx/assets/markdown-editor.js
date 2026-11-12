@@ -35,6 +35,7 @@
       command("H", "Heading", (chain) => chain.toggleHeading({ level: 2 })),
       command("•", "Bullet list", (chain) => chain.toggleBulletList()),
       command("1.", "Ordered list", (chain) => chain.toggleOrderedList()),
+      command("☑", "Task list", (chain) => chain.toggleTaskList()),
       command("❝", "Block quote", (chain) => chain.toggleBlockquote()),
       command("</>", "Code block", (chain) => chain.toggleCodeBlock()),
       command("↶", "Undo", (chain) => chain.undo()),
@@ -45,7 +46,7 @@
 
   const initializeWithin = (root = document) => {
     const tiptap = window.CuebookTiptap;
-    if (!tiptap?.Editor || !tiptap.StarterKit || !tiptap.Markdown) return;
+    if (!tiptap?.Editor || !tiptap.StarterKit || !tiptap.Markdown || !tiptap.TaskList || !tiptap.TaskItem) return;
 
     for (const textarea of textareasWithin(root)) {
       if (editors.has(textarea)) continue;
@@ -64,6 +65,10 @@
           tiptap.StarterKit.configure({
             link: { openOnClick: false },
           }),
+          // Without these, task items parse as plain list items and saving
+          // drops or escapes their `[ ]` markers.
+          tiptap.TaskList,
+          tiptap.TaskItem.configure({ nested: true }),
           tiptap.Markdown,
         ],
         content: textarea.value,

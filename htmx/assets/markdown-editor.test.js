@@ -89,6 +89,8 @@ function browser(initialRoot = element("main")) {
       Editor,
       StarterKit: { configure: (options) => ({ starterKit: options }) },
       Markdown: { name: "markdown" },
+      TaskList: { name: "taskList" },
+      TaskItem: { configure: (options) => ({ taskItem: options }) },
     },
   };
   vm.runInContext(fs.readFileSync(path.join(__dirname, "markdown-editor.js"), "utf8"), vm.createContext({ document, window }));
@@ -116,6 +118,16 @@ test("initializes marked textareas once with Tiptap Markdown", () => {
   assert.equal(root.children[1].className, "markdown-editor");
   app.dispatch("htmx:afterSwap", { detail: { target: root } });
   assert.equal(app.instances.length, 1);
+});
+
+test("registers task list extensions so checkboxes survive editing", () => {
+  const root = element("main");
+  root.append(element("textarea", true));
+  const app = browser(root);
+
+  const { extensions } = app.instances[0].options;
+  assert.ok(extensions.some((extension) => extension.name === "taskList"));
+  assert.ok(extensions.some((extension) => extension.taskItem?.nested === true));
 });
 
 test("initializes dynamically swapped multiline fields", () => {

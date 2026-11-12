@@ -1,5 +1,7 @@
 Third-party licenses for tiptap-markdown-3.32.2.min.js
 Bundled from @tiptap/core, @tiptap/starter-kit and @tiptap/markdown 3.32.2 and their dependencies.
+The bundle's window.CuebookTiptap export also exposes the TaskList and TaskItem
+extensions from @tiptap/extension-list, which @tiptap/starter-kit already bundles.
 
 ================================================================
 @tiptap/core 3.32.2 (MIT)

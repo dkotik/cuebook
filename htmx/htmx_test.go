@@ -323,8 +323,8 @@ func TestAssetsAreServedLocally(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "version-pinned htmx", path: "/assets/htmx-2.0.4.min.js", contains: []string{"htmx"}, wantStatus: http.StatusOK},
-		{name: "version-pinned Tiptap Markdown bundle", path: "/assets/tiptap-markdown-3.32.2.min.js", contains: []string{"CuebookTiptap"}, wantStatus: http.StatusOK},
-		{name: "Markdown editor initializer", path: "/assets/markdown-editor.js", contains: []string{"data-markdown-editor", "CuebookTiptap", `contentType: "markdown"`, "getMarkdown()", "htmx:afterSwap", "htmx:beforeCleanupElement"}, wantStatus: http.StatusOK},
+		{name: "version-pinned Tiptap Markdown bundle", path: "/assets/tiptap-markdown-3.32.2.min.js", contains: []string{"CuebookTiptap", "TaskList:", "TaskItem:"}, wantStatus: http.StatusOK},
+		{name: "Markdown editor initializer", path: "/assets/markdown-editor.js", contains: []string{"data-markdown-editor", "CuebookTiptap", "tiptap.TaskList", "tiptap.TaskItem", `contentType: "markdown"`, "getMarkdown()", "htmx:afterSwap", "htmx:beforeCleanupElement"}, wantStatus: http.StatusOK},
 		{name: "Tiptap licenses", path: "/assets/tiptap-LICENSE.txt", contains: []string{"@tiptap/markdown 3.32.2", "prosemirror-view", "MIT"}, wantStatus: http.StatusOK},
 		{name: "removed EasyMDE bundle", path: "/assets/easymde-2.21.0.min.js", wantStatus: http.StatusNotFound},
 		{name: "removed DOMPurify bundle", path: "/assets/dompurify-3.4.17.min.js", wantStatus: http.StatusNotFound},
