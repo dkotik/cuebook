@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/dkotik/cuebook/internal/markdown"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/yuin/goldmark/v2/ast"
 	"github.com/yuin/goldmark/v2/parser"
@@ -45,7 +46,7 @@ func TestDetailsTransformer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			document, ok := parser.New(parser.WithASTTransformers(util.Prioritized(
+			document, ok := markdown.NewParser(parser.WithASTTransformers(util.Prioritized(
 				metadata.NewDetailsTransformer(tt.head, tt.tail), 0,
 			))).Parse([]byte(tt.source)).(*ast.Document)
 			if !ok {

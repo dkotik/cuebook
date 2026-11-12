@@ -111,6 +111,24 @@ func TestMultilineFieldViewRendersSafeMarkdown(t *testing.T) {
 
 		[Cuebook](https://example.test)
 		<script>alert("unsafe")</script>
+
+		- [ ] Pending task
+		- [x] Completed task
+
+		| Name | Value |
+		| --- | --- |
+		| Ada | 1 |
+
+		~~Removed~~
+
+		Footnote reference[^note].
+
+		[^note]: Footnote details.
+
+		Term
+		: Definition details.
+
+		"Hello" -- world...
 		"""
 	Password: "secret value"
 	Summary: "**Literal Markdown**"
@@ -124,6 +142,20 @@ func TestMultilineFieldViewRendersSafeMarkdown(t *testing.T) {
 		{
 			name:     "renders Markdown blocks and links",
 			contains: []string{`<div class="field-markdown content"><h1>Heading</h1>`, `<a href="https://example.test">Cuebook</a>`},
+		},
+		{
+			name: "renders task list checkboxes",
+			contains: []string{
+				`<input disabled="" type="checkbox">`,
+				`<input checked="" disabled="" type="checkbox">`,
+			},
+		},
+		{
+			name: "renders tables, strikethrough, footnotes, definitions, and typography",
+			contains: []string{
+				"<table>", "<del>Removed</del>", `class="footnotes"`,
+				"<dl>", "<dt>Term</dt>", "“Hello”", "–", "…",
+			},
 		},
 		{
 			name:  "does not render raw HTML from field values",

@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/internal/markdown"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/terminalui/event"
 	"github.com/dkotik/cuebook/terminalui/internal/card"
@@ -222,7 +223,7 @@ func LoadEntries(r cuebook.Result, selectionIndex int) tea.Cmd {
 				return m, nil
 			}
 		})(list.Title{
-			Text:  cmp.Or(metadata.NewFrontmatter(r.Source, metadata.NewParser()).Title(), informationUnavailable),
+			Text:  cmp.Or(metadata.NewFrontmatter(r.Source, markdown.NewParser()).Title(), informationUnavailable),
 			Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		})
 		result.Cards = append(result.Cards, title)

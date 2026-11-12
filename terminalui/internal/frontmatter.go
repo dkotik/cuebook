@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
+	goldmarkmarkdown "github.com/dkotik/cuebook/internal/markdown"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 	"github.com/dkotik/cuebook/terminalui/internal/markdown"
@@ -53,7 +54,7 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			func() tea.Msg {
 				return window.TranslatableFunc(func(lc *i18n.Localizer) tea.Cmd {
 					return func() tea.Msg {
-						md := metadata.NewFrontmatter(msg.Source, metadata.NewParser())
+						md := metadata.NewFrontmatter(msg.Source, goldmarkmarkdown.NewParser())
 						description, err := markdown.New(markdown.Configuration{Text: string(md.Source)})
 						if err != nil {
 							return err
@@ -77,7 +78,7 @@ func (v FrontMatterView) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case frontMatterUpdate:
 		source := v.state.Source
 		return v, func() tea.Msg {
-			md := metadata.NewFrontmatter(source, metadata.NewParser())
+			md := metadata.NewFrontmatter(source, goldmarkmarkdown.NewParser())
 			form, err := textarea.New(textarea.Configuration{
 				Label: "Description",
 				Value: string(md.Source),

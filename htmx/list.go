@@ -15,10 +15,10 @@ import (
 
 	"github.com/dkotik/cuebook"
 	gitview "github.com/dkotik/cuebook/htmx/git"
+	"github.com/dkotik/cuebook/internal/markdown"
 	"github.com/dkotik/cuebook/metadata"
 	"github.com/yuin/goldmark/v2/ast"
 	"github.com/yuin/goldmark/v2/parser"
-	markdownhtml "github.com/yuin/goldmark/v2/renderer/html"
 	"github.com/yuin/goldmark/v2/util"
 )
 
@@ -327,7 +327,7 @@ func makeFileBreadcrumb(fileName string) []fileBreadcrumbItem {
 }
 
 func setFileFrontmatter(data *pageData, source []byte) {
-	descriptionParser := parser.New(parser.WithASTTransformers(util.Prioritized(
+	descriptionParser := markdown.NewParser(parser.WithASTTransformers(util.Prioritized(
 		metadata.NewDetailsTransformer(fileFrontmatterDetailsHead, fileFrontmatterDetailsTail), 0,
 	)))
 	frontmatter := metadata.NewFrontmatter(source, descriptionParser)
@@ -343,7 +343,7 @@ func renderFrontmatterDescription(frontmatter metadata.Frontmatter) template.HTM
 	}
 
 	var rendered bytes.Buffer
-	renderer := markdownhtml.New()
+	renderer := markdown.NewRenderer()
 	for block := frontmatter.Node.FirstChild().NextSibling(); block != nil; block = block.NextSibling() {
 		if rawHTML, ok := block.(*ast.HTMLBlock); ok && rawHTML.Value.IsOwned() {
 			_, _ = rawHTML.Value.WriteTo(&rendered, frontmatter.Source)

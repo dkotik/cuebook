@@ -3,6 +3,7 @@ package metadata
 import (
 	"bytes"
 
+	"github.com/dkotik/cuebook/internal/markdown"
 	"github.com/yuin/goldmark/v2/ast"
 	"github.com/yuin/goldmark/v2/parser"
 )
@@ -73,6 +74,7 @@ func NewFrontmatter(source []byte, p parser.Parser) Frontmatter {
 	}
 }
 
+// NewParser returns a Goldmark parser using the project's shared defaults.
 func NewParser() parser.Parser {
-	return parser.New()
+	return markdown.NewParser()
 }

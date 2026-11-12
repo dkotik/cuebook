@@ -6,9 +6,8 @@ import (
 
 	"cuelang.org/go/cue"
 	"github.com/dkotik/cuebook"
+	"github.com/dkotik/cuebook/internal/markdown"
 	"github.com/dkotik/cuebook/metadata"
-	"github.com/yuin/goldmark/v2/parser"
-	markdownhtml "github.com/yuin/goldmark/v2/renderer/html"
 )
 
 type addFieldView struct {
@@ -35,7 +34,7 @@ type entryFieldDefinition struct {
 func renderFieldMarkdown(value string) template.HTML {
 	source := []byte(value)
 	var rendered bytes.Buffer
-	if err := markdownhtml.New().Render(&rendered, source, parser.New().Parse(source)); err != nil {
+	if err := markdown.NewRenderer().Render(&rendered, source, markdown.NewParser().Parse(source)); err != nil {
 		return template.HTML(template.HTMLEscapeString(value))
 	}
 	return template.HTML(rendered.String())
