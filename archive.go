@@ -32,10 +32,14 @@ type EntryTransfer struct {
 // PrepareEntryTransfer creates patches to append entry to the destination list
 // and remove it from the source list. The caller is responsible for validating
 // and committing both documents together.
-func PrepareEntryTransfer(destination []byte, entry Entry) (EntryTransfer, error) {
+func PrepareEntryTransfer(destination []byte, sourceBook Book, entry EntryRef) (EntryTransfer, error) {
 	var transfer EntryTransfer
 
-	unconstrained, _, err := EntryValueWithoutConstraints(entry.Value)
+	sourceEntry, err := sourceBook.patchContext(entry)
+	if err != nil {
+		return transfer, err
+	}
+	unconstrained, _, err := EntryValueWithoutConstraints(sourceEntry.Value)
 	if err != nil {
 		return transfer, err
 	}
@@ -64,7 +68,7 @@ func PrepareEntryTransfer(destination []byte, entry Entry) (EntryTransfer, error
 	if err != nil {
 		return transfer, err
 	}
-	transfer.SourcePatch, err = entry.DeleteFromStructList()
+	transfer.SourcePatch, err = sourceBook.DeleteFromStructList(entry)
 	if err != nil {
 		return transfer, err
 	}

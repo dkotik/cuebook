@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"cuelang.org/go/cue"
-	"cuelang.org/go/cue/cuecontext"
 )
 
 func TestDeleteStructFromList(t *testing.T) {
@@ -20,11 +19,11 @@ func TestDeleteStructFromList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for entry, err := range document.EachEntry() {
+	for entry, err := range document.EachEntryRef() {
 		if err != nil {
 			t.Fatal(err)
 		}
-		patch, err := entry.DeleteFromStructList()
+		patch, err := document.DeleteFromStructList(entry)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -33,14 +32,14 @@ func TestDeleteStructFromList(t *testing.T) {
 	}
 
 	// TODO: multiple delete and insert cycles leave whitespace artifacts
-	last, err := document.GetEntry(1)
+	last, err := document.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	book := document
 	changed := slices.Clone(source)
 	for range 5 {
-		inverse, err := book.AppendToStructList(last.Value)
+		inverse, err := book.AppendToStructList(last.Entry().Value)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -53,11 +52,11 @@ func TestDeleteStructFromList(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		last, err = updatedBook.GetEntry(2)
+		last, err = updatedBook.GetEntryRef(2)
 		if err != nil {
 			t.Fatal(err)
 		}
-		patch, err := last.DeleteFromStructList()
+		patch, err := updatedBook.DeleteFromStructList(last)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,11 +94,11 @@ func TestRemoveFieldValue(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(1)
+			entry, err := book.GetEntryRef(1)
 			if err != nil {
 				t.Fatal(err)
 			}
-			change, err := entry.RemoveFieldValue(tt.field)
+			change, err := book.RemoveFieldValue(entry, tt.field)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -152,7 +151,15 @@ func TestRemoveFieldValue(t *testing.T) {
 
 func TestRemoveFieldValueRejectsNonStruct(t *testing.T) {
 	t.Parallel()
-	_, err := (Entry{Value: cuecontext.New().CompileString(`"not a struct"`)}).RemoveFieldValue("Enabled")
+	book, err := New([]byte(`["not a struct"]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref, refErr := book.GetEntryRef(0)
+	if !errors.Is(refErr, ErrEntryValueNotStruct) {
+		t.Fatalf("GetEntryRef() error = %v, want %v", refErr, ErrEntryValueNotStruct)
+	}
+	_, err = book.RemoveFieldValue(ref, "Enabled")
 	if !errors.Is(err, ErrEntryNotStruct) {
 		t.Fatalf("error = %v, want %v", err, ErrEntryNotStruct)
 	}

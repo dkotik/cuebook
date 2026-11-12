@@ -20,7 +20,8 @@ type archiveEvent struct{}
 
 // ArchiveEntryEvent requests moving an entry to the daily archive.
 type ArchiveEntryEvent struct {
-	Entry        cuebook.Entry
+	Book         cuebook.Book
+	Entry        cuebook.EntryRef
 	ReturnToList bool
 }
 

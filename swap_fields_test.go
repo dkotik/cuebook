@@ -87,12 +87,12 @@ func TestSwapFields(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, entryErr := document.GetEntry(tt.entry)
+			entryRef, entryErr := document.GetEntryRef(tt.entry)
 			if entryErr != nil && !errors.Is(entryErr, ErrEntryValueNotStruct) {
 				t.Fatal(entryErr)
 			}
 
-			patch, err := entry.SwapFields(tt.a, tt.b)
+			patch, err := document.SwapFields(entryRef, tt.a, tt.b)
 			if tt.wantErr != nil && err == nil {
 				_, err = patch.ApplyToCueSource(source)
 			}

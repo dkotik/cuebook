@@ -69,12 +69,12 @@ func TestPrepareEntryTransfer(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := sourceBook.GetEntry(0)
+			entry, err := sourceBook.GetEntryRef(0)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			transfer, err := PrepareEntryTransfer([]byte(test.destination), entry)
+			transfer, err := PrepareEntryTransfer([]byte(test.destination), sourceBook, entry)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -117,12 +117,12 @@ func TestPrepareEntryTransferRejectsAmbiguousDuplicate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = PrepareEntryTransfer([]byte(`[{Name: "Move me"}]`), entry)
+	_, err = PrepareEntryTransfer([]byte(`[{Name: "Move me"}]`), book, entry)
 	if !errors.Is(err, ErrPatchTargetAmbiguous) {
 		t.Fatalf("PrepareEntryTransfer() error = %v, want %v", err, ErrPatchTargetAmbiguous)
 	}

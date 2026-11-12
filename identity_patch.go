@@ -16,35 +16,35 @@ func (e Entry) entryIdentity() (entryIdentity, bool) {
 	return identity, identity.valid()
 }
 
-func resolveEntryIdentity(source []byte, identity entryIdentity) (Entry, error) {
+func resolveEntryIdentity(source []byte, identity entryIdentity) (EntryRef, error) {
 	if !identity.valid() {
-		return Entry{}, ErrPatchTargetConflict
+		return EntryRef{}, ErrPatchTargetConflict
 	}
 	book, err := New(source)
 	if err != nil {
-		return Entry{}, err
+		return EntryRef{}, err
 	}
 	if book.entryUniqueIdentifierFieldName != identity.fieldName {
-		return Entry{}, ErrPatchTargetConflict
+		return EntryRef{}, ErrPatchTargetConflict
 	}
 
-	var match Entry
+	var match EntryRef
 	found := false
-	for entry, err := range book.EachEntry() {
+	for entry, err := range book.EachEntryRef() {
 		if err != nil {
-			return Entry{}, err
+			return EntryRef{}, err
 		}
-		if entry.identifierFieldName != identity.fieldName || entry.UUID != identity.value {
+		if entry.entry.identifierFieldName != identity.fieldName || entry.entry.UUID != identity.value {
 			continue
 		}
 		if found {
-			return Entry{}, ErrPatchTargetAmbiguous
+			return EntryRef{}, ErrPatchTargetAmbiguous
 		}
 		match = entry
 		found = true
 	}
 	if !found {
-		return Entry{}, ErrPatchTargetConflict
+		return EntryRef{}, ErrPatchTargetConflict
 	}
 	return match, nil
 }
@@ -90,7 +90,7 @@ func (p identifiedEntryReplacePatch) patchTargetIdentity() (entryIdentity, bool)
 	return p.target, p.target.valid()
 }
 
-func entryReplacementPatch(e Entry, r ByteRange, replacement []byte) (Patch, error) {
+func entryReplacementPatch(e entryPatchContext, r ByteRange, replacement []byte) (Patch, error) {
 	identity, identified := e.entryIdentity()
 	if !identified {
 		return replaceByteRange(e.source, r, replacement)
@@ -105,7 +105,7 @@ func entryReplacementPatch(e Entry, r ByteRange, replacement []byte) (Patch, err
 	}, nil
 }
 
-func identifyEntryPatch(e Entry, patch Patch) (Patch, error) {
+func identifyEntryPatch(e entryPatchContext, patch Patch) (Patch, error) {
 	identity, identified := e.entryIdentity()
 	if !identified {
 		return patch, nil
@@ -174,7 +174,7 @@ type entryLocator struct {
 	content  []byte
 }
 
-func entryLocatorFor(entry Entry, source []byte) (entryLocator, error) {
+func entryLocatorFor(entry EntryRef, source []byte) (entryLocator, error) {
 	if identity, ok := entry.entryIdentity(); ok {
 		return entryLocator{identity: identity}, nil
 	}
@@ -185,13 +185,13 @@ func entryLocatorFor(entry Entry, source []byte) (entryLocator, error) {
 	return entryLocator{content: bytes.Clone(source[r.Head:r.Tail])}, nil
 }
 
-func entriesFromSource(source []byte) (Book, []Entry, error) {
+func entriesFromSource(source []byte) (Book, []EntryRef, error) {
 	book, err := New(source)
 	if err != nil {
 		return Book{}, nil, err
 	}
-	var entries []Entry
-	for entry, err := range book.EachEntry() {
+	var entries []EntryRef
+	for entry, err := range book.EachEntryRef() {
 		if err != nil {
 			return Book{}, nil, err
 		}
@@ -200,13 +200,13 @@ func entriesFromSource(source []byte) (Book, []Entry, error) {
 	return book, entries, nil
 }
 
-func findEntryIdentity(book Book, entries []Entry, identity entryIdentity) (int, bool, error) {
+func findEntryIdentity(book Book, entries []EntryRef, identity entryIdentity) (int, bool, error) {
 	if !identity.valid() || book.entryUniqueIdentifierFieldName != identity.fieldName {
 		return -1, false, ErrPatchTargetConflict
 	}
 	found := -1
 	for index, entry := range entries {
-		if entry.identifierFieldName != identity.fieldName || entry.UUID != identity.value {
+		if entry.entry.identifierFieldName != identity.fieldName || entry.entry.UUID != identity.value {
 			continue
 		}
 		if found >= 0 {
@@ -217,7 +217,7 @@ func findEntryIdentity(book Book, entries []Entry, identity entryIdentity) (int,
 	return found, found >= 0, nil
 }
 
-func findEntryLocator(entries []Entry, source []byte, locator entryLocator) (int, error) {
+func findEntryLocator(entries []EntryRef, source []byte, locator entryLocator) (int, error) {
 	if !locator.identity.valid() && len(locator.content) == 0 {
 		return -1, ErrPatchTargetConflict
 	}
@@ -225,7 +225,7 @@ func findEntryLocator(entries []Entry, source []byte, locator entryLocator) (int
 	for index, entry := range entries {
 		matches := false
 		if locator.identity.valid() {
-			matches = entry.identifierFieldName == locator.identity.fieldName && entry.UUID == locator.identity.value
+			matches = entry.entry.identifierFieldName == locator.identity.fieldName && entry.entry.UUID == locator.identity.value
 		} else if r, err := entry.originalSourceRange(); err == nil {
 			matches = bytes.Equal(source[r.Head:r.Tail], locator.content)
 		}
@@ -243,7 +243,7 @@ func findEntryLocator(entries []Entry, source []byte, locator entryLocator) (int
 	return found, nil
 }
 
-func entryHasExpectedNeighbors(entries []Entry, source []byte, index int, left entryLocator, hasLeft bool, right entryLocator, hasRight bool) error {
+func entryHasExpectedNeighbors(entries []EntryRef, source []byte, index int, left entryLocator, hasLeft bool, right entryLocator, hasRight bool) error {
 	if index < 0 || index >= len(entries) {
 		return ErrPatchTargetConflict
 	}
@@ -272,7 +272,7 @@ func entryHasExpectedNeighbors(entries []Entry, source []byte, index int, left e
 	return nil
 }
 
-func locateEntryGap(book Book, entries []Entry, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool, emptyGap ByteAnchor) (int, error) {
+func locateEntryGap(book Book, entries []EntryRef, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool, emptyGap ByteAnchor) (int, error) {
 	leftIndex, rightIndex := -1, -1
 	if hasLeft {
 		var err error
@@ -537,7 +537,7 @@ type identifiedEntryMovePatch struct {
 	hasAfterRight  bool
 }
 
-func newIdentifiedEntryMovePatch(book Book, entries []Entry, from, to int) (Patch, error) {
+func newIdentifiedEntryMovePatch(book Book, entries []EntryRef, from, to int) (Patch, error) {
 	identity, identified := entries[from].entryIdentity()
 	if !identified {
 		return nil, ErrPatchTargetConflict
@@ -576,7 +576,7 @@ func newIdentifiedEntryMovePatch(book Book, entries []Entry, from, to int) (Patc
 	}, nil
 }
 
-func entryNeighbors(entries []Entry, source []byte, index int) (entryLocator, bool, entryLocator, bool, error) {
+func entryNeighbors(entries []EntryRef, source []byte, index int) (entryLocator, bool, entryLocator, bool, error) {
 	var left, right entryLocator
 	hasLeft, hasRight := index > 0, index+1 < len(entries)
 	if hasLeft {
@@ -596,8 +596,8 @@ func entryNeighbors(entries []Entry, source []byte, index int) (entryLocator, bo
 	return left, hasLeft, right, hasRight, nil
 }
 
-func moveEntryInList(entries []Entry, from, to int) []Entry {
-	result := append([]Entry(nil), entries...)
+func moveEntryInList(entries []EntryRef, from, to int) []EntryRef {
+	result := append([]EntryRef(nil), entries...)
 	moved := result[from]
 	if from < to {
 		copy(result[from:to], result[from+1:to+1])
@@ -608,7 +608,7 @@ func moveEntryInList(entries []Entry, from, to int) []Entry {
 	return result
 }
 
-func moveDestinationIndex(entries []Entry, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool) (int, error) {
+func moveDestinationIndex(entries []EntryRef, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool) (int, error) {
 	leftIndex, rightIndex := -1, -1
 	if hasLeft {
 		var err error
@@ -676,7 +676,7 @@ func (p identifiedEntryMovePatch) ApplyToCueSource(source []byte) ([]byte, error
 		return nil, err
 	}
 
-	remaining := append([]Entry(nil), entries[:from]...)
+	remaining := append([]EntryRef(nil), entries[:from]...)
 	remaining = append(remaining, entries[from+1:]...)
 	to, err := moveDestinationIndex(remaining, source, p.afterLeft, p.hasAfterLeft, p.afterRight, p.hasAfterRight)
 	if err != nil {

@@ -16,7 +16,7 @@ func TestResolveEntryIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	original, err := book.GetEntry(0)
+	original, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,8 +55,8 @@ func TestResolveEntryIdentity(t *testing.T) {
 				t.Fatalf("resolveEntryIdentity() error = %v, want %v", err, tt.wantErr)
 			}
 			if err == nil {
-				if entry.UUID != identity.value {
-					t.Errorf("resolved UUID = %q, want %q", entry.UUID, identity.value)
+				if entry.entry.UUID != identity.value {
+					t.Errorf("resolved UUID = %q, want %q", entry.entry.UUID, identity.value)
 				}
 				if got := tt.source[entry.sourceRange.Head:entry.sourceRange.Tail]; !bytes.Equal(got, []byte(`{ID: "target", Name: "before"}`)) {
 					t.Errorf("resolved source = %q, want target entry", got)
@@ -103,11 +103,11 @@ func TestIdentifiedEntryDeletePatch(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(tt.index)
+			entry, err := book.GetEntryRef(tt.index)
 			if err != nil {
 				t.Fatal(err)
 			}
-			change, err := entry.DeleteFromStructList()
+			change, err := book.DeleteFromStructList(entry)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -156,11 +156,11 @@ func TestIdentifiedEntryDeletePatchReResolvesShiftedTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entry, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.DeleteFromStructList()
+	change, err := book.DeleteFromStructList(entry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,11 +200,11 @@ func TestIdentifiedEntryDeletePatchRejectsAmbiguousOrUnexpectedState(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entry, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.DeleteFromStructList()
+	change, err := book.DeleteFromStructList(entry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,11 +252,11 @@ func TestMergeFieldValuesLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entry, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.MergeFieldValues(map[string]string{"Name": "after"})
+	change, err := book.MergeFieldValues(entry, map[string]string{"Name": "after"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,11 +325,11 @@ func TestMergeFieldValuesRejectsIdentifierChanges(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(0)
+			entry, err := book.GetEntryRef(0)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := entry.MergeFieldValues(map[string]string{"ID": tt.value}); !errors.Is(err, ErrEntryIdentifierImmutable) {
+			if _, err := book.MergeFieldValues(entry, map[string]string{"ID": tt.value}); !errors.Is(err, ErrEntryIdentifierImmutable) {
 				t.Fatalf("MergeFieldValues() error = %v, want %v", err, ErrEntryIdentifierImmutable)
 			}
 		})
@@ -344,11 +344,11 @@ func TestMergeFieldValuesAndRemoveLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entry, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.MergeFieldValuesAndRemove(map[string]string{"Name": "after"}, []string{"Extra"})
+	change, err := book.MergeFieldValuesAndRemove(entry, map[string]string{"Name": "after"}, []string{"Extra"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +405,7 @@ func TestMergeFieldValuesAndRemoveRejectsIdentifierChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -420,7 +420,7 @@ func TestMergeFieldValuesAndRemoveRejectsIdentifierChanges(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if _, err := entry.MergeFieldValuesAndRemove(tt.values, tt.removals); !errors.Is(err, ErrEntryIdentifierImmutable) {
+			if _, err := book.MergeFieldValuesAndRemove(entry, tt.values, tt.removals); !errors.Is(err, ErrEntryIdentifierImmutable) {
 				t.Fatalf("MergeFieldValuesAndRemove() error = %v, want %v", err, ErrEntryIdentifierImmutable)
 			}
 		})
@@ -435,11 +435,11 @@ func TestRemoveFieldValueLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entry, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.RemoveFieldValue("Extra")
+	change, err := book.RemoveFieldValue(entry, "Extra")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -486,11 +486,11 @@ func TestRemoveFieldValueRejectsIdentifierRemoval(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := entry.RemoveFieldValue("ID"); !errors.Is(err, ErrEntryIdentifierImmutable) {
+	if _, err := book.RemoveFieldValue(entry, "ID"); !errors.Is(err, ErrEntryIdentifierImmutable) {
 		t.Fatalf("RemoveFieldValue() error = %v, want %v", err, ErrEntryIdentifierImmutable)
 	}
 }
@@ -503,11 +503,11 @@ func TestReplaceStructListEntryPreservesUUID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entry, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.ReplaceStructListEntry([]byte(`{ID: "target", Name: "after"}`))
+	change, err := book.ReplaceStructListEntry(entry, []byte(`{ID: "target", Name: "after"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,7 +541,7 @@ func TestReplaceStructListEntryRejectsIdentifierChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +555,7 @@ func TestReplaceStructListEntryRejectsIdentifierChanges(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			if _, err := entry.ReplaceStructListEntry([]byte(tt.replacement)); !errors.Is(err, ErrEntryIdentifierImmutable) {
+			if _, err := book.ReplaceStructListEntry(entry, []byte(tt.replacement)); !errors.Is(err, ErrEntryIdentifierImmutable) {
 				t.Fatalf("ReplaceStructListEntry() error = %v, want %v", err, ErrEntryIdentifierImmutable)
 			}
 		})
@@ -570,11 +570,11 @@ func TestSwapFieldsLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entry, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.SwapFields("First", "Second")
+	change, err := book.SwapFields(entry, "First", "Second")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -601,7 +601,7 @@ func TestSwapFieldsLatchesToUUIDEntry(t *testing.T) {
 			t.Fatalf("target %s = %q, err = %v; want %q", field, got, err, want)
 		}
 	}
-	targetRange, err := target.originalSourceRange()
+	targetRange, err := NewByteRange(target.Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -629,11 +629,11 @@ func TestSwapFieldsRejectsIdentifierMutation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := entry.SwapFields("ID", "Name"); !errors.Is(err, ErrEntryIdentifierImmutable) {
+	if _, err := book.SwapFields(entry, "ID", "Name"); !errors.Is(err, ErrEntryIdentifierImmutable) {
 		t.Fatalf("SwapFields() error = %v, want %v", err, ErrEntryIdentifierImmutable)
 	}
 }
@@ -646,11 +646,11 @@ func TestUpdateFieldValueLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entry, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.UpdateFieldValue("Name", "after")
+	change, err := book.UpdateFieldValue(entry, "Name", "after")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -694,11 +694,11 @@ func TestUpdateFieldValueRejectsIdentifierMutation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := entry.UpdateFieldValue("ID", "different"); !errors.Is(err, ErrEntryIdentifierImmutable) {
+	if _, err := book.UpdateFieldValue(entry, "ID", "different"); !errors.Is(err, ErrEntryIdentifierImmutable) {
 		t.Fatalf("UpdateFieldValue() error = %v, want %v", err, ErrEntryIdentifierImmutable)
 	}
 }
@@ -733,11 +733,11 @@ func TestResultMatchFindsNeighborAfterIdentifiedDeletion(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(tt.index)
+			entry, err := book.GetEntryRef(tt.index)
 			if err != nil {
 				t.Fatal(err)
 			}
-			change, err := entry.DeleteFromStructList()
+			change, err := book.DeleteFromStructList(entry)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -931,11 +931,11 @@ func TestSwapEntriesLatchesToUUIDIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err := book.GetEntry(0)
+	a, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := book.GetEntry(2)
+	c, err := book.GetEntryRef(2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1002,11 +1002,11 @@ func TestSwapEntriesFallsBackWithoutTwoIdentifiers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err := book.GetEntry(0)
+	a, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := book.GetEntry(1)
+	b, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1027,11 +1027,11 @@ func TestSwapEntriesRejectsAmbiguousOrConflictingIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, err := book.GetEntry(0)
+	a, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := book.GetEntry(2)
+	c, err := book.GetEntryRef(2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1082,15 +1082,11 @@ func TestIdentifiedEntryReplacePatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	rangeInOriginal, err := entry.originalSourceRange()
-	if err != nil {
-		t.Fatal(err)
-	}
-	patch, err := entryReplacementPatch(entry, rangeInOriginal, []byte(`{ID: "target", Name: "after"}`))
+	patch, err := book.ReplaceStructListEntry(entry, []byte(`{ID: "target", Name: "after"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -84,11 +84,11 @@ func TestArchiveEntry(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(0)
+			entry, err := book.GetEntryRef(0)
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = archiveEntry(context.Background(), files, sourceName, entry, date)
+			_, err = archiveEntry(context.Background(), files, sourceName, book, entry, date)
 			if test.wantError != "" {
 				if err == nil || !strings.Contains(err.Error(), test.wantError) {
 					t.Fatalf("archive error = %v, want containing %q", err, test.wantError)
@@ -137,7 +137,7 @@ func TestEntryListArchiveUsesSourceDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	selected, err := book.GetEntry(0)
+	selected, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +147,7 @@ func TestEntryListArchiveUsesSourceDirectory(t *testing.T) {
 		t.Fatalf("NewEntryList returned %T, want EntryList", model)
 	}
 	model.book = cuebook.Result{Document: book, Source: source}
-	_, cmd := model.Update(entry.ArchiveEntryEvent{Entry: selected})
+	_, cmd := model.Update(entry.ArchiveEntryEvent{Book: book, Entry: selected})
 	if cmd == nil {
 		t.Fatal("archive action did not schedule a command")
 	}
@@ -217,12 +217,12 @@ func TestArchiveEntryDoesNotRemoveSourceWhenArchiveWriteFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	selected, err := book.GetEntry(0)
+	selected, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	failingFiles := &writeFailureFileSystem{FileSystem: files, failName: archiveName}
-	if _, err := archiveEntry(context.Background(), failingFiles, sourceName, selected, date); err == nil {
+	if _, err := archiveEntry(context.Background(), failingFiles, sourceName, book, selected, date); err == nil {
 		t.Fatal("archiveEntry succeeded despite a failed archive write")
 	}
 
@@ -276,12 +276,12 @@ func TestArchiveEntryKeepsArchivedCopyWhenSourceWriteFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	selected, err := book.GetEntry(0)
+	selected, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	failingFiles := &writeFailureFileSystem{FileSystem: files, failName: sourceName}
-	if _, err := archiveEntry(context.Background(), failingFiles, sourceName, selected, date); err == nil {
+	if _, err := archiveEntry(context.Background(), failingFiles, sourceName, book, selected, date); err == nil {
 		t.Fatal("archiveEntry succeeded despite a failed source write")
 	}
 

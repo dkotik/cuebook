@@ -95,32 +95,14 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 			}
 		}
 
-		var precedingRange ByteRange
-		hasPrecedingRange := false
 		for next.Next() {
 			value := next.Value()
 			entry := Entry{
-				Value:                   value,
-				FieldDefinitions:        d.Definitions,
-				identifierFieldName:     d.entryUniqueIdentifierFieldName,
-				source:                  d.source,
-				precedingSourceRange:    precedingRange,
-				hasPrecedingSourceRange: hasPrecedingRange,
+				Value:               value,
+				FieldDefinitions:    d.Definitions,
+				identifierFieldName: d.entryUniqueIdentifierFieldName,
 			}
 			var entryErr error
-			entryRange, rangeErr := NewByteRange(value)
-			if rangeErr == nil {
-				entry.sourceRange = entryRange
-				entry.hasSourceRange = true
-				entry.sourceAnchor, rangeErr = anchorForRange(entryRange, d.source)
-			}
-			if rangeErr == nil {
-				precedingRange = entryRange
-				hasPrecedingRange = true
-			}
-			if rangeErr != nil {
-				entryErr = errors.Join(entryErr, rangeErr)
-			}
 			if !value.IsConcrete() || value.IsNull() {
 				entryErr = ErrCannotLoadAbstractEntry
 			} else if kind := value.Kind(); kind != cue.StructKind {

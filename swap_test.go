@@ -21,8 +21,8 @@ func TestSwapEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var entries []Entry
-	for entry, err := range document.EachEntry() {
+	var entries []EntryRef
+	for entry, err := range document.EachEntryRef() {
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -88,11 +88,11 @@ func TestSwapDifference(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	a, err := document.GetEntry(1)
+	a, err := document.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := document.GetEntry(2)
+	b, err := document.GetEntryRef(2)
 	if err != nil {
 		t.Fatal(err)
 	}

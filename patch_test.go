@@ -52,11 +52,11 @@ func TestCommitSkipsWriteWhenPatchWasAlreadyApplied(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entry, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	patch, err := entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
+	patch, err := book.ReplaceStructListEntry(entry, []byte(`{Name: "new"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -415,16 +415,16 @@ func TestPatchApplicationDoesNotMutateInput(t *testing.T) {
 }
 
 func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
-	entryPatch := func(source []byte, index int, create func(Entry) (Patch, error)) (Patch, error) {
+	entryPatch := func(source []byte, index int, create func(Book, EntryRef) (Patch, error)) (Patch, error) {
 		book, err := New(source)
 		if err != nil {
 			return nil, err
 		}
-		entry, err := book.GetEntry(index)
+		entry, err := book.GetEntryRef(index)
 		if err != nil {
 			return nil, err
 		}
-		return create(entry)
+		return create(book, entry)
 	}
 	bookPatch := func(source []byte, create func(Book) (Patch, error)) (Patch, error) {
 		book, err := New(source)
@@ -442,8 +442,8 @@ func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
 			name:   "replace entry",
 			source: `[{Name: "old"}]`,
 			makePatch: func(source []byte) (Patch, error) {
-				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
-					return entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
+				return entryPatch(source, 0, func(book Book, entry EntryRef) (Patch, error) {
+					return book.ReplaceStructListEntry(entry, []byte(`{Name: "new"}`))
 				})
 			},
 		},
@@ -461,8 +461,8 @@ func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
 			name:   "delete entry",
 			source: `[{Name: "one"}, {Name: "two"}]`,
 			makePatch: func(source []byte) (Patch, error) {
-				return entryPatch(source, 1, func(entry Entry) (Patch, error) {
-					return entry.DeleteFromStructList()
+				return entryPatch(source, 1, func(book Book, entry EntryRef) (Patch, error) {
+					return book.DeleteFromStructList(entry)
 				})
 			},
 		},
@@ -470,8 +470,8 @@ func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
 			name:   "update field",
 			source: `[{Name: "old"}]`,
 			makePatch: func(source []byte) (Patch, error) {
-				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
-					return entry.UpdateFieldValue("Name", "new")
+				return entryPatch(source, 0, func(book Book, entry EntryRef) (Patch, error) {
+					return book.UpdateFieldValue(entry, "Name", "new")
 				})
 			},
 		},
@@ -479,8 +479,8 @@ func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
 			name:   "merge fields",
 			source: `[{Name: "old"}]`,
 			makePatch: func(source []byte) (Patch, error) {
-				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
-					return entry.MergeFieldValues(map[string]string{"Name": "new"})
+				return entryPatch(source, 0, func(book Book, entry EntryRef) (Patch, error) {
+					return book.MergeFieldValues(entry, map[string]string{"Name": "new"})
 				})
 			},
 		},
@@ -488,8 +488,8 @@ func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
 			name:   "remove field",
 			source: `[{Name: "old", Extra: "remove"}]`,
 			makePatch: func(source []byte) (Patch, error) {
-				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
-					return entry.RemoveFieldValue("Extra")
+				return entryPatch(source, 0, func(book Book, entry EntryRef) (Patch, error) {
+					return book.RemoveFieldValue(entry, "Extra")
 				})
 			},
 		},
@@ -497,8 +497,8 @@ func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
 			name:   "add field",
 			source: `[{Name: "old"}]`,
 			makePatch: func(source []byte) (Patch, error) {
-				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
-					return entry.AddField("Extra", FieldKindString, "added")
+				return entryPatch(source, 0, func(book Book, entry EntryRef) (Patch, error) {
+					return book.AddField(entry, "Extra", FieldKindString, "added")
 				})
 			},
 		},
@@ -507,11 +507,11 @@ func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
 			source: `[{Name: "one"}, {Name: "two"}]`,
 			makePatch: func(source []byte) (Patch, error) {
 				return bookPatch(source, func(book Book) (Patch, error) {
-					a, err := book.GetEntry(0)
+					a, err := book.GetEntryRef(0)
 					if err != nil {
 						return nil, err
 					}
-					b, err := book.GetEntry(1)
+					b, err := book.GetEntryRef(1)
 					if err != nil {
 						return nil, err
 					}
@@ -523,8 +523,8 @@ func TestGeneratedPatchesAreIdempotentAndInvertBeforeApplication(t *testing.T) {
 			name:   "swap fields",
 			source: `[{a: 1, b: 2}]`,
 			makePatch: func(source []byte) (Patch, error) {
-				return entryPatch(source, 0, func(entry Entry) (Patch, error) {
-					return entry.SwapFields("a", "b")
+				return entryPatch(source, 0, func(book Book, entry EntryRef) (Patch, error) {
+					return book.SwapFields(entry, "a", "b")
 				})
 			},
 		},
@@ -628,11 +628,11 @@ func TestDeleteDifferenceIdentifiesPrecedingContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	entry, err := document.GetEntry(1)
+	entry, err := document.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.DeleteFromStructList()
+	change, err := document.DeleteFromStructList(entry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -647,12 +647,12 @@ func TestResultMatchFindsChangedEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := document.GetEntry(0)
+	entry, err := document.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	replacement := []byte(`{Name: "new"}`)
-	change, err := entry.ReplaceStructListEntry(replacement)
+	change, err := document.ReplaceStructListEntry(entry, replacement)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -665,11 +665,11 @@ func TestResultMatchFindsChangedEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := Result{Document: book, Source: updated, LastChange: change}
-	entry, ok := result.Match(replacement)
+	matched, ok := result.Match(replacement)
 	if !ok {
 		t.Fatal("Match() did not find the changed entry")
 	}
-	if got, err := entry.Value.LookupPath(cuePathName("Name")).String(); err != nil || got != "new" {
+	if got, err := matched.Value.LookupPath(cuePathName("Name")).String(); err != nil || got != "new" {
 		t.Fatalf("matched Name = %q, err = %v; want %q", got, err, "new")
 	}
 	withoutChange := Result{Document: book, Source: updated}
@@ -716,11 +716,11 @@ func TestResultMatchFindsPrecedingEntryAfterDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := document.GetEntry(1)
+	entry, err := document.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.DeleteFromStructList()
+	change, err := document.DeleteFromStructList(entry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -733,11 +733,11 @@ func TestResultMatchFindsPrecedingEntryAfterDeletion(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := Result{Document: book, Source: updated, LastChange: change}
-	entry, ok := result.Match(change.Difference().Content)
+	matched, ok := result.Match(change.Difference().Content)
 	if !ok {
 		t.Fatal("Match() did not find the preceding entry")
 	}
-	if got, err := entry.Value.LookupPath(cuePathName("Name")).String(); err != nil || got != "one" {
+	if got, err := matched.Value.LookupPath(cuePathName("Name")).String(); err != nil || got != "one" {
 		t.Fatalf("matched Name = %q, err = %v; want %q", got, err, "one")
 	}
 }
@@ -756,11 +756,11 @@ func TestCommitPreservesPermissionsAndCleansTemporaryFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := document.GetEntry(0)
+	entry, err := document.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
+	change, err := document.ReplaceStructListEntry(entry, []byte(`{Name: "new"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -808,11 +808,11 @@ func TestCommitCleansTemporaryFileWhenRenameFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := document.GetEntry(0)
+	entry, err := document.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
+	change, err := document.ReplaceStructListEntry(entry, []byte(`{Name: "new"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -871,11 +871,11 @@ func TestCommitLeavesOriginalUntouchedWhenSwapDirectoryIsMissing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := document.GetEntry(0)
+	entry, err := document.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.ReplaceStructListEntry([]byte(`{Name: "new"}`))
+	change, err := document.ReplaceStructListEntry(entry, []byte(`{Name: "new"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

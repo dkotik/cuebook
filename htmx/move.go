@@ -91,11 +91,11 @@ func (a *handler) transferEntry(ctx context.Context, sourceName, destinationName
 	if err != nil {
 		return pageData{}, err
 	}
-	sourceEntry, err := sourceDocument.GetEntry(from)
+	sourceEntry, err := sourceDocument.GetEntryRef(from)
 	if err != nil {
 		return pageData{}, &cuebook.EntryNotFoundError{Path: sourceName}
 	}
-	transfer, err := cuebook.PrepareEntryTransfer(destinationRaw, sourceEntry)
+	transfer, err := cuebook.PrepareEntryTransfer(destinationRaw, sourceDocument, sourceEntry)
 	if err != nil {
 		return pageData{}, CauseError{Code: ErrUnableToPrepareEntryTransfer, Cause: err}
 	}

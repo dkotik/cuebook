@@ -26,11 +26,11 @@ func TestUpdateStructInList(t *testing.T) {
 	}
 
 	replacement := []byte(`{ replacement: "replacement"}`)
-	for entry, err := range document.EachEntry() {
+	for entry, err := range document.EachEntryRef() {
 		if err != nil {
 			t.Fatal(err)
 		}
-		patch, err := entry.ReplaceStructListEntry(replacement)
+		patch, err := document.ReplaceStructListEntry(entry, replacement)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +47,15 @@ func TestUpdateStructInList(t *testing.T) {
 }
 
 func TestUpdateReturnsEntryNotStructError(t *testing.T) {
-	entry := cuecontext.New().CompileBytes([]byte(`"not a struct"`))
+	source := []byte(`["not a struct"]`)
+	book, err := New(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, entryErr := book.GetEntryRef(0)
+	if !errors.Is(entryErr, ErrEntryValueNotStruct) {
+		t.Fatalf("GetEntryRef() error = %v, want %v", entryErr, ErrEntryValueNotStruct)
+	}
 	tests := []struct {
 		name string
 		call func() error
@@ -55,14 +63,14 @@ func TestUpdateReturnsEntryNotStructError(t *testing.T) {
 		{
 			name: "update field",
 			call: func() error {
-				_, err := (Entry{Value: entry}).UpdateFieldValue("value", "value")
+				_, err := book.UpdateFieldValue(entry, "value", "value")
 				return err
 			},
 		},
 		{
 			name: "merge field values",
 			call: func() error {
-				_, err := (Entry{Value: entry}).MergeFieldValues(nil)
+				_, err := book.MergeFieldValues(entry, nil)
 				return err
 			},
 		},
@@ -78,21 +86,32 @@ func TestUpdateReturnsEntryNotStructError(t *testing.T) {
 }
 
 func TestUpdateReturnsTargetFieldNotStructFieldError(t *testing.T) {
-	entry := cuecontext.New().CompileString(`{name: "entry"}`)
+	book, err := New([]byte(`[{name: "entry"}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := book.GetEntryRef(0)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	_, err := (Entry{Value: entry}).UpdateFieldValue("value", "updated")
+	_, err = book.UpdateFieldValue(entry, "value", "updated")
 	if !errors.Is(err, ErrTargetFieldNotStructField) {
 		t.Fatalf("error = %v, want %v", err, ErrTargetFieldNotStructField)
 	}
 }
 
 func TestMergeFieldValuesReturnsFormattingError(t *testing.T) {
-	entry := cuecontext.New().CompileString(`{Name: "" @cuebook(default=missingTestDefault)}`)
-	if err := entry.Err(); err != nil {
+	book, err := New([]byte(`[{Name: "" @cuebook(default=missingTestDefault)}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := book.GetEntryRef(0)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err := (Entry{Value: entry}).MergeFieldValues(map[string]string{"Name": ""})
+	_, err = book.MergeFieldValues(entry, map[string]string{"Name": ""})
 	if err == nil {
 		t.Fatal("MergeFieldValues() error = nil, want a formatting error")
 	}
@@ -137,17 +156,18 @@ func TestUpdateStructField(t *testing.T) {
 	if target.Err() != nil {
 		t.Fatal(target.Err())
 	}
-	entry, err := book.GetEntry(2)
+	entryRef, err := book.GetEntryRef(2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	entry := entryRef.Entry()
 	field, err := entry.GetField(1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log("field:", field.Name)
 
-	patch, err := entry.UpdateFieldValue(field.Name, "value string sdkfjlsf lskdj;lsajfskajfsadjsakdljfadsfsakj ksadjl;sajflsaf \n\n\nkjshfadsjh")
+	patch, err := book.UpdateFieldValue(entryRef, field.Name, "value string sdkfjlsf lskdj;lsajfskajfsadjsakdljfadsfsakj ksadjl;sajflsaf \n\n\nkjshfadsjh")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,17 +215,18 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	if target.Err() != nil {
 		t.Fatal(target.Err())
 	}
-	entry, err := book.GetEntry(2)
+	entryRef, err := book.GetEntryRef(2)
 	if err != nil {
 		t.Fatal(err)
 	}
+	entry := entryRef.Entry()
 	field, err := entry.GetField(1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log("field:", field.Name)
 
-	patch, err := entry.MergeFieldValues(map[string]string{
+	patch, err := book.MergeFieldValues(entryRef, map[string]string{
 		"ID":          "",
 		"another":     "123",
 		"seriously":   "545445",
@@ -250,17 +271,20 @@ func TestUpdateStructFieldsWithMapOfValues(t *testing.T) {
 	}
 }
 
-func TestMergeFieldValuesEmptyIsNoOpWithoutSourceAnchor(t *testing.T) {
-	entry := Entry{Value: cuecontext.New().CompileString(`{Name: "value"}`)}
-	if err := entry.Value.Err(); err != nil {
-		t.Fatal(err)
-	}
-
-	patch, err := entry.MergeFieldValues(nil)
+func TestMergeFieldValuesEmptyIsNoOp(t *testing.T) {
+	source := []byte(`[{Name: "value"}]`)
+	book, err := New(source)
 	if err != nil {
 		t.Fatal(err)
 	}
-	source := []byte(`[{}]`)
+	entryRef, err := book.GetEntryRef(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch, err := book.MergeFieldValues(entryRef, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	updated, err := patch.ApplyToCueSource(source)
 	if err != nil {
 		t.Fatal(err)
@@ -280,11 +304,11 @@ func TestMergeFieldValuesAddsNewFieldsInStableOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entryRef, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.MergeFieldValues(map[string]string{
+	change, err := book.MergeFieldValues(entryRef, map[string]string{
 		"zField": "last",
 		"aField": "first",
 	})

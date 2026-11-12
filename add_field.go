@@ -50,16 +50,7 @@ func (k FieldKind) ValidateValue(value string) error {
 	return err
 }
 
-// AddField appends a new field to the end of this entry. An empty value
-// becomes the zero value of the kind: an empty string, 0, or false. A
-// multiline string is marked with @cuebook(multiline) so that editors keep
-// treating it as multiline.
-//
-// The entry is rewritten from its source, so its comments, formatting within
-// fields, and attributes are kept. The patch does not check whether the entry's
-// schema accepts the field: validate the patched source with [New] or wrap the
-// patch with [Validated].
-func (e Entry) AddField(name string, kind FieldKind, value string) (Patch, error) {
+func (e entryPatchContext) addField(name string, kind FieldKind, value string) (Patch, error) {
 	if strings.TrimSpace(name) == "" {
 		return nil, ErrFieldNameEmpty
 	}

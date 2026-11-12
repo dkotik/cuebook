@@ -140,11 +140,11 @@ func TestAddField(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, err := book.GetEntry(tt.entry)
+			entryRef, err := book.GetEntryRef(tt.entry)
 			if err != nil {
 				t.Fatal(err)
 			}
-			change, err := entry.AddField(tt.field, tt.kind, tt.value)
+			change, err := book.AddField(entryRef, tt.field, tt.kind, tt.value)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -171,11 +171,11 @@ func TestAddFieldLatchesToUUIDEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(1)
+	entryRef, err := book.GetEntryRef(1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	patch, err := entry.AddField("Role", FieldKindString, "dev")
+	patch, err := book.AddField(entryRef, "Role", FieldKindString, "dev")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,11 +278,11 @@ func TestAddFieldRejectsInvalidInput(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			entry, entryErr := book.GetEntry(0)
+			entryRef, entryErr := book.GetEntryRef(0)
 			if entryErr != nil && !errors.Is(entryErr, ErrEntryValueNotStruct) {
 				t.Fatal(entryErr)
 			}
-			change, err := entry.AddField(tt.field, tt.kind, tt.value)
+			change, err := book.AddField(entryRef, tt.field, tt.kind, tt.value)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("error = %v, want %v", err, tt.want)
 			}
@@ -328,11 +328,11 @@ func TestAddFieldToClosedSchemaFailsValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry, err := book.GetEntry(0)
+	entryRef, err := book.GetEntryRef(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	change, err := entry.AddField("Role", FieldKindString, "dev")
+	change, err := book.AddField(entryRef, "Role", FieldKindString, "dev")
 	if err != nil {
 		t.Fatal(err)
 	}

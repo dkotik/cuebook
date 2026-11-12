@@ -85,12 +85,12 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if err != nil {
 				return err
 			}
-			result, err := archiveEntry(context.Background(), files, sourceName, msg.Entry, time.Now())
+			result, err := archiveEntry(context.Background(), files, sourceName, msg.Book, msg.Entry, time.Now())
 			if err != nil {
 				return err
 			}
 			return entry.ArchiveEntryCompletedEvent{
-				Title:        msg.Entry.Title,
+				Title:        msg.Entry.Entry().Title,
 				Result:       result,
 				ReturnToList: msg.ReturnToList,
 			}
@@ -139,21 +139,21 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case entry.CreateEvent:
 		return l, entry.NewCreateForm(l.book.Document)
 	case entrySelected:
-		selected, err := l.book.Document.GetEntry(int(msg))
+		selected, err := l.book.Document.GetEntryRef(int(msg))
 		if err != nil {
 			return l, func() tea.Msg { return err } // TODO: fails on empty list?
 		}
-		return l, entry.NewForm(selected)
+		return l, entry.NewForm(l.book.Document, selected)
 	case list.SwapOrderEvent:
 		if msg.CurrentIndex < 1 || msg.DesiredIndex < 1 {
 			return l, nil // the title card at index 0 is not an entry
 		}
 		return l, func() tea.Msg {
-			a, err := l.book.Document.GetEntry(msg.CurrentIndex - 1)
+			a, err := l.book.Document.GetEntryRef(msg.CurrentIndex - 1)
 			if err != nil {
 				return nil // does not exist
 			}
-			b, err := l.book.Document.GetEntry(msg.DesiredIndex - 1)
+			b, err := l.book.Document.GetEntryRef(msg.DesiredIndex - 1)
 			if err != nil {
 				return nil // does not exist
 			}
@@ -174,12 +174,12 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 				panic(err)
 			}
 			index--
-			selectedEntry, err := l.book.Document.GetEntry(index)
+			selectedEntry, err := l.book.Document.GetEntryRef(index)
 			if err != nil {
 				return l, func() tea.Msg { return err }
 			}
 			l.selected--
-			return l, func() tea.Msg { return entry.ArchiveEntryEvent{Entry: selectedEntry} }
+			return l, func() tea.Msg { return entry.ArchiveEntryEvent{Book: l.book.Document, Entry: selectedEntry} }
 		case 'n':
 			if msg.Key().Mod != tea.ModCtrl {
 				break

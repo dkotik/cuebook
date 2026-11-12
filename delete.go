@@ -5,8 +5,7 @@ import (
 	"unicode"
 )
 
-// DeleteFromStructList creates a patch that removes this entry from its list.
-func (e Entry) DeleteFromStructList() (Patch, error) {
+func (e entryPatchContext) deleteFromStructList() (Patch, error) {
 	r, err := e.originalSourceRange()
 	if err != nil {
 		return nil, err

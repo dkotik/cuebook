@@ -29,7 +29,7 @@ func TestLoadFieldsOffersExtendButtonForOpenEntries(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, cards := loadEntry(t, tt.source, 0)
+			_, _, cards := loadEntry(t, tt.source, 0)
 			// Every entry ends with the save and delete buttons.
 			got := len(cards.Cards) == len(cards.Order)+3
 			if got != tt.want {
@@ -97,8 +97,8 @@ func TestFormAddsFieldWithNameKindAndValueFromOneForm(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			state, cards := loadEntry(t, `[{Name: "Ada"}]`, 0)
-			entryForm := openForm(t, cards, 0)
+			state, ref, cards := loadEntry(t, `[{Name: "Ada"}]`, 0)
+			entryForm := openForm(t, state.Document, ref, cards, 0)
 
 			entryForm, cmd := entryForm.Update(extendRequestEvent{})
 			msgs := runCommand(cmd)
@@ -250,8 +250,8 @@ func TestNewFieldFormRendersBeforeItKnowsTheWindowSize(t *testing.T) {
 
 func TestFormRequiresSavedChangesBeforeAddingAField(t *testing.T) {
 	t.Parallel()
-	_, cards := loadEntry(t, `[{Name: "Ada"}]`, 0)
-	model := openForm(t, cards, 0)
+	state, ref, cards := loadEntry(t, `[{Name: "Ada"}]`, 0)
+	model := openForm(t, state.Document, ref, cards, 0)
 	model, _ = model.Update(fieldChangedEvent{Name: "Name", Value: "Grace", Original: "Ada"})
 	_, cmd := model.Update(extendRequestEvent{})
 	for _, msg := range runCommand(cmd) {

@@ -128,10 +128,11 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 	if entryIndex < 0 {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
-	entry, err := document.GetEntry(entryIndex)
+	entryRef, err := document.GetEntryRef(entryIndex)
 	if err != nil {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
+	entry := entryRef.Entry()
 	entryValue := entry.Value
 	fieldName := request.Field
 	field, ok := entry.GetFieldByName(fieldName)
@@ -148,9 +149,9 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 	unset := value == "not_set" && field.Value.IncompleteKind() == cue.BoolKind && !isSecretField(field.Value)
 	var change cuebook.Patch
 	if unset {
-		change, err = entry.RemoveFieldValue(fieldName)
+		change, err = document.RemoveFieldValue(entryRef, fieldName)
 	} else {
-		change, err = entry.UpdateFieldValue(fieldName, value)
+		change, err = document.UpdateFieldValue(entryRef, fieldName, value)
 	}
 	if err != nil {
 		return editResponse{}, CauseError{Code: ErrFieldValueFormatFailed, Cause: err}

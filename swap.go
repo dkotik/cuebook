@@ -9,9 +9,15 @@ import (
 )
 
 // SwapEntries creates a patch that exchanges two entries in this book.
-func (book Book) SwapEntries(a, b Entry) (Patch, error) {
+func (book Book) SwapEntries(a, b EntryRef) (Patch, error) {
 	if book.Value.Kind() != cue.ListKind {
 		return nil, ErrSourceIsNotList
+	}
+	if _, err := book.patchContext(a); err != nil {
+		return nil, err
+	}
+	if _, err := book.patchContext(b); err != nil {
+		return nil, err
 	}
 	aIdentity, aIdentified := a.entryIdentity()
 	bIdentity, bIdentified := b.entryIdentity()
@@ -42,7 +48,7 @@ func (book Book) MoveEntry(from, to int) (Patch, error) {
 	if from < 0 || from >= length || to < 0 || to >= length {
 		return nil, ErrBookEntryIndexOutOfRange
 	}
-	originalEntry, err := book.GetEntry(from)
+	originalEntry, err := book.GetEntryRef(from)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +64,7 @@ func (book Book) MoveEntry(from, to int) (Patch, error) {
 	}
 
 	entries := make([]ByteRange, 0, length)
-	for entry, err := range book.EachEntry() {
+	for entry, err := range book.EachEntryRef() {
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +111,7 @@ func (book Book) MoveEntry(from, to int) (Patch, error) {
 	return change, nil
 }
 
-func moveEntriesByIndex(source []byte, entries []Entry, from, to int) ([]byte, error) {
+func moveEntriesByIndex(source []byte, entries []EntryRef, from, to int) ([]byte, error) {
 	byteRanges := make([]ByteRange, len(entries))
 	for index, entry := range entries {
 		byteRanges[index] = entry.sourceRange
@@ -150,8 +156,7 @@ func rangesAfterSwap(a, b ByteRange) (ByteRange, ByteRange) {
 		ByteRange{Head: bHead, Tail: bHead + b.Tail - b.Head}
 }
 
-// SwapFields creates a patch exchanging two written fields in this entry.
-func (e Entry) SwapFields(a, b string) (Patch, error) {
+func (e entryPatchContext) swapFields(a, b string) (Patch, error) {
 	if e.Value.IncompleteKind() != cue.StructKind {
 		return nil, ErrEntryNotStruct
 	}

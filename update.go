@@ -149,14 +149,13 @@ func restoreWrittenAttributes(exported, written *ast.StructLit) {
 	exported.Elts = append(declarations, exported.Elts...)
 }
 
-// ReplaceStructListEntry creates a patch that replaces this entry's source.
-func (e Entry) ReplaceStructListEntry(replacement []byte) (Patch, error) {
+func (e entryPatchContext) replaceStructListEntry(replacement []byte) (Patch, error) {
 	r, err := e.originalSourceRange()
 	if err != nil {
 		return nil, err
 	}
 	if e.identifierFieldName != "" {
-		if err := validateIdentifierReplacement(e, replacement); err != nil {
+		if err := validateIdentifierReplacement(e.Entry, replacement); err != nil {
 			return nil, err
 		}
 	}
@@ -214,8 +213,7 @@ func replaceByteRangeWithDifference(source []byte, r ByteRange, replacement []by
 	}, nil
 }
 
-// UpdateFieldValue creates a patch that changes a field in this entry.
-func (e Entry) UpdateFieldValue(fieldName, value string) (Patch, error) {
+func (e entryPatchContext) updateFieldValue(fieldName, value string) (Patch, error) {
 	if e.Value.IncompleteKind() != cue.StructKind {
 		return nil, ErrEntryNotStruct
 	}
@@ -274,10 +272,7 @@ func (e Entry) UpdateFieldValue(fieldName, value string) (Patch, error) {
 	return entryReplacementPatch(e, entryRange, content)
 }
 
-// RemoveFieldValue creates a patch that omits a field from this entry's
-// concrete values without materializing optional fields or changing the
-// surrounding document.
-func (e Entry) RemoveFieldValue(fieldName string) (Patch, error) {
+func (e entryPatchContext) removeFieldValue(fieldName string) (Patch, error) {
 	if e.Value.IncompleteKind() != cue.StructKind {
 		return nil, ErrEntryNotStruct
 	}
@@ -320,21 +315,18 @@ func (e Entry) RemoveFieldValue(fieldName string) (Patch, error) {
 	return entryReplacementPatch(e, entryRange, content)
 }
 
-// MergeFieldValues creates a patch that merges field values into this entry.
-func (e Entry) MergeFieldValues(values map[string]string) (Patch, error) {
+func (e entryPatchContext) mergeFieldValues(values map[string]string) (Patch, error) {
 	if err := e.validateIdentifierValues(values); err != nil {
 		return nil, err
 	}
-	patch, err := e.MergeFieldValuesAndRemove(values, nil)
+	patch, err := e.mergeFieldValuesAndRemove(values, nil)
 	if err != nil {
 		return nil, err
 	}
 	return identifyEntryPatch(e, patch)
 }
 
-// MergeFieldValuesAndRemove merges field values and removes named fields in one
-// entry rewrite. Removal takes precedence if a field appears in both arguments.
-func (e Entry) MergeFieldValuesAndRemove(values map[string]string, removals []string) (Patch, error) {
+func (e entryPatchContext) mergeFieldValuesAndRemove(values map[string]string, removals []string) (Patch, error) {
 	if err := e.validateIdentifierValues(values); err != nil {
 		return nil, err
 	}

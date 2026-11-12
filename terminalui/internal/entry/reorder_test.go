@@ -53,7 +53,7 @@ func TestLoadFieldsUsesEntrySourceOrder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, cards := loadEntry(t, tt.source, 0)
+			_, _, cards := loadEntry(t, tt.source, 0)
 			if got := orderNames(cards.Order); !slices.Equal(got, tt.want) {
 				t.Errorf("field order = %q, want %q", got, tt.want)
 			}
@@ -165,8 +165,8 @@ func TestFormReordersFields(t *testing.T) {
 			if tt.name == "only the open entry changes" {
 				entryIndex = 1
 			}
-			state, cards := loadEntry(t, tt.source, entryIndex)
-			model := openForm(t, cards, tt.selected)
+			state, ref, cards := loadEntry(t, tt.source, entryIndex)
+			model := openForm(t, state.Document, ref, cards, tt.selected)
 
 			patch, ok := pressReorderKey(t, model, tt.key, state)
 			if tt.want == "" {
@@ -222,8 +222,8 @@ func TestFormReorderRequiresSavedChanges(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			state, cards := loadEntry(t, `[{Name: "Ada", Email: "a@b"}]`, 0)
-			model := openForm(t, cards, 0)
+			state, ref, cards := loadEntry(t, `[{Name: "Ada", Email: "a@b"}]`, 0)
+			model := openForm(t, state.Document, ref, cards, 0)
 			if tt.changed {
 				model, _ = model.Update(fieldChangedEvent{Name: "Name", Value: "Grace", Original: "Ada"})
 			}
@@ -238,8 +238,8 @@ func TestFormReorderRequiresSavedChanges(t *testing.T) {
 func TestFormDoesNotEmitEntryReorderEvents(t *testing.T) {
 	t.Parallel()
 
-	_, cards := loadEntry(t, `[{Name: "Ada", Email: "a@b"}]`, 0)
-	model := openForm(t, cards, 0)
+	state, ref, cards := loadEntry(t, `[{Name: "Ada", Email: "a@b"}]`, 0)
+	model := openForm(t, state.Document, ref, cards, 0)
 	_, cmd := model.Update(ctrlJ)
 	if cmd == nil {
 		t.Fatal("ctrl+j produced no command")
@@ -257,7 +257,7 @@ func TestFormDoesNotEmitEntryReorderEvents(t *testing.T) {
 }
 
 // loadEntry parses source and loads the fields of the entry at index.
-func loadEntry(t *testing.T, source string, index int) (cuebook.Result, fieldListCards) {
+func loadEntry(t *testing.T, source string, index int) (cuebook.Result, cuebook.EntryRef, fieldListCards) {
 	t.Helper()
 	book, err := cuebook.New([]byte(source))
 	if err != nil {
@@ -269,21 +269,25 @@ func loadEntry(t *testing.T, source string, index int) (cuebook.Result, fieldLis
 			t.Fatal(err)
 		}
 		if i == index {
+			ref, err := book.GetEntryRef(i)
+			if err != nil {
+				t.Fatal(err)
+			}
 			cards, ok := LoadFields(e)().(fieldListCards)
 			if !ok {
 				t.Fatal("LoadFields did not return field cards")
 			}
-			return cuebook.Result{Document: book, Source: []byte(source)}, cards
+			return cuebook.Result{Document: book, Source: []byte(source)}, ref, cards
 		}
 		i++
 	}
 	t.Fatalf("entry %d not found", index)
-	return cuebook.Result{}, fieldListCards{}
+	return cuebook.Result{}, cuebook.EntryRef{}, fieldListCards{}
 }
 
-func openForm(t *testing.T, cards fieldListCards, selected int) tea.Model {
+func openForm(t *testing.T, book cuebook.Book, ref cuebook.EntryRef, cards fieldListCards, selected int) tea.Model {
 	t.Helper()
-	var model tea.Model = newForm(cards.Entry)
+	var model tea.Model = newForm(book, ref)
 	_ = model.Init()
 	model, _ = model.Update(cards)
 	model, _ = model.Update(list.ApplySelection(selected)())

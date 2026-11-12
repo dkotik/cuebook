@@ -44,8 +44,8 @@ func TestSaveChangesRemovesEmptyOptionalAndUndefinedFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			state, cards := loadEntry(t, source, 0)
-			model := openForm(t, cards, 0)
+			state, ref, cards := loadEntry(t, source, 0)
+			model := openForm(t, state.Document, ref, cards, 0)
 			model, _ = model.Update(fieldChangedEvent{
 				Name:     tt.field,
 				Value:    "",

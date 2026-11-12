@@ -148,22 +148,28 @@ func loadFieldsSelecting(cueEntry cuebook.Entry, name string) tea.Cmd {
 	}
 }
 
-func NewForm(entry cuebook.Entry) tea.Cmd {
+func NewForm(book cuebook.Book, ref cuebook.EntryRef) tea.Cmd {
+	entry := ref.Entry()
 	return tea.Sequence(
 		func() tea.Msg {
-			return window.SwitchTo(newForm(entry))
+			return window.SwitchTo(newForm(book, ref))
 		},
 		LoadFields(entry),
 	)
 }
 
-func newForm(entry cuebook.Entry) form {
-	return form{Model: newFieldList(), Entry: entry, Changes: make(map[string]string)}
+func newForm(book cuebook.Book, ref cuebook.EntryRef) form {
+	return form{
+		Model: newFieldList(), Book: book, EntryRef: ref,
+		Entry: ref.Entry(), Changes: make(map[string]string),
+	}
 }
 
 type form struct {
 	tea.Model
 
+	Book        cuebook.Book
+	EntryRef    cuebook.EntryRef
 	Entry       cuebook.Entry
 	Fields      []tea.Model
 	Buttons     []tea.Model
@@ -217,7 +223,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 		return f, func() tea.Msg {
 			return Update(func(_ cuebook.Result) (cuebook.Patch, error) {
-				p, err := f.Entry.MergeFieldValuesAndRemove(values, removals)
+				p, err := f.Book.MergeFieldValuesAndRemove(f.EntryRef, values, removals)
 				if err != nil {
 					return nil, err
 				}
@@ -243,7 +249,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		selected := msg.DesiredIndex
 		return f, func() tea.Msg {
 			return Update(func(state cuebook.Result) (cuebook.Patch, error) {
-				p, err := f.Entry.SwapFields(a.Name, b.Name)
+				p, err := f.Book.SwapFields(f.EntryRef, a.Name, b.Name)
 				if err != nil {
 					return nil, err
 				}
@@ -252,7 +258,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 		}
 	case archiveEvent:
 		return f, func() tea.Msg {
-			return ArchiveEntryEvent{Entry: f.Entry, ReturnToList: true}
+			return ArchiveEntryEvent{Book: f.Book, Entry: f.EntryRef, ReturnToList: true}
 		}
 	case fieldChangedEvent:
 		if msg.Value == msg.Original {
@@ -282,7 +288,7 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			func() tea.Msg { return window.BackEvent{} },
 			func() tea.Msg {
 				return Update(func(state cuebook.Result) (cuebook.Patch, error) {
-					p, err := f.Entry.AddField(msg.Name, msg.Kind, msg.Value)
+					p, err := f.Book.AddField(f.EntryRef, msg.Name, msg.Kind, msg.Value)
 					if err != nil {
 						return nil, err
 					}
@@ -392,20 +398,20 @@ func entryContaining(r cuebook.Result, anchor cuebook.ByteAnchor) (cuebook.Entry
 	return cuebook.Entry{}, false
 }
 
-func displayFieldForm(entry cuebook.Entry, field cuebook.Field) tea.Cmd {
+func displayFieldForm(book cuebook.Book, ref cuebook.EntryRef, field cuebook.Field) tea.Cmd {
 	return func() tea.Msg {
 		form, err := textarea.New(textarea.Configuration{
 			Label: field.Name,
 			Value: field.String(),
 			OnSubmit: func(value string) tea.Cmd {
 				return func() tea.Msg {
-					p, err := entry.UpdateFieldValue(field.Name, value)
+					p, err := book.UpdateFieldValue(ref, field.Name, value)
 					if err != nil {
 						return err
 					}
 					return updateFieldPatch{
 						Patch: p,
-						Entry: entry,
+						Entry: ref.Entry(),
 					}
 				}
 			},

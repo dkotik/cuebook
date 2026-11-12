@@ -42,10 +42,9 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 
 	tests := []struct {
 		name string
-		// destination is the schema of the file that receives the patch. The
-		// entry always comes from a file using sourceSchema.
+		// destination is the schema of the file that receives the patch.
 		destination string
-		patch       func(destination []byte, entry Entry) (Patch, error)
+		patch       func(book Book, entry EntryRef) (Patch, error)
 		// index and want describe the written entry in the patched file.
 		index int
 		want  string
@@ -55,12 +54,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "append entry",
 			destination: sourceSchema,
-			patch: func(destination []byte, entry Entry) (Patch, error) {
-				book, err := New(destination)
-				if err != nil {
-					return nil, err
-				}
-				return book.AppendToStructList(entry.Value)
+			patch: func(book Book, entry EntryRef) (Patch, error) {
+				return book.AppendToStructList(entry.Entry().Value)
 			},
 			index: 2,
 			want:  `{"Name": "second", "Notes": "old", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -68,12 +63,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "append entry to file with similar schema",
 			destination: destinationSchema,
-			patch: func(destination []byte, entry Entry) (Patch, error) {
-				book, err := New(destination)
-				if err != nil {
-					return nil, err
-				}
-				return book.AppendToStructList(entry.Value)
+			patch: func(book Book, entry EntryRef) (Patch, error) {
+				return book.AppendToStructList(entry.Entry().Value)
 			},
 			index: 2,
 			want:  `{"Name": "second", "Notes": "old", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -81,8 +72,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "update field",
 			destination: sourceSchema,
-			patch: func(_ []byte, entry Entry) (Patch, error) {
-				return entry.UpdateFieldValue("Name", "renamed")
+			patch: func(book Book, entry EntryRef) (Patch, error) {
+				return book.UpdateFieldValue(entry, "Name", "renamed")
 			},
 			index:      1,
 			want:       `{"Name": "renamed", "Notes": "old", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -91,8 +82,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "update multiline field",
 			destination: sourceSchema,
-			patch: func(_ []byte, entry Entry) (Patch, error) {
-				return entry.UpdateFieldValue("Notes", "line one\nline two")
+			patch: func(book Book, entry EntryRef) (Patch, error) {
+				return book.UpdateFieldValue(entry, "Notes", "line one\nline two")
 			},
 			index:      1,
 			want:       `{"Name": "second", "Notes": "line one\nline two", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -101,8 +92,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "remove field",
 			destination: sourceSchema,
-			patch: func(destination []byte, entry Entry) (Patch, error) {
-				return entry.RemoveFieldValue("Notes")
+			patch: func(book Book, entry EntryRef) (Patch, error) {
+				return book.RemoveFieldValue(entry, "Notes")
 			},
 			index:      1,
 			want:       `{"Name": "second", "Enabled": true, "Address": {"City": "Paris"}}`,
@@ -111,8 +102,8 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 		{
 			name:        "merge field values",
 			destination: sourceSchema,
-			patch: func(_ []byte, entry Entry) (Patch, error) {
-				return entry.MergeFieldValues(map[string]string{
+			patch: func(book Book, entry EntryRef) (Patch, error) {
+				return book.MergeFieldValues(entry, map[string]string{
 					"Name":  "merged",
 					"Notes": "line one\nline two",
 				})
@@ -125,16 +116,16 @@ func TestPatchesDoNotCopySchemaAttributes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			book, err := New([]byte(sourceSchema + entries))
-			if err != nil {
-				t.Fatal(err)
-			}
-			entry, err := book.GetEntry(1)
-			if err != nil {
-				t.Fatal(err)
-			}
 			destination := []byte(tt.destination + entries)
-			change, err := tt.patch(destination, entry)
+			book, err := New(destination)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entry, err := book.GetEntryRef(1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			change, err := tt.patch(book, entry)
 			if err != nil {
 				t.Fatal(err)
 			}
