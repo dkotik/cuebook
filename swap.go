@@ -63,41 +63,27 @@ func (book Book) MoveEntry(from, to int) (Patch, error) {
 		return newIdentifiedEntryMovePatch(parsedBook, entries, from, to)
 	}
 
-	entries := make([]ByteRange, 0, length)
+	entries := make([]EntryRef, 0, length)
 	for entry, err := range book.EachEntryRef() {
 		if err != nil {
 			return nil, err
 		}
-		entries = append(entries, entry.sourceRange)
+		entries = append(entries, entry)
 	}
 
 	targetRange := ByteRange{
-		Head: entries[min(from, to)].Head,
-		Tail: entries[max(from, to)].Tail,
+		Head: entries[min(from, to)].sourceRange.Head,
+		Tail: entries[max(from, to)].sourceRange.Tail,
 	}
-	current := bytes.Clone(book.source)
-	direction := 1
-	if from > to {
-		direction = -1
-	}
-	for index := from; index != to; index += direction {
-		next := index + direction
-		change, err := swapByteRanges(current, entries[index], entries[next])
-		if err != nil {
-			return nil, err
-		}
-		current, err = change.ApplyToCueSource(current)
-		if err != nil {
-			return nil, err
-		}
-		newA, newB := rangesAfterSwap(entries[index], entries[next])
-		entries[index], entries[next] = newB, newA
+	current, movedRanges, err := moveEntriesByIndex(book.source, entries, from, to)
+	if err != nil {
+		return nil, err
 	}
 	if bytes.Equal(current, book.source) {
 		return nothingPatch{A: originalEntry.sourceAnchor, B: originalEntry.sourceAnchor}, nil
 	}
 
-	movedAnchor := entries[to].Anchor(current)
+	movedAnchor := movedRanges[to].Anchor(current)
 	change, err := replaceByteRangeWithDifference(
 		book.source,
 		targetRange,
@@ -111,7 +97,7 @@ func (book Book) MoveEntry(from, to int) (Patch, error) {
 	return change, nil
 }
 
-func moveEntriesByIndex(source []byte, entries []EntryRef, from, to int) ([]byte, error) {
+func moveEntriesByIndex(source []byte, entries []EntryRef, from, to int) ([]byte, []ByteRange, error) {
 	byteRanges := make([]ByteRange, len(entries))
 	for index, entry := range entries {
 		byteRanges[index] = entry.sourceRange
@@ -125,16 +111,16 @@ func moveEntriesByIndex(source []byte, entries []EntryRef, from, to int) ([]byte
 		next := index + direction
 		change, err := swapByteRanges(current, byteRanges[index], byteRanges[next])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		current, err = change.ApplyToCueSource(current)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		newA, newB := rangesAfterSwap(byteRanges[index], byteRanges[next])
 		byteRanges[index], byteRanges[next] = newB, newA
 	}
-	return current, nil
+	return current, byteRanges, nil
 }
 
 func rangesAfterSwap(a, b ByteRange) (ByteRange, ByteRange) {

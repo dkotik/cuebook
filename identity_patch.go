@@ -243,50 +243,45 @@ func findEntryLocator(entries []EntryRef, source []byte, locator entryLocator) (
 	return found, nil
 }
 
+func entryLocatorIndices(entries []EntryRef, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool) (int, int, error) {
+	leftIndex, rightIndex := -1, -1
+	var err error
+	if hasLeft {
+		leftIndex, err = findEntryLocator(entries, source, left)
+		if err != nil {
+			return -1, -1, err
+		}
+	}
+	if hasRight {
+		rightIndex, err = findEntryLocator(entries, source, right)
+		if err != nil {
+			return -1, -1, err
+		}
+	}
+	return leftIndex, rightIndex, nil
+}
+
 func entryHasExpectedNeighbors(entries []EntryRef, source []byte, index int, left entryLocator, hasLeft bool, right entryLocator, hasRight bool) error {
 	if index < 0 || index >= len(entries) {
 		return ErrPatchTargetConflict
 	}
-	if hasLeft {
-		leftIndex, err := findEntryLocator(entries, source, left)
-		if err != nil {
-			return err
-		}
-		if leftIndex != index-1 {
-			return ErrPatchTargetConflict
-		}
-	} else if index != 0 {
+	leftIndex, rightIndex, err := entryLocatorIndices(entries, source, left, hasLeft, right, hasRight)
+	if err != nil {
+		return err
+	}
+	if (hasLeft && leftIndex != index-1) || (!hasLeft && index != 0) {
 		return ErrPatchTargetConflict
 	}
-	if hasRight {
-		rightIndex, err := findEntryLocator(entries, source, right)
-		if err != nil {
-			return err
-		}
-		if rightIndex != index+1 {
-			return ErrPatchTargetConflict
-		}
-	} else if index != len(entries)-1 {
+	if (hasRight && rightIndex != index+1) || (!hasRight && index != len(entries)-1) {
 		return ErrPatchTargetConflict
 	}
 	return nil
 }
 
-func locateEntryGap(book Book, entries []EntryRef, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool, emptyGap ByteAnchor) (int, error) {
-	leftIndex, rightIndex := -1, -1
-	if hasLeft {
-		var err error
-		leftIndex, err = findEntryLocator(entries, source, left)
-		if err != nil {
-			return 0, err
-		}
-	}
-	if hasRight {
-		var err error
-		rightIndex, err = findEntryLocator(entries, source, right)
-		if err != nil {
-			return 0, err
-		}
+func entryGapIndex(entries []EntryRef, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool) (int, error) {
+	leftIndex, rightIndex, err := entryLocatorIndices(entries, source, left, hasLeft, right, hasRight)
+	if err != nil {
+		return 0, err
 	}
 
 	switch {
@@ -294,36 +289,47 @@ func locateEntryGap(book Book, entries []EntryRef, source []byte, left entryLoca
 		if rightIndex != leftIndex+1 {
 			return 0, ErrPatchTargetConflict
 		}
-		leftRange, err := entries[leftIndex].originalSourceRange()
-		if err != nil {
-			return 0, err
-		}
-		return nextListDelimiter(source, leftRange.Tail)
+		return rightIndex, nil
 	case hasLeft:
 		if leftIndex != len(entries)-1 {
 			return 0, ErrPatchTargetConflict
 		}
-		leftRange, err := entries[leftIndex].originalSourceRange()
-		if err != nil {
-			return 0, err
-		}
-		return nextListDelimiter(source, leftRange.Tail)
+		return len(entries), nil
 	case hasRight:
 		if rightIndex != 0 {
 			return 0, ErrPatchTargetConflict
 		}
-		rightRange, err := entries[rightIndex].originalSourceRange()
-		if err != nil {
-			return 0, err
-		}
-		return previousListDelimiter(source, rightRange.Head)
+		return 0, nil
 	default:
 		if len(entries) != 0 {
 			return 0, ErrPatchTargetConflict
 		}
+		return 0, nil
+	}
+}
+
+func locateEntryGap(entries []EntryRef, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool, emptyGap ByteAnchor) (int, error) {
+	gapIndex, err := entryGapIndex(entries, source, left, hasLeft, right, hasRight)
+	if err != nil {
+		return 0, err
+	}
+	if len(entries) == 0 {
 		r, err := emptyGap.MatchUnique(source)
 		return r.Head, err
 	}
+
+	if gapIndex == 0 {
+		rightRange, err := entries[0].originalSourceRange()
+		if err != nil {
+			return 0, err
+		}
+		return previousListDelimiter(source, rightRange.Head)
+	}
+	leftRange, err := entries[gapIndex-1].originalSourceRange()
+	if err != nil {
+		return 0, err
+	}
+	return nextListDelimiter(source, leftRange.Tail)
 }
 
 func nextListDelimiter(source []byte, offset int) (int, error) {
@@ -408,7 +414,7 @@ func (p identifiedEntryDeletePatch) ApplyToCueSource(source []byte) ([]byte, err
 		return nil, err
 	}
 	if !found {
-		if _, err := locateEntryGap(book, entries, source, p.left, p.hasLeft, p.right, p.hasRight, p.emptyGap); err != nil {
+		if _, err := locateEntryGap(entries, source, p.left, p.hasLeft, p.right, p.hasRight, p.emptyGap); err != nil {
 			return nil, err
 		}
 		return source, nil
@@ -495,7 +501,7 @@ func (p identifiedEntryRestorePatch) ApplyToCueSource(source []byte) ([]byte, er
 		return source, nil
 	}
 
-	insertionPoint, err := locateEntryGap(book, entries, source, p.left, p.hasLeft, p.right, p.hasRight, p.emptyGap)
+	insertionPoint, err := locateEntryGap(entries, source, p.left, p.hasLeft, p.right, p.hasRight, p.emptyGap)
 	if err != nil {
 		return nil, err
 	}
@@ -608,46 +614,6 @@ func moveEntryInList(entries []EntryRef, from, to int) []EntryRef {
 	return result
 }
 
-func moveDestinationIndex(entries []EntryRef, source []byte, left entryLocator, hasLeft bool, right entryLocator, hasRight bool) (int, error) {
-	leftIndex, rightIndex := -1, -1
-	if hasLeft {
-		var err error
-		leftIndex, err = findEntryLocator(entries, source, left)
-		if err != nil {
-			return 0, err
-		}
-	}
-	if hasRight {
-		var err error
-		rightIndex, err = findEntryLocator(entries, source, right)
-		if err != nil {
-			return 0, err
-		}
-	}
-	switch {
-	case hasLeft && hasRight:
-		if rightIndex != leftIndex+1 {
-			return 0, ErrPatchTargetConflict
-		}
-		return rightIndex, nil
-	case hasLeft:
-		if leftIndex != len(entries)-1 {
-			return 0, ErrPatchTargetConflict
-		}
-		return len(entries), nil
-	case hasRight:
-		if rightIndex != 0 {
-			return 0, ErrPatchTargetConflict
-		}
-		return 0, nil
-	default:
-		if len(entries) != 0 {
-			return 0, ErrPatchTargetConflict
-		}
-		return 0, nil
-	}
-}
-
 func (p identifiedEntryMovePatch) ApplyToCueSource(source []byte) ([]byte, error) {
 	book, entries, err := entriesFromSource(source)
 	if err != nil {
@@ -678,11 +644,15 @@ func (p identifiedEntryMovePatch) ApplyToCueSource(source []byte) ([]byte, error
 
 	remaining := append([]EntryRef(nil), entries[:from]...)
 	remaining = append(remaining, entries[from+1:]...)
-	to, err := moveDestinationIndex(remaining, source, p.afterLeft, p.hasAfterLeft, p.afterRight, p.hasAfterRight)
+	to, err := entryGapIndex(remaining, source, p.afterLeft, p.hasAfterLeft, p.afterRight, p.hasAfterRight)
 	if err != nil {
 		return nil, err
 	}
-	return moveEntriesByIndex(source, entries, from, to)
+	updated, _, err := moveEntriesByIndex(source, entries, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
 }
 
 func (p identifiedEntryMovePatch) Difference() ByteAnchor {

@@ -139,75 +139,67 @@ func (book Book) patchContext(ref EntryRef) (entryPatchContext, error) {
 	}, nil
 }
 
-// AddField creates a patch that appends a field to the referenced entry.
-func (book Book) AddField(ref EntryRef, name string, kind FieldKind, value string) (Patch, error) {
+func (book Book) patchEntry(ref EntryRef, makePatch func(entryPatchContext) (Patch, error)) (Patch, error) {
 	entry, err := book.patchContext(ref)
 	if err != nil {
 		return nil, err
 	}
-	return entry.addField(name, kind, value)
+	return makePatch(entry)
+}
+
+// AddField creates a patch that appends a field to the referenced entry.
+func (book Book) AddField(ref EntryRef, name string, kind FieldKind, value string) (Patch, error) {
+	return book.patchEntry(ref, func(entry entryPatchContext) (Patch, error) {
+		return entry.addField(name, kind, value)
+	})
 }
 
 // UpdateFieldValue creates a patch that changes a field in the referenced entry.
 func (book Book) UpdateFieldValue(ref EntryRef, fieldName, value string) (Patch, error) {
-	entry, err := book.patchContext(ref)
-	if err != nil {
-		return nil, err
-	}
-	return entry.updateFieldValue(fieldName, value)
+	return book.patchEntry(ref, func(entry entryPatchContext) (Patch, error) {
+		return entry.updateFieldValue(fieldName, value)
+	})
 }
 
 // RemoveFieldValue creates a patch that omits a field from the referenced entry.
 func (book Book) RemoveFieldValue(ref EntryRef, fieldName string) (Patch, error) {
-	entry, err := book.patchContext(ref)
-	if err != nil {
-		return nil, err
-	}
-	return entry.removeFieldValue(fieldName)
+	return book.patchEntry(ref, func(entry entryPatchContext) (Patch, error) {
+		return entry.removeFieldValue(fieldName)
+	})
 }
 
 // MergeFieldValues creates a patch that merges values into the referenced entry.
 func (book Book) MergeFieldValues(ref EntryRef, values map[string]string) (Patch, error) {
-	entry, err := book.patchContext(ref)
-	if err != nil {
-		return nil, err
-	}
-	return entry.mergeFieldValues(values)
+	return book.patchEntry(ref, func(entry entryPatchContext) (Patch, error) {
+		return entry.mergeFieldValues(values)
+	})
 }
 
 // MergeFieldValuesAndRemove creates a patch that merges values and removes
 // fields in the referenced entry. Removal takes precedence for duplicate names.
 func (book Book) MergeFieldValuesAndRemove(ref EntryRef, values map[string]string, removals []string) (Patch, error) {
-	entry, err := book.patchContext(ref)
-	if err != nil {
-		return nil, err
-	}
-	return entry.mergeFieldValuesAndRemove(values, removals)
+	return book.patchEntry(ref, func(entry entryPatchContext) (Patch, error) {
+		return entry.mergeFieldValuesAndRemove(values, removals)
+	})
 }
 
 // ReplaceStructListEntry creates a patch that replaces the referenced entry's source.
 func (book Book) ReplaceStructListEntry(ref EntryRef, replacement []byte) (Patch, error) {
-	entry, err := book.patchContext(ref)
-	if err != nil {
-		return nil, err
-	}
-	return entry.replaceStructListEntry(replacement)
+	return book.patchEntry(ref, func(entry entryPatchContext) (Patch, error) {
+		return entry.replaceStructListEntry(replacement)
+	})
 }
 
 // DeleteFromStructList creates a patch that removes the referenced entry.
 func (book Book) DeleteFromStructList(ref EntryRef) (Patch, error) {
-	entry, err := book.patchContext(ref)
-	if err != nil {
-		return nil, err
-	}
-	return entry.deleteFromStructList()
+	return book.patchEntry(ref, func(entry entryPatchContext) (Patch, error) {
+		return entry.deleteFromStructList()
+	})
 }
 
 // SwapFields creates a patch exchanging two written fields in the referenced entry.
 func (book Book) SwapFields(ref EntryRef, a, b string) (Patch, error) {
-	entry, err := book.patchContext(ref)
-	if err != nil {
-		return nil, err
-	}
-	return entry.swapFields(a, b)
+	return book.patchEntry(ref, func(entry entryPatchContext) (Patch, error) {
+		return entry.swapFields(a, b)
+	})
 }

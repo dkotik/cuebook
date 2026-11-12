@@ -110,6 +110,31 @@ func entrySyntaxFromWrittenSource(entry cue.Value, written []byte) (*ast.StructL
 	return fields, nil
 }
 
+func (e entryPatchContext) writtenEntrySyntax() (ByteRange, *ast.StructLit, error) {
+	entryRange, err := e.originalSourceRange()
+	if err != nil {
+		return ByteRange{}, nil, err
+	}
+	fields, err := entrySyntaxFromWrittenSource(e.Value, e.source[entryRange.Head:entryRange.Tail])
+	if err != nil {
+		return ByteRange{}, nil, err
+	}
+	return entryRange, fields, nil
+}
+
+func (e entryPatchContext) patchWrittenEntrySyntax(entryRange ByteRange, fields *ast.StructLit) (Patch, error) {
+	content, err := format.Node(
+		fields,
+		format.Simplify(),
+		format.IndentPrefix(1),
+		format.UseSpaces(4),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return entryReplacementPatch(e, entryRange, content)
+}
+
 func restoreWrittenAttributes(exported, written *ast.StructLit) {
 	var declarations []ast.Decl
 	writtenFields := make(map[string]*ast.Field)
@@ -235,11 +260,7 @@ func (e entryPatchContext) updateFieldValue(fieldName, value string) (Patch, err
 		return nil, err
 	}
 
-	entryRange, err := e.originalSourceRange()
-	if err != nil {
-		return nil, err
-	}
-	fields, err := entrySyntaxFromWrittenSource(e.Value, e.source[entryRange.Head:entryRange.Tail])
+	entryRange, fields, err := e.writtenEntrySyntax()
 	if err != nil {
 		return nil, err
 	}
@@ -260,27 +281,14 @@ func (e entryPatchContext) updateFieldValue(fieldName, value string) (Patch, err
 	if !found {
 		fields.Elts = append(fields.Elts, replacement)
 	}
-	content, err := format.Node(
-		fields,
-		format.Simplify(),
-		format.IndentPrefix(1),
-		format.UseSpaces(4),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return entryReplacementPatch(e, entryRange, content)
+	return e.patchWrittenEntrySyntax(entryRange, fields)
 }
 
 func (e entryPatchContext) removeFieldValue(fieldName string) (Patch, error) {
 	if e.Value.IncompleteKind() != cue.StructKind {
 		return nil, ErrEntryNotStruct
 	}
-	entryRange, err := e.originalSourceRange()
-	if err != nil {
-		return nil, err
-	}
-	fields, err := entrySyntaxFromWrittenSource(e.Value, e.source[entryRange.Head:entryRange.Tail])
+	entryRange, fields, err := e.writtenEntrySyntax()
 	if err != nil {
 		return nil, err
 	}
@@ -303,16 +311,7 @@ func (e entryPatchContext) removeFieldValue(fieldName string) (Patch, error) {
 		return nil, ErrEntryIdentifierImmutable
 	}
 	fields.Elts = kept
-	content, err := format.Node(
-		fields,
-		format.Simplify(),
-		format.IndentPrefix(1),
-		format.UseSpaces(4),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return entryReplacementPatch(e, entryRange, content)
+	return e.patchWrittenEntrySyntax(entryRange, fields)
 }
 
 func (e entryPatchContext) mergeFieldValues(values map[string]string) (Patch, error) {
@@ -373,11 +372,7 @@ func (e entryPatchContext) mergeFieldValuesAndRemove(values map[string]string, r
 		formattedValues[label] = value
 	}
 
-	entryRange, err := e.originalSourceRange()
-	if err != nil {
-		return nil, err
-	}
-	fields, err := entrySyntaxFromWrittenSource(e.Value, e.source[entryRange.Head:entryRange.Tail])
+	entryRange, fields, err := e.writtenEntrySyntax()
 	if err != nil {
 		return nil, err
 	}
@@ -425,14 +420,5 @@ func (e entryPatchContext) mergeFieldValuesAndRemove(values map[string]string, r
 	if !changed {
 		return nothingPatch{}, nil
 	}
-	content, err := format.Node(
-		fields,
-		format.Simplify(),
-		format.IndentPrefix(1),
-		format.UseSpaces(4),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return entryReplacementPatch(e, entryRange, content)
+	return e.patchWrittenEntrySyntax(entryRange, fields)
 }
