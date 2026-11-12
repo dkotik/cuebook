@@ -102,6 +102,7 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 			entry := Entry{
 				Value:                   value,
 				FieldDefinitions:        d.Definitions,
+				identifierFieldName:     d.entryUniqueIdentifierFieldName,
 				source:                  d.source,
 				precedingSourceRange:    precedingRange,
 				hasPrecedingSourceRange: hasPrecedingRange,
@@ -137,6 +138,11 @@ func (d Book) EachEntry() iter.Seq2[Entry, error] {
 							entry.Title = metadata.ValueToString(fieldValue)
 						}
 						name := fields.Selector().Unquoted()
+						if name == d.entryUniqueIdentifierFieldName && fieldValue.IsConcrete() && fieldValue.Kind() == cue.StringKind {
+							if identifier, identifierErr := fieldValue.String(); identifierErr == nil && identifier != "" {
+								entry.UUID = identifier
+							}
+						}
 						_, isDefinition := fieldOrder[name]
 						if !isDefinition || metadata.IsDetailField(fieldValue) {
 							entry.Details = append(entry.Details, NewField(name, fieldValue))

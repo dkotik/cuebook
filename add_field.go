@@ -85,7 +85,7 @@ func (e Entry) AddField(name string, kind FieldKind, value string) (Patch, error
 	if err != nil {
 		return nil, err
 	}
-	return replaceByteRange(e.source, entryRange, replacement)
+	return entryReplacementPatch(e, entryRange, replacement)
 }
 
 func addFieldAtRange(source []byte, entryRange ByteRange, name string, kind FieldKind, field *ast.Field) ([]byte, error) {

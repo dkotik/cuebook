@@ -83,6 +83,8 @@ const (
 	ErrPatchTargetConflict
 	// ErrPatchTargetAmbiguous occurs when source context identifies multiple patch targets.
 	ErrPatchTargetAmbiguous
+	// ErrEntryIdentifierImmutable occurs when an ordinary patch would change an entry identifier.
+	ErrEntryIdentifierImmutable
 )
 
 // Localizable represents errors that can return localized messages.
@@ -120,6 +122,8 @@ func (e PatchError) Error() string {
 		return "patch target does not match its expected state"
 	case ErrPatchTargetAmbiguous:
 		return "patch target is ambiguous"
+	case ErrEntryIdentifierImmutable:
+		return "entry identifier is immutable"
 	default:
 		return fmt.Sprintf("unknown patch error code #%d", e)
 	}
@@ -156,6 +160,8 @@ func (e PatchError) LocalizeWith(localizer *i18n.Localizer) (string, error) {
 		message = i18n.Message{ID: "patch.targetConflict", Other: "patch target does not match its expected state"}
 	case ErrPatchTargetAmbiguous:
 		message = i18n.Message{ID: "patch.targetAmbiguous", Other: "patch target is ambiguous"}
+	case ErrEntryIdentifierImmutable:
+		message = i18n.Message{ID: "patch.entryIdentifierImmutable", Other: "entry identifier is immutable"}
 	default:
 		message = i18n.Message{ID: "patch.unknownError", Other: "unknown patch error code #{{.Code}}"}
 	}

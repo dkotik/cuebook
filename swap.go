@@ -13,6 +13,11 @@ func (book Book) SwapEntries(a, b Entry) (Patch, error) {
 	if book.Value.Kind() != cue.ListKind {
 		return nil, ErrSourceIsNotList
 	}
+	aIdentity, aIdentified := a.entryIdentity()
+	bIdentity, bIdentified := b.entryIdentity()
+	if aIdentified && bIdentified {
+		return newIdentifiedEntrySwapPatch(book, aIdentity, bIdentity)
+	}
 	aRange, err := a.sourceAnchor.MatchUnique(book.source)
 	if err != nil {
 		return nil, err
@@ -43,6 +48,13 @@ func (book Book) MoveEntry(from, to int) (Patch, error) {
 	}
 	if from == to {
 		return nothingPatch{A: originalEntry.sourceAnchor, B: originalEntry.sourceAnchor}, nil
+	}
+	if _, identified := originalEntry.entryIdentity(); identified {
+		parsedBook, entries, err := entriesFromSource(book.source)
+		if err != nil {
+			return nil, err
+		}
+		return newIdentifiedEntryMovePatch(parsedBook, entries, from, to)
 	}
 
 	entries := make([]ByteRange, 0, length)
@@ -93,6 +105,32 @@ func (book Book) MoveEntry(from, to int) (Patch, error) {
 	return change, nil
 }
 
+func moveEntriesByIndex(source []byte, entries []Entry, from, to int) ([]byte, error) {
+	byteRanges := make([]ByteRange, len(entries))
+	for index, entry := range entries {
+		byteRanges[index] = entry.sourceRange
+	}
+	current := bytes.Clone(source)
+	direction := 1
+	if from > to {
+		direction = -1
+	}
+	for index := from; index != to; index += direction {
+		next := index + direction
+		change, err := swapByteRanges(current, byteRanges[index], byteRanges[next])
+		if err != nil {
+			return nil, err
+		}
+		current, err = change.ApplyToCueSource(current)
+		if err != nil {
+			return nil, err
+		}
+		newA, newB := rangesAfterSwap(byteRanges[index], byteRanges[next])
+		byteRanges[index], byteRanges[next] = newB, newA
+	}
+	return current, nil
+}
+
 func rangesAfterSwap(a, b ByteRange) (ByteRange, ByteRange) {
 	aWasEarlier := a.Head < b.Head
 	earlier, later := a, b
@@ -121,7 +159,14 @@ func (e Entry) SwapFields(a, b string) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
-	return swapFieldsAtRange(e.source, entryRange, a, b)
+	patch, err := swapFieldsAtRange(e.source, entryRange, a, b)
+	if err != nil {
+		return nil, err
+	}
+	if e.identifierFieldName != "" && a != b && (a == e.identifierFieldName || b == e.identifierFieldName) {
+		return nil, ErrEntryIdentifierImmutable
+	}
+	return identifyEntryPatch(e, patch)
 }
 
 // swapFieldsAtRange exchanges two written field declarations, including their

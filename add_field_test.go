@@ -1,6 +1,7 @@
 package cuebook
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 )
@@ -158,6 +159,92 @@ func TestAddField(t *testing.T) {
 				t.Fatalf("invalid result: %v", err)
 			}
 			t.Run("reverse", ensureInversible(source, change))
+		})
+	}
+}
+
+func TestAddFieldLatchesToUUIDEntry(t *testing.T) {
+	const schema = `#entry: {ID: string @cuebook(uuid), Name: string, ...}
+`
+	originalSource := []byte(schema + `[...#entry] & [{ID: "first", Name: "Same"}, {ID: "target", Name: "Same"}]`)
+	book, err := New(originalSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := book.GetEntry(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch, err := entry.AddField("Role", FieldKindString, "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := patch.(identifiedEntryReplacePatch); !ok {
+		t.Fatalf("AddField() returned %T, want identifiedEntryReplacePatch", patch)
+	}
+
+	freshSource := []byte("// unrelated source edit\n" + schema +
+		`[...#entry] & [{ID: "first", Name: "Same"}, {ID: "other", Name: "Other"}, {ID: "target", Name: "Same"}]`)
+	updated, err := patch.ApplyToCueSource(freshSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatedBook, err := New(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatedEntry, err := updatedBook.GetEntry(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if field, ok := updatedEntry.GetFieldByName("Role"); !ok || field.String() != "dev" {
+		t.Fatalf("updated Role field = (%q, %t), want (dev, true)", field.String(), ok)
+	}
+	firstEntry, err := updatedBook.GetEntry(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := firstEntry.GetFieldByName("Role"); ok {
+		t.Fatal("entry with a different UUID was modified")
+	}
+
+	retried, err := patch.ApplyToCueSource(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(retried, updated) {
+		t.Fatalf("retry changed source:\n%s\nwant unchanged:\n%s", retried, updated)
+	}
+	restored, err := patch.Invert().ApplyToCueSource(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(restored, freshSource) {
+		t.Fatalf("inverse did not restore source:\n%s\nwant:\n%s", restored, freshSource)
+	}
+
+	tests := []struct {
+		name   string
+		source []byte
+		want   error
+	}{
+		{
+			name:   "missing UUID",
+			source: []byte(schema + `[...#entry] & [{ID: "first", Name: "Same"}]`),
+			want:   ErrPatchTargetConflict,
+		},
+		{
+			name:   "duplicate UUID",
+			source: []byte(schema + `[...#entry] & [{ID: "target", Name: "One"}, {ID: "target", Name: "Two"}]`),
+			want:   ErrPatchTargetAmbiguous,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if _, err := patch.ApplyToCueSource(tt.source); !errors.Is(err, tt.want) {
+				t.Fatalf("ApplyToCueSource() error = %v, want %v", err, tt.want)
+			}
 		})
 	}
 }

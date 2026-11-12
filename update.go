@@ -7,6 +7,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
+	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/format"
 	"cuelang.org/go/cue/literal"
 	"cuelang.org/go/cue/parser"
@@ -154,7 +155,40 @@ func (e Entry) ReplaceStructListEntry(replacement []byte) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
-	return replaceByteRange(e.source, r, bytes.Clone(replacement))
+	if e.identifierFieldName != "" {
+		if err := validateIdentifierReplacement(e, replacement); err != nil {
+			return nil, err
+		}
+	}
+	return entryReplacementPatch(e, r, bytes.Clone(replacement))
+}
+
+func validateIdentifierReplacement(entry Entry, replacement []byte) error {
+	path := cue.MakePath(cue.Str(entry.identifierFieldName))
+	before, beforePresent, err := stringFieldState(entry.Value.LookupPath(path))
+	if err != nil {
+		return ErrEntryIdentifierImmutable
+	}
+	replacementValue := cuecontext.New().CompileBytes(replacement)
+	if err := replacementValue.Err(); err != nil {
+		return err
+	}
+	after, afterPresent, err := stringFieldState(replacementValue.LookupPath(path))
+	if err != nil || beforePresent != afterPresent || before != after {
+		return ErrEntryIdentifierImmutable
+	}
+	return nil
+}
+
+func stringFieldState(value cue.Value) (string, bool, error) {
+	if !value.Exists() {
+		return "", false, nil
+	}
+	if !value.IsConcrete() || value.Kind() != cue.StringKind {
+		return "", true, ErrEntryIdentifierImmutable
+	}
+	text, err := value.String()
+	return text, true, err
 }
 
 func replaceByteRange(source []byte, r ByteRange, replacement []byte) (Patch, error) {
@@ -188,6 +222,11 @@ func (e Entry) UpdateFieldValue(fieldName, value string) (Patch, error) {
 	field, exists := e.GetFieldByName(fieldName)
 	if !exists {
 		return nil, ErrTargetFieldNotStructField
+	}
+	if fieldName == e.identifierFieldName && e.identifierFieldName != "" {
+		if err := e.validateIdentifierValues(map[string]string{fieldName: value}); err != nil {
+			return nil, err
+		}
 	}
 	search, ok := field.Value.Label()
 	if !ok {
@@ -232,7 +271,7 @@ func (e Entry) UpdateFieldValue(fieldName, value string) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
-	return replaceByteRange(e.source, entryRange, content)
+	return entryReplacementPatch(e, entryRange, content)
 }
 
 // RemoveFieldValue creates a patch that omits a field from this entry's
@@ -265,6 +304,9 @@ func (e Entry) RemoveFieldValue(fieldName string) (Patch, error) {
 	if !found {
 		return nothingPatch{}, nil
 	}
+	if fieldName == e.identifierFieldName && e.identifierFieldName != "" {
+		return nil, ErrEntryIdentifierImmutable
+	}
 	fields.Elts = kept
 	content, err := format.Node(
 		fields,
@@ -275,17 +317,30 @@ func (e Entry) RemoveFieldValue(fieldName string) (Patch, error) {
 	if err != nil {
 		return nil, err
 	}
-	return replaceByteRange(e.source, entryRange, content)
+	return entryReplacementPatch(e, entryRange, content)
 }
 
 // MergeFieldValues creates a patch that merges field values into this entry.
 func (e Entry) MergeFieldValues(values map[string]string) (Patch, error) {
-	return e.MergeFieldValuesAndRemove(values, nil)
+	if err := e.validateIdentifierValues(values); err != nil {
+		return nil, err
+	}
+	patch, err := e.MergeFieldValuesAndRemove(values, nil)
+	if err != nil {
+		return nil, err
+	}
+	return identifyEntryPatch(e, patch)
 }
 
 // MergeFieldValuesAndRemove merges field values and removes named fields in one
 // entry rewrite. Removal takes precedence if a field appears in both arguments.
 func (e Entry) MergeFieldValuesAndRemove(values map[string]string, removals []string) (Patch, error) {
+	if err := e.validateIdentifierValues(values); err != nil {
+		return nil, err
+	}
+	if err := e.validateIdentifierRemovals(removals); err != nil {
+		return nil, err
+	}
 	if e.Value.IncompleteKind() != cue.StructKind {
 		return nil, ErrEntryNotStruct
 	}
@@ -387,5 +442,5 @@ func (e Entry) MergeFieldValuesAndRemove(values map[string]string, removals []st
 	if err != nil {
 		return nil, err
 	}
-	return replaceByteRange(e.source, entryRange, content)
+	return entryReplacementPatch(e, entryRange, content)
 }

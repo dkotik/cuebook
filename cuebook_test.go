@@ -152,6 +152,59 @@ func TestNewConfiguresEntryUniqueIdentifier(t *testing.T) {
 	}
 }
 
+func TestEachEntryPopulatesUUIDOnlyFromPresentNonEmptyStringField(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   string
+		wantUUID string
+	}{
+		{
+			name: "present non-empty identifier",
+			source: `#entry: {ID?: string @cuebook(uuid), Name: string}
+			[...#entry] & [{ID: "identifier", Name: "Ada"}]`,
+			wantUUID: "identifier",
+		},
+		{
+			name: "missing optional identifier",
+			source: `#entry: {ID?: string @cuebook(uuid), Name: string}
+			[...#entry] & [{Name: "Ada"}]`,
+		},
+		{
+			name: "empty identifier",
+			source: `#entry: {ID?: string @cuebook(uuid), Name: string}
+			[...#entry] & [{ID: "", Name: "Ada"}]`,
+		},
+		{
+			name: "non-string identifier field",
+			source: `#entry: {ID?: int @cuebook(uuid), Name: string}
+			[...#entry] & [{ID: 42, Name: "Ada"}]`,
+		},
+		{
+			name: "field without UUID attribute",
+			source: `#entry: {ID: string, Name: string}
+			[...#entry] & [{ID: "identifier", Name: "Ada"}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			book, err := New([]byte(tt.source))
+			if err != nil {
+				t.Fatal(err)
+			}
+			entry, err := book.GetEntry(0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if entry.UUID != tt.wantUUID {
+				t.Errorf("Entry.UUID = %q, want %q", entry.UUID, tt.wantUUID)
+			}
+		})
+	}
+}
+
 func TestEachEntryOrdersFieldsByBookFields(t *testing.T) {
 	tests := []struct {
 		name        string

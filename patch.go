@@ -71,12 +71,31 @@ func (r Result) BottomChangeIndex(since Result) (int, error) {
 // difference anchor. For insertions and deletions, that anchor may include
 // surrounding bytes; an entry contained by the matched range is returned.
 func (r Result) Match(difference []byte) (entry Entry, ok bool) {
-	if r.LastChange == nil || len(difference) == 0 {
+	if r.LastChange == nil {
+		return entry, false
+	}
+
+	lastDifference := r.LastChange.Difference()
+	if identified, ok := r.LastChange.(interface {
+		patchTargetIdentity() (entryIdentity, bool)
+	}); ok {
+		if identity, hasIdentity := identified.patchTargetIdentity(); hasIdentity {
+			if !bytes.Equal(lastDifference.Content, difference) {
+				return entry, false
+			}
+			for current, err := range r.Document.EachEntry() {
+				if err == nil && current.identifierFieldName == identity.fieldName && current.UUID == identity.value {
+					return current, true
+				}
+			}
+			return entry, false
+		}
+	}
+	if len(difference) == 0 {
 		return entry, false
 	}
 
 	anchor := ByteAnchor{Content: difference}
-	lastDifference := r.LastChange.Difference()
 	if bytes.Equal(lastDifference.Content, difference) {
 		anchor = lastDifference
 	}
@@ -179,4 +198,14 @@ func (p validatedPatch) ApplyToCueSource(source []byte) ([]byte, error) {
 
 func (p validatedPatch) Invert() Patch {
 	return validatedPatch{Patch: p.Patch.Invert()}
+}
+
+func (p validatedPatch) patchTargetIdentity() (entryIdentity, bool) {
+	identified, ok := p.Patch.(interface {
+		patchTargetIdentity() (entryIdentity, bool)
+	})
+	if !ok {
+		return entryIdentity{}, false
+	}
+	return identified.patchTargetIdentity()
 }
