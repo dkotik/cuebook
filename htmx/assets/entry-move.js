@@ -49,15 +49,39 @@
     draggedCard = null;
   }
 
-  async function submitMove(sourceCard, values) {
+  function moveRequest(sourceCard, changes = {}) {
+    const values = { file: sourceCard.dataset.file };
+    const uuid = sourceCard.dataset.entryUuid;
+    const path = uuid ? "/move/uuid" : "/move";
+    if (uuid) {
+      values.from_uuid = uuid;
+    } else {
+      values.from = sourceCard.dataset.entryIndex;
+    }
+    return { url: `${routePrefix}${path}`, values: { ...values, ...changes } };
+  }
+
+  function archiveRequest(sourceCard) {
+    const values = { file: sourceCard.dataset.file };
+    const uuid = sourceCard.dataset.entryUuid;
+    const path = uuid ? "/archive/uuid" : "/archive";
+    if (uuid) {
+      values.uuid = uuid;
+    } else {
+      values.entry = sourceCard.dataset.entryIndex;
+    }
+    return { url: `${routePrefix}${path}`, values };
+  }
+
+  async function submitMove(sourceCard, request) {
     pending = true;
     document.getElementById("workspace")?.setAttribute("aria-busy", "true");
     clearDropIndicators();
     try {
-      await window.htmx.ajax("POST", `${routePrefix}/move`, {
+      await window.htmx.ajax("POST", request.url, {
         target: "#workspace",
         swap: "outerHTML",
-        values,
+        values: request.values,
       });
     } catch (_) {
       window.location.reload();
@@ -69,15 +93,15 @@
     }
   }
 
-  async function submitArchive(sourceCard, values) {
+  async function submitArchive(sourceCard, request) {
     pending = true;
     document.getElementById("workspace")?.setAttribute("aria-busy", "true");
     clearDropIndicators();
     try {
-      await window.htmx.ajax("POST", `${routePrefix}/archive`, {
+      await window.htmx.ajax("POST", request.url, {
         target: "#workspace",
         swap: "outerHTML",
-        values,
+        values: request.values,
       });
     } catch (_) {
       window.location.reload();
@@ -166,16 +190,13 @@
     const targetArchive = archiveTargetFromEvent(event);
     if (targetArchive) {
       if (sourceCard.dataset.canArchive === "true") {
-        const values = {
-          file: sourceCard.dataset.file,
-          entry: sourceCard.dataset.entryIndex,
-        };
+        const request = archiveRequest(sourceCard);
         document.dispatchEvent(new CustomEvent("cuebook:archive-confirmation-request", {
           cancelable: true,
           detail: {
             sourceCard,
             archiveTarget: targetArchive,
-            confirm: () => submitArchive(sourceCard, values),
+            confirm: () => submitArchive(sourceCard, request),
           },
         }));
       }
@@ -187,21 +208,17 @@
     if (targetFileLink) {
       const destination = targetFileLink.dataset.file;
       if (destination && destination !== sourceCard.dataset.file) {
-        const values = {
-          file: sourceCard.dataset.file,
-          from: sourceCard.dataset.entryIndex,
-          destination,
-        };
+        const move = moveRequest(sourceCard, { destination });
         const request = new CustomEvent("cuebook:move-confirmation-request", {
           cancelable: true,
           detail: {
             sourceCard,
             destinationLink: targetFileLink,
-            confirm: () => submitMove(sourceCard, values),
+            confirm: () => submitMove(sourceCard, move),
           },
         });
         if (document.dispatchEvent(request)) {
-          await submitMove(sourceCard, values);
+          await submitMove(sourceCard, move);
         }
       } else {
         clearDragState();
@@ -238,11 +255,7 @@
       return;
     }
 
-    await submitMove(sourceCard, {
-      file: sourceCard.dataset.file,
-      from: String(from),
-      to: String(to),
-    });
+    await submitMove(sourceCard, moveRequest(sourceCard, { to: String(to) }));
   });
 
   document.addEventListener("dragend", () => {

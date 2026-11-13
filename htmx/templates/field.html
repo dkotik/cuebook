@@ -17,7 +17,7 @@
       </span>
       {{end}}
     {{else if and .EntryView .Boolean (not .Secret)}}
-      <form class="boolean-field-form" action="{{route "/edit"}}" method="post" hx-post="{{route "/edit"}}" hx-trigger="change" hx-target="#workspace" hx-swap="outerHTML">
+      <form class="boolean-field-form" action="{{if .UUID}}{{route "/edit/uuid"}}{{else}}{{route "/edit"}}{{end}}" method="post" hx-post="{{if .UUID}}{{route "/edit/uuid"}}{{else}}{{route "/edit"}}{{end}}" hx-trigger="change" hx-target="#workspace" hx-swap="outerHTML">
         {{template "field-form-controls.html" .}}
         <boolean-toggle data-optional="{{.Optional}}" expanded="true">
           <input type="hidden" name="value" value="{{.Value}}">

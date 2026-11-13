@@ -56,7 +56,7 @@
 
   document.addEventListener("submit", (event) => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || !form.matches('form[action$="/archive"], form[hx-post$="/archive"]')) {
+    if (!(form instanceof HTMLFormElement) || !form.matches('form[action$="/archive"], form[action$="/archive/uuid"], form[hx-post$="/archive"], form[hx-post$="/archive/uuid"]')) {
       return;
     }
     if (form.dataset.confirmed === "true") {

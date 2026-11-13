@@ -110,7 +110,7 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 	if err := a.appendEntry(ctx, fileName, raw, entry); err != nil {
 		return addResponse{}, err
 	}
-	addedEntry, err := a.loadEntryPage(fileName, cuebook.ByteRange{}, entryIndex)
+	addedEntry, err := a.loadEntryPageByIndex(fileName, entryIndex)
 	if err != nil {
 		return addResponse{}, ErrEntrySavedButDisplayFailed
 	}

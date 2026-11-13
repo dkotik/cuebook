@@ -25,9 +25,17 @@ type editFormRequest struct {
 	View  string `schema:"view"`
 }
 
-func (*editFormRequest) Validate(context.Context) error {
-	return nil
+func (*editFormRequest) Validate(context.Context) error { return nil }
+
+type editUUIDFormRequest struct {
+	File  string `schema:"file"`
+	UUID  string `schema:"uuid"`
+	Field string `schema:"field"`
+	Mode  string `schema:"mode"`
+	View  string `schema:"view"`
 }
+
+func (*editUUIDFormRequest) Validate(context.Context) error { return nil }
 
 type editFormResponse struct {
 	fieldView
@@ -38,41 +46,52 @@ func (a *handler) editForm(_ context.Context, request *editFormRequest) (editFor
 	if a.files == nil {
 		return editFormResponse{}, ErrSourceReadOnly
 	}
-
-	fileNames, err := a.fileNames()
-	if err != nil {
-		return editFormResponse{}, ErrUnableToListCueFiles
-	}
-	_, document, err := a.readDocument(request.File, fileNames)
+	_, _, document, err := a.loadEntryDocument(request.File)
 	if err != nil {
 		return editFormResponse{}, err
 	}
-
 	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil {
 		return editFormResponse{}, ErrInvalidEntryIndex
 	}
-	if entryIndex < 0 {
+	return a.editFormAtIndex(request.File, document, entryIndex, request.Field, request.Mode, request.View)
+}
+
+func (a *handler) editFormUUID(_ context.Context, request *editUUIDFormRequest) (editFormResponse, error) {
+	if a.files == nil {
+		return editFormResponse{}, ErrSourceReadOnly
+	}
+	_, _, document, err := a.loadEntryDocument(request.File)
+	if err != nil {
+		return editFormResponse{}, err
+	}
+	entryIndex, err := entryIndexByUUID(document, request.UUID)
+	if errors.Is(err, cuebook.ErrBookEntryNotFound) {
 		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
 	}
+	if err != nil {
+		return editFormResponse{}, err
+	}
+	return a.editFormAtIndex(request.File, document, entryIndex, request.Field, request.Mode, request.View)
+}
+
+func (a *handler) editFormAtIndex(fileName string, document cuebook.Book, entryIndex int, fieldName, mode, view string) (editFormResponse, error) {
 	entry, err := document.GetEntryByIndex(entryIndex)
 	if err != nil {
-		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
+		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
-	entryValue := entry.Value
-	field, ok := entry.GetFieldByName(request.Field)
-	if !ok || request.Field == "" {
-		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
+	field, ok := entry.GetFieldByName(fieldName)
+	if !ok || fieldName == "" {
+		return editFormResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
 
-	view := makeFieldView(field, request.File, entryIndex, false, request.View == "entry")
-	view.Optional = entryFieldOptional(entryValue, field.Name)
+	fieldData := makeFieldView(field, fileName, entryIndex, false, view == "entry", entry.UUID)
+	fieldData.Optional = entryFieldOptional(entry.Value, field.Name)
 	templateName := "field-form"
-	if request.Mode == "view" {
+	if mode == "view" {
 		templateName = "field"
 	}
-	response := editFormResponse{fieldView: view, templateName: templateName}
-	return response, nil
+	return editFormResponse{fieldView: fieldData, templateName: templateName}, nil
 }
 
 type editRequest struct {
@@ -84,6 +103,22 @@ type editRequest struct {
 }
 
 func (*editRequest) Validate(context.Context) error { return nil }
+
+type editUUIDRequest struct {
+	File  string  `schema:"file"`
+	UUID  string  `schema:"uuid"`
+	Field string  `schema:"field"`
+	Value *string `schema:"value"`
+	View  string  `schema:"view"`
+}
+
+func (*editUUIDRequest) Validate(context.Context) error { return nil }
+
+type editInput struct {
+	Field string
+	Value *string
+	View  string
+}
 
 type editResponse struct {
 	pageData
@@ -102,29 +137,61 @@ func (response editErrorResponse) GetFlashMessage() (string, bool) {
 	return response.Error, response.Error == ""
 }
 
-func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {
-	if a.files == nil {
-		return editResponse{}, ErrSourceReadOnly
-	}
-	if request.Value == nil {
-		return editResponse{}, ErrInvalidEditRequest
-	}
-	value := *request.Value
+type entryPageRenderer func() (entryResponse, error)
 
-	fileName := request.File
-	fileNames, err := a.fileNames()
-	if err != nil {
-		return editResponse{}, ErrUnableToListCueFiles
-	}
-	raw, document, err := a.readDocument(fileName, fileNames)
+func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse, error) {
+	raw, document, err := a.loadEditableDocument(request.File, request.Value)
 	if err != nil {
 		return editResponse{}, err
 	}
-
 	entryIndex, err := strconv.Atoi(request.Entry)
 	if err != nil {
 		return editResponse{}, ErrInvalidEntryIndex
 	}
+	renderEntry := func() (entryResponse, error) {
+		return a.loadEntryPageByIndex(request.File, entryIndex)
+	}
+	return a.editAt(ctx, request.File, document, raw, entryIndex, editInput{
+		Field: request.Field,
+		Value: request.Value,
+		View:  request.View,
+	}, renderEntry)
+}
+
+func (a *handler) editUUID(ctx context.Context, request *editUUIDRequest) (editResponse, error) {
+	raw, document, err := a.loadEditableDocument(request.File, request.Value)
+	if err != nil {
+		return editResponse{}, err
+	}
+	entryIndex, err := entryIndexByUUID(document, request.UUID)
+	if errors.Is(err, cuebook.ErrBookEntryNotFound) {
+		return editResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
+	}
+	if err != nil {
+		return editResponse{}, err
+	}
+	renderEntry := func() (entryResponse, error) {
+		return a.loadEntryPageByUUID(request.File, request.UUID)
+	}
+	return a.editAt(ctx, request.File, document, raw, entryIndex, editInput{
+		Field: request.Field,
+		Value: request.Value,
+		View:  request.View,
+	}, renderEntry)
+}
+
+func (a *handler) loadEditableDocument(fileName string, value *string) ([]byte, cuebook.Book, error) {
+	if a.files == nil {
+		return nil, cuebook.Book{}, ErrSourceReadOnly
+	}
+	if value == nil {
+		return nil, cuebook.Book{}, ErrInvalidEditRequest
+	}
+	_, raw, document, err := a.loadEntryDocument(fileName)
+	return raw, document, err
+}
+
+func (a *handler) editAt(ctx context.Context, fileName string, document cuebook.Book, raw []byte, entryIndex int, request editInput, renderEntry entryPageRenderer) (editResponse, error) {
 	if entryIndex < 0 {
 		return editResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
@@ -142,10 +209,11 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 	if metadata.IsLockedField(field.Value) {
 		return editResponse{}, FieldError{Code: ErrFieldLocked, Field: fieldName}
 	}
-	if isSecretField(field.Value) && value == "" && field.String() != "" {
-		return a.renderEditResponse(request, entryIndex)
+	if isSecretField(field.Value) && *request.Value == "" && field.String() != "" {
+		return a.renderEditResult(fileName, request.View, renderEntry)
 	}
 
+	value := *request.Value
 	unset := value == "not_set" && field.Value.IncompleteKind() == cue.BoolKind && !isSecretField(field.Value)
 	var change cuebook.Patch
 	if unset {
@@ -161,14 +229,12 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 		return editResponse{}, CauseError{Code: ErrDocumentChangedBeforeEdit, Cause: err}
 	}
 	if unset {
-		// Inspect the field after omission: a populated optional field has a regular
-		// selector, and a required field with a default may still validate.
 		omitted := cuecontext.New().CompileBytes(candidate).LookupPath(cue.MakePath(cue.Index(entryIndex)))
 		if !optionalField(omitted, fieldName) {
 			return editResponse{}, FieldError{Code: ErrRequiredBooleanFieldUnset, Field: fieldName}
 		}
 		if !entryValue.LookupPath(cue.MakePath(cue.Str(fieldName))).Exists() {
-			return a.renderEditResponse(request, entryIndex)
+			return a.renderEditResult(fileName, request.View, renderEntry)
 		}
 	}
 	if _, err = cuebook.New(candidate); err != nil {
@@ -177,12 +243,12 @@ func (a *handler) edit(ctx context.Context, request *editRequest) (editResponse,
 	if err = a.commitFile(ctx, fileName, change); err != nil {
 		return editResponse{}, err
 	}
-	return a.renderEditResponse(request, entryIndex)
+	return a.renderEditResult(fileName, request.View, renderEntry)
 }
 
-func (a *handler) renderEditResponse(request *editRequest, entryIndex int) (editResponse, error) {
-	if request.View == "entry" {
-		entry, err := a.loadEntryPage(request.File, cuebook.ByteRange{}, entryIndex)
+func (a *handler) renderEditResult(fileName, view string, renderEntry entryPageRenderer) (editResponse, error) {
+	if view == "entry" {
+		entry, err := renderEntry()
 		if err != nil {
 			return editResponse{}, err
 		}
@@ -191,7 +257,7 @@ func (a *handler) renderEditResponse(request *editRequest, entryIndex int) (edit
 			destination: routeWithPrefix(a.routePrefix, entry.EntryURL),
 		}, nil
 	}
-	data, err := a.renderEditedFile(request.File)
+	data, err := a.renderEditedFile(fileName)
 	return editResponse{pageData: data}, err
 }
 
@@ -265,14 +331,19 @@ type fieldView struct {
 	ReadOnly     bool
 	Editing      bool
 	EntryView    bool
+	UUID         string
 	ShowEditIcon bool
 	HideLabel    bool
 	Markdown     template.HTML
 }
 
-func fieldEditURL(fileName string, entryIndex int, fieldName string, view, entryView bool) string {
+func fieldEditURL(fileName string, entryIndex int, uuid, fieldName string, view, entryView bool) string {
 	query := url.Values{}
-	query.Set("entry", strconv.Itoa(entryIndex))
+	if uuid == "" {
+		query.Set("entry", strconv.Itoa(entryIndex))
+	} else {
+		query.Set("uuid", uuid)
+	}
 	query.Set("field", fieldName)
 	query.Set("file", fileName)
 	if view {
@@ -281,7 +352,11 @@ func fieldEditURL(fileName string, entryIndex int, fieldName string, view, entry
 	if entryView {
 		query.Set("view", "entry")
 	}
-	return "/edit?" + query.Encode()
+	editPath := "/edit"
+	if uuid != "" {
+		editPath += "/uuid"
+	}
+	return editPath + "?" + query.Encode()
 }
 
 // optionalFieldValue inspects declarations because CUE value paths do not retain
@@ -301,7 +376,11 @@ func optionalFieldValue(value cue.Value) bool {
 	return false
 }
 
-func makeFieldView(field cuebook.Field, fileName string, index int, readOnly, entryView bool) fieldView {
+func makeFieldView(field cuebook.Field, fileName string, index int, readOnly, entryView bool, entryUUID ...string) fieldView {
+	uuid := ""
+	if len(entryUUID) > 0 {
+		uuid = entryUUID[0]
+	}
 	_, secret := metadata.GetFieldAttributes(field.Value, "cuebook").GetFirstOf("argon2id")
 	booleanOnly := field.Value.IncompleteKind() == cue.BoolKind
 	value := field.String()
@@ -328,12 +407,13 @@ func makeFieldView(field cuebook.Field, fileName string, index int, readOnly, en
 	return fieldView{
 		File:         fileName,
 		Index:        index,
+		UUID:         uuid,
 		Name:         field.Name,
 		Description:  field.Description,
 		Value:        value,
 		Empty:        empty,
-		EditURL:      fieldEditURL(fileName, index, field.Name, false, entryView),
-		ViewURL:      fieldEditURL(fileName, index, field.Name, true, entryView),
+		EditURL:      fieldEditURL(fileName, index, uuid, field.Name, false, entryView),
+		ViewURL:      fieldEditURL(fileName, index, uuid, field.Name, true, entryView),
 		EntryView:    entryView,
 		MultiLine:    metadata.IsMultiLine(field.Value),
 		Boolean:      booleanOnly,

@@ -57,6 +57,7 @@ type fileBreadcrumbItem struct {
 
 type entryView struct {
 	Index          int
+	UUID           string
 	File           string
 	FileURL        string
 	EntryURL       string
@@ -191,9 +192,10 @@ func makeEntryViews(document cuebook.Book, fileName string, readOnly bool) ([]en
 func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange cuebook.ByteRange, readOnly, includeTitleField bool) entryView {
 	view := entryView{
 		Index:       index,
+		UUID:        entry.UUID,
 		File:        fileName,
 		FileURL:     fileURL(fileName),
-		EntryURL:    entryURL(fileName, entryRange),
+		EntryURL:    entryURLForEntry(fileName, entryRange, entry.UUID),
 		Title:       entry.Title,
 		CanMove:     !readOnly,
 		CanArchive:  !readOnly && !strings.HasPrefix(fileName, archiveDirectory),
@@ -215,7 +217,7 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 		if !includeTitleField && (metadata.IsTitleField(field.Value) || (!hasTitleField && fieldIndex == 0 && entry.Title != "")) {
 			continue
 		}
-		fieldView := makeFieldView(field, fileName, index, readOnly, includeTitleField)
+		fieldView := makeFieldView(field, fileName, index, readOnly, includeTitleField, entry.UUID)
 		fieldView.Optional = entryFieldOptional(entry.Value, field.Name)
 		view.Fields = append(view.Fields, fieldView)
 	}
@@ -223,7 +225,7 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 		if !includeTitleField && metadata.IsTitleField(field.Value) {
 			continue
 		}
-		fieldView := makeFieldView(field, fileName, index, readOnly, includeTitleField)
+		fieldView := makeFieldView(field, fileName, index, readOnly, includeTitleField, entry.UUID)
 		fieldView.Optional = entryFieldOptional(entry.Value, field.Name)
 		view.Details = append(view.Details, fieldView)
 	}
@@ -292,11 +294,21 @@ func containsFile(names []string, name string) bool {
 }
 
 func entryURL(fileName string, entryRange cuebook.ByteRange) string {
+	return entryURLForEntry(fileName, entryRange, "")
+}
+
+func entryURLForEntry(fileName string, entryRange cuebook.ByteRange, uuid string) string {
 	query := url.Values{}
 	query.Set("path", fileName)
-	query.Set("head", strconv.Itoa(entryRange.Head))
-	query.Set("tail", strconv.Itoa(entryRange.Tail))
-	return "/entry?" + query.Encode()
+	entryPath := "/entry"
+	if uuid != "" {
+		query.Set("uuid", uuid)
+		entryPath += "/uuid"
+	} else {
+		query.Set("head", strconv.Itoa(entryRange.Head))
+		query.Set("tail", strconv.Itoa(entryRange.Tail))
+	}
+	return entryPath + "?" + query.Encode()
 }
 
 const (

@@ -17,6 +17,15 @@ type moveRequest struct {
 
 func (*moveRequest) Validate(context.Context) error { return nil }
 
+type moveUUIDRequest struct {
+	File        string `schema:"file"`
+	FromUUID    string `schema:"from_uuid"`
+	To          string `schema:"to"`
+	Destination string `schema:"destination"`
+}
+
+func (*moveUUIDRequest) Validate(context.Context) error { return nil }
+
 type moveResponse struct {
 	pageData
 }
@@ -25,21 +34,36 @@ func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse,
 	if a.files == nil {
 		return moveResponse{}, ErrSourceReadOnly
 	}
-
-	fileName := request.File
-	fileNames, err := a.fileNames()
-	if err != nil {
-		return moveResponse{}, ErrUnableToListCueFiles
-	}
-	raw, document, err := a.readDocument(fileName, fileNames)
+	fileNames, raw, document, err := a.loadEntryDocument(request.File)
 	if err != nil {
 		return moveResponse{}, err
 	}
-
 	from, err := strconv.Atoi(request.From)
 	if err != nil {
 		return moveResponse{}, ErrInvalidEntryPosition
 	}
+	return a.moveEntry(ctx, request.File, fileNames, raw, document, from, request.To, request.Destination)
+}
+
+func (a *handler) moveUUID(ctx context.Context, request *moveUUIDRequest) (moveResponse, error) {
+	if a.files == nil {
+		return moveResponse{}, ErrSourceReadOnly
+	}
+	fileNames, raw, document, err := a.loadEntryDocument(request.File)
+	if err != nil {
+		return moveResponse{}, err
+	}
+	from, err := entryIndexByUUID(document, request.FromUUID)
+	if errors.Is(err, cuebook.ErrBookEntryNotFound) {
+		return moveResponse{}, &cuebook.EntryNotFoundError{Path: request.File}
+	}
+	if err != nil {
+		return moveResponse{}, err
+	}
+	return a.moveEntry(ctx, request.File, fileNames, raw, document, from, request.To, request.Destination)
+}
+
+func (a *handler) moveEntry(ctx context.Context, fileName string, fileNames []string, raw []byte, document cuebook.Book, from int, toPosition, destination string) (moveResponse, error) {
 	length, err := document.Len()
 	if err != nil {
 		return moveResponse{}, CauseError{Code: ErrUnableToReadEntryCount, Cause: err}
@@ -47,12 +71,12 @@ func (a *handler) move(ctx context.Context, request *moveRequest) (moveResponse,
 	if from < 0 || from >= length {
 		return moveResponse{}, &cuebook.EntryNotFoundError{Path: fileName}
 	}
-	if request.Destination != "" {
-		data, err := a.transferEntry(ctx, fileName, request.Destination, raw, document, from, fileNames)
+	if destination != "" {
+		data, err := a.transferEntry(ctx, fileName, destination, raw, document, from, fileNames)
 		return moveResponse{pageData: data}, err
 	}
 
-	to, err := strconv.Atoi(request.To)
+	to, err := strconv.Atoi(toPosition)
 	if err != nil {
 		return moveResponse{}, ErrInvalidEntryPosition
 	}

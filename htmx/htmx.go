@@ -157,6 +157,27 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 		NewHTMXSwitch(editFieldHandler, editFieldHandler),
 	))
 
+	uuidEditFormHandler, err := config.Adaptor.AdaptFunc(app.editFormUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("field-form.html")),
+		htadaptor.WithQueryValues("file", "uuid", "field", "mode", "view"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID edit form route: %w", err)
+	}
+	uuidEditFieldHandler, err := config.Adaptor.AdaptFunc(app.editFormUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("field.html")),
+		htadaptor.WithQueryValues("file", "uuid", "field", "mode", "view"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID edit field route: %w", err)
+	}
+	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "edit/uuid"), selectEditTemplateHandler(
+		NewHTMXSwitch(uuidEditFormHandler, uuidEditFormHandler),
+		NewHTMXSwitch(uuidEditFieldHandler, uuidEditFieldHandler),
+	))
+
 	entryPageHandler, err := config.Adaptor.AdaptFunc(app.entry,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page.html")),
@@ -174,6 +195,24 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 		return nil, fmt.Errorf("htmx: adapt entry HTMX route: %w", err)
 	}
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "entry"), NewHTMXSwitch(entryPageHandler, entryFragmentHandler))
+
+	uuidEntryPageHandler, err := config.Adaptor.AdaptFunc(app.entryUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
+		htadaptor.WithQueryValues("path", "file", "uuid"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID entry route: %w", err)
+	}
+	uuidEntryFragmentHandler, err := config.Adaptor.AdaptFunc(app.entryUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("entry-workspace.html")),
+		htadaptor.WithQueryValues("path", "file", "uuid"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID entry HTMX route: %w", err)
+	}
+	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "entry/uuid"), NewHTMXSwitch(uuidEntryPageHandler, uuidEntryFragmentHandler))
 
 	searchHandler, err := config.Adaptor.AdaptFunc(app.search,
 		htadaptor.WithErrorHandler(errorHandler),
@@ -248,6 +287,22 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 	}
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "edit"), sameOriginMiddleware(NewHTMXSwitch(editPageHandler, editWorkspaceHandler)))
 
+	uuidEditPageHandler, err := config.Adaptor.AdaptFunc(app.editUUID,
+		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("page.html"))),
+		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("page.html")))),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID edit route: %w", err)
+	}
+	uuidEditWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.editUUID,
+		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("workspace.html"))),
+		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("workspace.html")))),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID edit HTMX route: %w", err)
+	}
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "edit/uuid"), sameOriginMiddleware(NewHTMXSwitch(uuidEditPageHandler, uuidEditWorkspaceHandler)))
+
 	newFieldPageHandler, err := config.Adaptor.AdaptFunc(app.newField,
 		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("page.html"))),
 		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("page.html")))),
@@ -263,6 +318,22 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 		return nil, fmt.Errorf("htmx: adapt new field HTMX route: %w", err)
 	}
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "add-field"), sameOriginMiddleware(NewHTMXSwitch(newFieldPageHandler, newFieldWorkspaceHandler)))
+
+	uuidNewFieldPageHandler, err := config.Adaptor.AdaptFunc(app.newFieldUUID,
+		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("page.html"))),
+		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("page.html")))),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID new field route: %w", err)
+	}
+	uuidNewFieldWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.newFieldUUID,
+		htadaptor.WithErrorHandler(editErrorHandler(templates.Lookup("workspace.html"))),
+		htadaptor.WithEncoder(NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("workspace.html")))),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID new field HTMX route: %w", err)
+	}
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "add-field/uuid"), sameOriginMiddleware(NewHTMXSwitch(uuidNewFieldPageHandler, uuidNewFieldWorkspaceHandler)))
 
 	formErrorEncoder := NewEncoder(htadaptor.NewTemplateEncoder(templates.Lookup("error.html")))
 	formErrorHandler := func(target string) htadaptor.ErrorHandlerFunc {
@@ -323,6 +394,22 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 	}
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "move"), sameOriginMiddleware(NewHTMXSwitch(movePageHandler, moveWorkspaceHandler)))
 
+	uuidMovePageHandler, err := config.Adaptor.AdaptFunc(app.moveUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID move route: %w", err)
+	}
+	uuidMoveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.moveUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID move HTMX route: %w", err)
+	}
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "move/uuid"), sameOriginMiddleware(NewHTMXSwitch(uuidMovePageHandler, uuidMoveWorkspaceHandler)))
+
 	archivePageHandler, err := config.Adaptor.AdaptFunc(app.archive,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page.html")),
@@ -338,6 +425,22 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 		return nil, fmt.Errorf("htmx: adapt archive HTMX route: %w", err)
 	}
 	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "archive"), sameOriginMiddleware(NewHTMXSwitch(archivePageHandler, archiveWorkspaceHandler)))
+
+	uuidArchivePageHandler, err := config.Adaptor.AdaptFunc(app.archiveUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID archive route: %w", err)
+	}
+	uuidArchiveWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.archiveUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt UUID archive HTMX route: %w", err)
+	}
+	mux.Handle("POST "+routeWithPrefix(config.ServeMuxPrefix, "archive/uuid"), sameOriginMiddleware(NewHTMXSwitch(uuidArchivePageHandler, uuidArchiveWorkspaceHandler)))
 
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "assets/{name}"), http.HandlerFunc(serveAsset))
 

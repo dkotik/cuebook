@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-function browser({ canArchive = true } = {}) {
+function browser({ canArchive = true, uuid = "" } = {}) {
   const handlers = new Map();
   const requests = [];
   const dispatched = [];
@@ -46,8 +46,10 @@ function browser({ canArchive = true } = {}) {
     removeAttribute(name) { delete this.attributes[name]; },
   };
   const archiveTarget = new Element(["[data-archive-drop-target]"]);
+  const destinationLink = new Element([".tree-file-link[data-file]"]);
+  destinationLink.dataset = { file: "destination.cue" };
   const card = new Element([".entry[data-entry-index][data-file]"]);
-  card.dataset = { file: "source.cue", entryIndex: "2", canArchive: String(canArchive) };
+  card.dataset = { file: "source.cue", entryIndex: "2", entryUuid: uuid, canArchive: String(canArchive) };
   const handle = new Element(["[data-entry-drag-handle]"]);
   handle.parentElement = card;
   const document = {
@@ -91,6 +93,7 @@ function browser({ canArchive = true } = {}) {
   return {
     archiveTarget,
     card,
+    destinationLink,
     dataTransfer,
     dispatched,
     handle,
@@ -108,6 +111,11 @@ function browser({ canArchive = true } = {}) {
     drop: async () => {
       let prevented = false;
       await dispatch("drop", { target: archiveTarget, preventDefault() { prevented = true; } });
+      return prevented;
+    },
+    dropOnFile: async () => {
+      let prevented = false;
+      await dispatch("drop", { target: destinationLink, preventDefault() { prevented = true; } });
       return prevented;
     },
   };
@@ -138,6 +146,31 @@ test("archive drop requests confirmation before posting", async () => {
   assert.equal(app.requests[0].options.swap, "outerHTML");
   assert.deepEqual({ ...app.requests[0].options.values }, { file: "source.cue", entry: "2" });
   assert.equal(app.workspace.attributes["aria-busy"], undefined);
+});
+
+test("UUID-backed archive drops use the UUID-only route", async () => {
+  const app = browser({ uuid: "target" });
+  await app.dragStart();
+  assert.equal(await app.dragOver(), true);
+  await app.drop();
+
+  const request = app.dispatched[0];
+  await request.detail.confirm();
+  assert.equal(app.requests[0].url, "/books/archive/uuid");
+  assert.deepEqual({ ...app.requests[0].options.values }, { file: "source.cue", uuid: "target" });
+});
+
+test("UUID-backed moves to another file use the UUID-only route", async () => {
+  const app = browser({ uuid: "target" });
+  await app.dragStart();
+  await app.dropOnFile();
+
+  assert.equal(app.requests[0].url, "/books/move/uuid");
+  assert.deepEqual({ ...app.requests[0].options.values }, {
+    file: "source.cue",
+    from_uuid: "target",
+    destination: "destination.cue",
+  });
 });
 
 test("entries that cannot be archived are not accepted by the archive drop target", async () => {
