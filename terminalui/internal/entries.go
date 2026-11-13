@@ -158,6 +158,18 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			if err != nil {
 				return nil // does not exist
 			}
+			from, to := msg.CurrentIndex-1, msg.DesiredIndex-1
+			aEntry, bEntry := a.Entry(), b.Entry()
+			if (from-to == 1 || to-from == 1) && (aEntry.UUID == "") != (bEntry.UUID == "") {
+				if aEntry.UUID == "" {
+					from, to = to, from
+				}
+				p, err := l.book.Document.MoveEntry(from, to)
+				if err != nil {
+					return err
+				}
+				return p
+			}
 			p, err := l.book.Document.SwapEntries(a, b)
 			if err != nil {
 				return err

@@ -9,6 +9,8 @@ type historyPatch struct {
 	cuebook.Patch
 }
 
+func (p historyPatch) UnwrapPatch() cuebook.Patch { return p.Patch }
+
 type snapShot struct {
 	Patch              cuebook.Patch
 	SelectedEntryIndex int

@@ -21,6 +21,8 @@ type createEntryPatch struct {
 	cuebook.Patch
 }
 
+func (p createEntryPatch) UnwrapPatch() cuebook.Patch { return p.Patch }
+
 type createForm struct {
 	tea.Model
 	Document    cuebook.Book

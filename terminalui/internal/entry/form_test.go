@@ -1,12 +1,76 @@
 package entry
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/dkotik/cuebook"
 	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
 )
+
+func TestEntryContainingUsesUUIDWhenDifferenceAlsoAppearsElsewhere(t *testing.T) {
+	const source = `#entry: {ID: string @cuebook(uuid), Name: string, Other: string}
+[...#entry] & [{ID: "target", Name: "before", Other: "first"}, {ID: "other", Name: "target", Other: "second"}]`
+	book, err := cuebook.New([]byte(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref, err := book.GetEntryRef(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch, err := book.SwapFields(ref, "Name", "Other")
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := patch.ApplyToCueSource([]byte(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+	document, err := cuebook.New(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrappedPatch := swapFieldsPatch{Patch: patch}
+	result := cuebook.Result{Document: document, Source: updated, LastChange: wrappedPatch}
+
+	got, ok := entryContaining(result, patch.Difference())
+	if !ok {
+		t.Fatal("entryContaining() did not find the identified entry")
+	}
+	if got.UUID != "target" {
+		t.Errorf("entryContaining() UUID = %q, want %q", got.UUID, "target")
+	}
+}
+
+func TestFormUpdatePatchRejectsDuplicateUUIDs(t *testing.T) {
+	const source = `#entry: {ID: string @cuebook(uuid), Name: string}
+[...#entry] & [{ID: "target", Name: "before"}]`
+	state, ref, cards := loadEntry(t, source, 0)
+	model := openForm(t, state.Document, ref, cards, 0)
+	model, _ = model.Update(fieldChangedEvent{Name: "Name", Value: "after", Original: "before"})
+
+	_, cmd := model.Update(listForm.SaveChangesEvent{})
+	if cmd == nil {
+		t.Fatal("saving changes produced no command")
+	}
+	result := cmd()
+	update, ok := result.(Update)
+	if !ok {
+		t.Fatalf("save command returned %T, want Update", result)
+	}
+	patch, err := update(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	duplicateSource := []byte(`#entry: {ID: string @cuebook(uuid), Name: string}
+[...#entry] & [{ID: "target", Name: "before"}, {ID: "target", Name: "duplicate"}]`)
+	if _, err := patch.ApplyToCueSource(duplicateSource); !errors.Is(err, cuebook.ErrPatchTargetAmbiguous) {
+		t.Fatalf("applying form patch to duplicate UUIDs error = %v, want %v", err, cuebook.ErrPatchTargetAmbiguous)
+	}
+}
 
 func TestSaveChangesRemovesEmptyOptionalAndUndefinedFields(t *testing.T) {
 	t.Parallel()

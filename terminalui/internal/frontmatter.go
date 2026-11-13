@@ -24,6 +24,8 @@ type (
 	}
 )
 
+func (p frontMatterPatch) UnwrapPatch() cuebook.Patch { return p.Patch }
+
 type FrontMatterView struct {
 	tea.Model
 

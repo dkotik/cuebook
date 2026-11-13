@@ -42,6 +42,8 @@ type (
 	newFieldSubmitEvent    struct{}
 )
 
+func (p addFieldPatch) UnwrapPatch() cuebook.Patch { return p.Patch }
+
 func NewExtendButton() tea.Model {
 	return label.New(list.NewButton(
 		&i18n.LocalizeConfig{

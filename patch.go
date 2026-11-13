@@ -18,6 +18,12 @@ type Patch interface {
 	Invert() Patch
 }
 
+// PatchUnwrapper exposes the underlying patch when a wrapper adds metadata
+// without changing the patch's source transition.
+type PatchUnwrapper interface {
+	UnwrapPatch() Patch
+}
+
 // Result contains a validated document and the source revision produced by a patch.
 type Result struct {
 	Document Book
@@ -68,15 +74,28 @@ func (r Result) BottomChangeIndex(since Result) (int, error) {
 }
 
 // Match returns the entry in this result identified by the last change's
-// difference anchor. For insertions and deletions, that anchor may include
-// surrounding bytes; an entry contained by the matched range is returned.
+// difference anchor. The anchor may identify bytes inside an entry, or include
+// surrounding bytes around an inserted or deleted entry.
 func (r Result) Match(difference []byte) (entry Entry, ok bool) {
 	if r.LastChange == nil {
 		return entry, false
 	}
 
-	lastDifference := r.LastChange.Difference()
-	if identified, ok := r.LastChange.(interface {
+	patch := r.LastChange
+	for {
+		wrapper, ok := patch.(PatchUnwrapper)
+		if !ok {
+			break
+		}
+		unwrapped := wrapper.UnwrapPatch()
+		if unwrapped == nil {
+			break
+		}
+		patch = unwrapped
+	}
+
+	lastDifference := patch.Difference()
+	if identified, ok := patch.(interface {
 		patchTargetIdentity() (entryIdentity, bool)
 	}); ok {
 		if identity, hasIdentity := identified.patchTargetIdentity(); hasIdentity {
@@ -111,7 +130,8 @@ func (r Result) Match(difference []byte) (entry Entry, ok bool) {
 		if err != nil || !validByteRange(currentRange, r.Source) {
 			continue
 		}
-		if currentRange.Head >= target.Head && currentRange.Tail <= target.Tail {
+		if (currentRange.Head <= target.Head && target.Tail <= currentRange.Tail) ||
+			(currentRange.Head >= target.Head && currentRange.Tail <= target.Tail) {
 			return current, true
 		}
 	}
@@ -184,6 +204,8 @@ func Validated(p Patch) Patch {
 type validatedPatch struct {
 	Patch
 }
+
+func (p validatedPatch) UnwrapPatch() Patch { return p.Patch }
 
 func (p validatedPatch) ApplyToCueSource(source []byte) ([]byte, error) {
 	result, err := p.Patch.ApplyToCueSource(source)

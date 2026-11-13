@@ -61,6 +61,10 @@ type (
 	}
 )
 
+func (p updateFieldPatch) UnwrapPatch() cuebook.Patch { return p.Patch }
+func (p swapEntriesPatch) UnwrapPatch() cuebook.Patch { return p.Patch }
+func (p swapFieldsPatch) UnwrapPatch() cuebook.Patch  { return p.Patch }
+
 func LoadFields(cueEntry cuebook.Entry) tea.Cmd {
 	return loadFields(cueEntry, 0)
 }
@@ -378,24 +382,11 @@ func (f form) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return f, cmd
 }
 
-// entryContaining finds the entry that holds the anchored bytes, such as a
-// field that was just moved. [cuebook.Result.Match] does the reverse: it
-// finds an entry inside the anchored bytes.
-func entryContaining(r cuebook.Result, anchor cuebook.ByteAnchor) (cuebook.Entry, bool) {
-	target, err := anchor.MatchUnique(r.Source)
-	if err != nil {
-		return cuebook.Entry{}, false
-	}
-	for entry, err := range r.Document.EachEntry() {
-		if err != nil {
-			continue
-		}
-		at, err := cuebook.NewByteRange(entry.Value)
-		if err == nil && at.Head <= target.Head && target.Tail <= at.Tail {
-			return entry, true
-		}
-	}
-	return cuebook.Entry{}, false
+// entryContaining finds the entry affected by the patch difference. Result.Match
+// resolves identified patches by UUID and falls back to byte anchors for
+// anonymous entries.
+func entryContaining(r cuebook.Result, difference cuebook.ByteAnchor) (cuebook.Entry, bool) {
+	return r.Match(difference.Content)
 }
 
 func displayFieldForm(book cuebook.Book, ref cuebook.EntryRef, field cuebook.Field) tea.Cmd {
