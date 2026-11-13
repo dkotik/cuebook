@@ -393,6 +393,41 @@ func TestEntryViewAlwaysShowsDetailsAndEmptyOptionalFields(t *testing.T) {
 	}
 }
 
+func TestEntryViewOmitsFirstUUIDField(t *testing.T) {
+	t.Parallel()
+
+	const source = `#person: {
+	ID: string @cuebook(uuid)
+	OtherID: string @cuebook(uuid)
+	Name: string @cuebook(title)
+	Email: string
+}
+	[...#person] & [{ID: "primary-id", OtherID: "secondary-id", Name: "Ada", Email: "ada@example.test"}]`
+	files := fstest.MapFS{"people.cue": &fstest.MapFile{Data: []byte(source)}}
+	handler, err := New(files)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response := serveGET(t, handler, "/entry/uuid/people?uuid=primary-id")
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+	body := response.Body.String()
+	articleStart := strings.Index(body, `<article `)
+	articleEnd := strings.Index(body, `</article>`)
+	if articleStart < 0 || articleEnd < articleStart {
+		t.Fatalf("entry article not found: %s", body)
+	}
+	article := body[articleStart : articleEnd+len(`</article>`)]
+	if strings.Contains(article, `<span class="field-name">ID:</span>`) {
+		t.Errorf("entry view shows the configured UUID field: %s", article)
+	}
+	if !strings.Contains(article, `<span class="field-name">OtherID:</span>`) || !strings.Contains(article, "secondary-id") {
+		t.Errorf("entry view should retain later UUID-marked fields as ordinary fields: %s", article)
+	}
+}
+
 func TestEntryHandlerRendersOnlyTheEntryMatchingItsByteRange(t *testing.T) {
 	source := []byte(`[
 	{Name: "First entry", Email: "first@example.test"},

@@ -35,6 +35,11 @@ type Entry struct {
 	FieldDefinitions    []FieldDefinition
 }
 
+// UniqueIdentifierFieldName reports the configured schema field that identifies this entry.
+func (e Entry) UniqueIdentifierFieldName() string {
+	return e.identifierFieldName
+}
+
 func (e Entry) GetDescription() (description []string) {
 	for _, fields := range [][]Field{e.Fields, e.Details} {
 		for _, field := range fields {

@@ -36,19 +36,27 @@ type createFormFields struct {
 	Values      map[string]string
 }
 
-func emitCreateFormFields(value cue.Value) tea.Cmd {
+func emitCreateFormFields(document cuebook.Book) tea.Cmd {
 	return func() tea.Msg {
+		identifierFieldName, identifier, err := document.GenerateEntryUniqueIdentifier()
+		if err != nil {
+			return err
+		}
 		fields := createFormFields{
 			Items:       make([]tea.Model, 0, 9),
 			Definitions: make([]cuebook.FieldDefinition, 0, 9),
 			Values:      make(map[string]string),
 		}
-		for definition := range cuebook.EachFieldDefinition(value) {
+		for definition := range cuebook.EachFieldDefinition(document.Value) {
 			name := definition.Selector.Unquoted()
 			field := cuebook.NewField(name, definition.Value)
-			optional := definition.Selector.ConstraintType() == cue.OptionalConstraint
-			text := createFieldInitialValue(field, optional)
 			fields.Definitions = append(fields.Definitions, definition)
+			if name == identifierFieldName && identifierFieldName != "" {
+				fields.Values[name] = identifier
+				continue
+			}
+			optional := createFieldOptional(document, definition)
+			text := createFieldInitialValue(field, optional)
 			fields.Values[name] = text
 			fields.Items = append(fields.Items,
 				listForm.NewField(name, text, func(updated string) tea.Cmd {
@@ -65,6 +73,13 @@ func emitCreateFormFields(value cue.Value) tea.Cmd {
 		}
 		return fields
 	}
+}
+
+func createFieldOptional(document cuebook.Book, definition cuebook.FieldDefinition) bool {
+	return definition.Selector.ConstraintType() == cue.OptionalConstraint || cuebook.FieldIsOptional(
+		document.Value.LookupPath(cue.MakePath(cue.Index(0))),
+		definition.Selector.Unquoted(),
+	)
 }
 
 func createFieldInitialValue(field cuebook.Field, optional bool) string {
@@ -98,7 +113,7 @@ func NewCreateForm(document cuebook.Book) tea.Cmd {
 		func() tea.Msg {
 			return window.SwitchTo(newCreateForm(document))
 		},
-		emitCreateFormFields(document.Value),
+		emitCreateFormFields(document),
 	)
 }
 
@@ -138,7 +153,7 @@ func (f createForm) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 			for _, definition := range f.Definitions {
 				name := definition.Selector.Unquoted()
 				field := cuebook.NewField(name, definition.Value)
-				optional := definition.Selector.ConstraintType() == cue.OptionalConstraint
+				optional := createFieldOptional(f.Document, definition)
 				value, exists := f.Values[name]
 				if !exists {
 					if optional {

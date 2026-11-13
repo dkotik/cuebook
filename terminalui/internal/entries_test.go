@@ -2,11 +2,44 @@ package internal
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/dkotik/cuebook"
 	"github.com/dkotik/cuebook/terminalui/internal/list"
 )
+
+func TestEntryListHidesConfiguredUUIDFromCardDescription(t *testing.T) {
+	const source = `#Entry: {
+ID: string @cuebook(uuid)
+OtherID: string @cuebook(uuid)
+Name: string @cuebook(title)
+}
+[...#Entry] & [{ID: "primary-id", OtherID: "secondary-id", Name: "Ada"}]`
+	book, err := cuebook.New([]byte(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	message := LoadEntries(cuebook.Result{Document: book, Source: []byte(source)}, 0)()
+	cards, ok := message.(entryListCards)
+	if !ok {
+		t.Fatalf("LoadEntries() returned %T, want entryListCards", message)
+	}
+	entryCard, ok := cards.Cards[1].(Entry)
+	if !ok {
+		t.Fatalf("entry card = %T, want Entry", cards.Cards[1])
+	}
+	model, _ := entryCard.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	content := model.View().Content
+	if strings.Contains(content, "primary-id") {
+		t.Errorf("entry list card displays the configured UUID: %s", content)
+	}
+	if !strings.Contains(content, "secondary-id") {
+		t.Errorf("entry list card should retain later UUID-marked fields: %s", content)
+	}
+}
 
 func TestEntryListMixedIdentityReorderUsesUUID(t *testing.T) {
 	tests := []struct {

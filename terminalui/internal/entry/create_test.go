@@ -7,7 +7,6 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"cuelang.org/go/cue/cuecontext"
 	"github.com/charmbracelet/x/exp/teatest/v2"
 	"github.com/dkotik/cuebook"
 	listForm "github.com/dkotik/cuebook/terminalui/internal/form"
@@ -38,7 +37,7 @@ func TestCreateFormUsesSubmittedValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fields, ok := emitCreateFormFields(book.Value)().(createFormFields)
+	fields, ok := emitCreateFormFields(book)().(createFormFields)
 	if !ok {
 		t.Fatalf("emitCreateFormFields() returned %T, want createFormFields", fields)
 	}
@@ -99,6 +98,69 @@ func TestCreateFormUsesSubmittedValues(t *testing.T) {
 	}
 }
 
+func TestCreateFormHidesAndGeneratesConfiguredIdentifier(t *testing.T) {
+	const source = `#Entry: {
+ID?: string @cuebook(uuid=UUID?prefix=terminal-)
+OtherID?: string @cuebook(uuid=UUID?prefix=other-)
+Name: string @cuebook(title)
+}
+[...#Entry] & [{ID: "existing-id", OtherID: "other-id", Name: "Existing"}]`
+	book, err := cuebook.New([]byte(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fields, ok := emitCreateFormFields(book)().(createFormFields)
+	if !ok {
+		t.Fatalf("emitCreateFormFields() returned unexpected message")
+	}
+	if len(fields.Items) != 2 {
+		t.Fatalf("visible create fields = %d, want OtherID and Name", len(fields.Items))
+	}
+	if len(fields.Definitions) != 3 {
+		t.Fatalf("retained schema definitions = %d, want 3", len(fields.Definitions))
+	}
+	identifier := fields.Values["ID"]
+	if !strings.HasPrefix(identifier, "terminal-") || identifier == "terminal-" {
+		t.Fatalf("generated ID = %q, want a non-empty terminal-prefixed value", identifier)
+	}
+
+	model, _ := newCreateForm(book).Update(fields)
+	form := model.(createForm)
+	model, _ = form.Update(fieldChangedEvent{Name: "Name", Value: "Created", Original: ""})
+	form = model.(createForm)
+	_, cmd := form.Update(listForm.SaveChangesEvent{})
+	if cmd == nil {
+		t.Fatal("create submission did not produce a command")
+	}
+	result := cmd()
+	patch, ok := result.(createEntryPatch)
+	if !ok {
+		if err, isError := result.(error); isError {
+			t.Fatal(err)
+		}
+		t.Fatalf("create submission returned %T, want createEntryPatch", result)
+	}
+	updated, err := patch.ApplyToCueSource([]byte(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatedBook, err := cuebook.New(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created, err := updatedBook.GetEntryByIndex(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.UUID != identifier {
+		t.Errorf("created UUID = %q, want generated value %q", created.UUID, identifier)
+	}
+	if field, ok := created.GetFieldByName("OtherID"); ok && field.Value.IsConcrete() {
+		t.Errorf("empty later UUID-marked field was written with concrete value %q", field.String())
+	}
+}
+
 func TestCreateFormIgnoresEscape(t *testing.T) {
 	document, err := cuebook.New([]byte("[]"))
 	if err != nil {
@@ -123,8 +185,8 @@ func TestCreateForm(t *testing.T) {
 	if err != nil {
 		t.Fatal("unable to read test file")
 	}
-	book := cuecontext.New().CompileBytes(large)
-	if err = book.Err(); err != nil {
+	book, err := cuebook.New(large)
+	if err != nil {
 		t.Fatal("unable to parse test file:", err)
 	}
 

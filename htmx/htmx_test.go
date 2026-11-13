@@ -136,6 +136,120 @@ func TestAddEntryFormShowsAllSchemaFieldsImmediately(t *testing.T) {
 
 }
 
+func TestAddEntryFormHidesAndPrefillsUUIDField(t *testing.T) {
+	t.Parallel()
+
+	const source = `#entry: {
+	ID?: string @cuebook(uuid=UUID?prefix=generated-)
+	OtherID?: string @cuebook(uuid=UUID?prefix=other-)
+	Name: string
+	}
+	[...#entry] & [{Name: "Existing"}]`
+	handler, err := newTestHandler(fstest.MapFS{
+		"identifiers.cue": &fstest.MapFile{Data: []byte(source)},
+	}, &recordingFileSystem{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodGet, "http://example.test/?file=identifiers.cue", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+
+	body := response.Body.String()
+	const generatedInput = `<input type="hidden" name="identifier" value="generated-`
+	start := strings.Index(body, generatedInput)
+	if start < 0 {
+		t.Fatalf("UUID field was not rendered as a prefilled hidden input: %s", body)
+	}
+	valueStart := start + len(generatedInput)
+	valueLength := strings.IndexByte(body[valueStart:], '"')
+	if valueLength <= 0 {
+		t.Fatalf("generated UUID value is empty or unterminated: %s", body[start:])
+	}
+	if strings.Count(body, `<input type="hidden" name="identifier"`) != 1 {
+		t.Errorf("configured UUID field should use one hidden input: %s", body)
+	}
+	if strings.Contains(body, `name="entry.0.field" value="ID"`) {
+		t.Errorf("configured UUID field should not be part of the indexed field definitions: %s", body)
+	}
+	if !strings.Contains(body, `<input class="input" type="text" name="entry.0.value"`) ||
+		!strings.Contains(body, `name="entry.0.field" value="OtherID"`) {
+		t.Errorf("later @cuebook(uuid) field should remain an ordinary field: %s", body)
+	}
+}
+
+func TestEntryFieldDefinitionsExcludeOnlyConfiguredUUIDField(t *testing.T) {
+	t.Parallel()
+
+	const source = `#entry: {
+ID?: string @cuebook(uuid)
+OtherID?: string @cuebook(uuid)
+Name: string
+}
+[...#entry] & [{Name: "Existing"}]`
+	book, err := cuebook.New([]byte(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var names []string
+	for _, definition := range entryFieldDefinitions(book) {
+		names = append(names, definition.Field.Name)
+	}
+	if len(names) != 2 || names[0] != "OtherID" || names[1] != "Name" {
+		t.Fatalf("field definitions = %v, want [OtherID Name]", names)
+	}
+}
+
+func TestAddEntryAcceptsGeneratedIdentifierWithoutFieldName(t *testing.T) {
+	t.Parallel()
+
+	const source = `#entry: {
+ID?: string @cuebook(uuid=UUID?prefix=generated-)
+OtherID?: string @cuebook(uuid=UUID?prefix=other-)
+Name: string
+}
+[...#entry] & [{Name: "Existing"}]`
+	files := fstest.MapFS{
+		"identifiers.cue": &fstest.MapFile{Data: []byte(source)},
+	}
+	handler, err := newTestHandler(files, &mapFileSystem{files: files})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	values := url.Values{
+		"file":          {"identifiers.cue"},
+		"identifier":    {"generated-submitted-id"},
+		"entry.0.field": {"OtherID"},
+		"entry.0.value": {""},
+		"entry.1.field": {"Name"},
+		"entry.1.value": {"Created entry"},
+	}
+	response := submitAdd(t, handler, false, values)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
+	}
+
+	book, err := cuebook.New(files["identifiers.cue"].Data)
+	if err != nil {
+		t.Fatalf("saved source is invalid: %v", err)
+	}
+	entry, err := book.GetEntryByIndex(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry.UUID != "generated-submitted-id" {
+		t.Errorf("saved entry UUID = %q, want %q", entry.UUID, "generated-submitted-id")
+	}
+	if field, ok := entry.GetFieldByName("OtherID"); ok && field.String() != "" {
+		t.Errorf("later UUID-marked field unexpectedly populated: %q", field.String())
+	}
+}
+
 func TestAddEntryFormUsesCurrentFile(t *testing.T) {
 	t.Parallel()
 

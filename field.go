@@ -167,3 +167,40 @@ func EachFieldDefinition(value cue.Value) iter.Seq[FieldDefinition] {
 		}
 	}
 }
+
+// FieldIsOptional reports whether name is optional in a CUE value, including
+// optional constraints inherited through conjunctions.
+func FieldIsOptional(value cue.Value, name string) bool {
+	if optionalField(value, name) {
+		return true
+	}
+	if op, operands := value.Expr(); op == cue.AndOp {
+		// A regular data field does not make an optional schema field required,
+		// but a regular field inherited from another list constraint does.
+		for _, operand := range operands {
+			if _, inherited := operand.Source().(*ast.Ellipsis); inherited &&
+				operand.LookupPath(cue.MakePath(cue.Str(name))).Exists() && !optionalField(operand, name) {
+				return false
+			}
+		}
+		for _, operand := range operands {
+			if FieldIsOptional(operand, name) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func optionalField(value cue.Value, name string) bool {
+	fields, err := value.Fields(cue.Optional(true))
+	if err != nil {
+		return false
+	}
+	for fields.Next() {
+		if fields.Selector().Unquoted() == name {
+			return fields.Selector().ConstraintType() == cue.OptionalConstraint
+		}
+	}
+	return false
+}

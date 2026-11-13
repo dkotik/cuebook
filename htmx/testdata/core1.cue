@@ -8,6 +8,7 @@
 //
 #email: =~"^[^@]+@[^@]+$"
 #contact: {
+  ID?: string @cuebook(uuid)
 	// current definition scanner cannot detect abstract definitions yet
 
 	// Name help text.
@@ -113,5 +114,11 @@
 		Name:  "nnnnnnew"
 		Email: "nnnnnnew@new.com"
 		Notes: "sdfjksdf"
+	},
+  {
+		ID:    "c6497c13-58df-4f5c-b988-698883eb1eb6"
+		Name:  "sdfklj"
+		Email: "lskdfjsldf@dsaf.com"
+		Notes: "943jdsn========================="
 	}
 ]

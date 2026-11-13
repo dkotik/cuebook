@@ -40,6 +40,7 @@ Cuebook reads attributes attached to CUE fields:
 | --- | --- |
 | `@cuebook(title)` | Marks the field as the entry title. The field remains in `Fields` when concrete. |
 | `@cuebook(detail)` | Places the concrete field in `Entry.Details` instead of `Entry.Fields`. |
+| `@cuebook(uuid)` | Marks a schema field as the entry identifier used for UUID-based patch targeting. |
 | `@cuebook(multiline)` | Marks a field as multiline for applications that present or edit it. |
 | `@cuebook(default=UUID)` | Provides a UUID default through the field helpers. |
 | `@cuebook(default=SFID)` | Provides a Snowflake-style ID default; query parameters can configure its encoding and node. |
@@ -55,3 +56,32 @@ ID?: string @cuebook(default=UUID,detail)
 The attribute is metadata; CUE constraints still define which values are valid. For example, use a CUE type or pattern constraint to validate an email address rather than relying on a display annotation.
 
 [Continue to source byte ranges]({{< relref "source-ranges.md" >}}).
+
+## Unique Entry Identifiers
+
+Mark an entry schema field with `@cuebook(uuid)` to configure it as the entry identifier. The first field definition carrying this attribute is used. For example:
+
+```cue
+#entry: {
+    ID?: string @cuebook(uuid)
+    Name: string
+}
+[...#entry] & [
+  {
+    ID: "unique-id-1",
+    Name: "Write tests"
+  }
+]
+```
+
+The `ID` field is populated only when an entry actually has a non-empty string value in the configured field. A missing, empty, or non-string value leaves `UUID` empty; parsing an entry does not generate an identifier. The annotation identifies the schema field but does not make it required or validate its value.
+
+Identifier uniqueness is not enforced. Any changes to a list item that has a `UUID` field will similarly update all other items in the same list with the same `UUID`.
+
+### Patch targeting
+
+When changes are applied to entries with a `UUID` field, an identifier-based patch parses the current CUE source and resolves the configured field name and UUID.
+
+Ordinary field operations preserve identifier immutability. Updating or removing the identifier, swapping it with another field, or replacing an entry with a different or missing identifier is rejected.
+
+There is currently no re-key operation. Ordinary entry patches cannot change an identifier. If it must be changed, edit the source file.

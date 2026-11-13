@@ -23,6 +23,10 @@ type addFieldView struct {
 	Locked      bool
 }
 
+type addIdentifierView struct {
+	Value string
+}
+
 type entryFieldDefinition struct {
 	Field    cuebook.Field
 	Optional bool
@@ -40,7 +44,16 @@ func renderFieldMarkdown(value string) template.HTML {
 	return template.HTML(rendered.String())
 }
 
-func makeAddFieldViews(document cuebook.Book) []addFieldView {
+func makeAddFieldViews(document cuebook.Book) ([]addFieldView, *addIdentifierView, error) {
+	identifierFieldName, identifier, err := document.GenerateEntryUniqueIdentifier()
+	if err != nil {
+		return nil, nil, err
+	}
+	var identifierView *addIdentifierView
+	if identifierFieldName != "" {
+		identifierView = &addIdentifierView{Value: identifier}
+	}
+
 	var result []addFieldView
 	for index, definition := range entryFieldDefinitions(document) {
 		field := definition.Field
@@ -77,7 +90,7 @@ func makeAddFieldViews(document cuebook.Book) []addFieldView {
 		}
 		result = append(result, view)
 	}
-	return result
+	return result, identifierView, nil
 }
 
 func splitAddFieldViews(fields []addFieldView) (required, optional []addFieldView) {
@@ -92,6 +105,27 @@ func splitAddFieldViews(fields []addFieldView) (required, optional []addFieldVie
 }
 
 func entryFieldDefinitions(document cuebook.Book) []entryFieldDefinition {
+	identifierFieldName := document.EntryUniqueIdentifierFieldName()
+	allDefinitions := allEntryFieldDefinitions(document)
+	if identifierFieldName == "" {
+		return allDefinitions
+	}
+
+	result := make([]entryFieldDefinition, 0, len(allDefinitions))
+	for _, definition := range allDefinitions {
+		if definition.Field.Name == identifierFieldName {
+			continue
+		}
+		result = append(result, definition)
+	}
+	return result
+}
+
+func entryIdentifierFieldName(entry cuebook.Entry) string {
+	return entry.UniqueIdentifierFieldName()
+}
+
+func allEntryFieldDefinitions(document cuebook.Book) []entryFieldDefinition {
 	var result []entryFieldDefinition
 	entry := document.Value.LookupPath(cue.MakePath(cue.Index(0)))
 	for definition := range cuebook.EachFieldDefinition(document.Value) {

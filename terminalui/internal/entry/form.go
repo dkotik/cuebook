@@ -71,7 +71,9 @@ func LoadFields(cueEntry cuebook.Entry) tea.Cmd {
 
 func loadFields(cueEntry cuebook.Entry, selectedIndex int) tea.Cmd {
 	return func() tea.Msg {
-		expectedTotal := len(cueEntry.Fields) + len(cueEntry.Details) + 3
+		entryFields := withoutIdentifierField(cueEntry, cueEntry.Fields)
+		detailFields := withoutIdentifierField(cueEntry, cueEntry.Details)
+		expectedTotal := len(entryFields) + len(detailFields) + 3
 		knownFieldNames := make([]string, 0, expectedTotal)
 		fields := make([]tea.Model, 0, expectedTotal)
 		// fields = append(fields, list.Title{
@@ -79,8 +81,8 @@ func loadFields(cueEntry cuebook.Entry, selectedIndex int) tea.Cmd {
 		// 	Style: lipgloss.NewStyle().Bold(true).Align(lipgloss.Left).Foreground(lipgloss.BrightRed),
 		// })
 		order := append(
-			sourceOrder(cueEntry, cueEntry.Fields, false),
-			sourceOrder(cueEntry, cueEntry.Details, true)...,
+			sourceOrder(cueEntry, entryFields, false),
+			sourceOrder(cueEntry, detailFields, true)...,
 		)
 		for _, f := range order {
 			fields = append(fields, createField(f.Field))
@@ -101,6 +103,20 @@ func loadFields(cueEntry cuebook.Entry, selectedIndex int) tea.Cmd {
 			SelectedIndex:   selectedIndex,
 		}
 	}
+}
+
+func withoutIdentifierField(entry cuebook.Entry, fields []cuebook.Field) []cuebook.Field {
+	identifierFieldName := entry.UniqueIdentifierFieldName()
+	if identifierFieldName == "" {
+		return fields
+	}
+	filtered := make([]cuebook.Field, 0, len(fields))
+	for _, field := range fields {
+		if field.Name != identifierFieldName {
+			filtered = append(filtered, field)
+		}
+	}
+	return filtered
 }
 
 // sourceOrder sorts fields by where they are written in the entry, so that

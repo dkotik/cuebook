@@ -79,6 +79,22 @@ func (book *Book) configureEntryUniqueIdentifier() {
 	}
 }
 
+// GenerateEntryUniqueIdentifier returns a new value for the configured
+// @cuebook(uuid) field. If the Book has no such field, it returns empty values
+// and a nil error.
+func (book Book) GenerateEntryUniqueIdentifier() (fieldName, value string, err error) {
+	if book.entryUniqueIdentifierGenerator == nil {
+		return "", "", nil
+	}
+	value, err = book.entryUniqueIdentifierGenerator.GenerateIdentifier()
+	return book.entryUniqueIdentifierFieldName, value, err
+}
+
+// EntryUniqueIdentifierFieldName returns the configured UUID field name, if any.
+func (book Book) EntryUniqueIdentifierFieldName() string {
+	return book.entryUniqueIdentifierFieldName
+}
+
 func (d Book) EachEntry() iter.Seq2[Entry, error] {
 	return func(yield func(Entry, error) bool) {
 		next, err := d.Value.List()

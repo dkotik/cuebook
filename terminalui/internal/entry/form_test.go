@@ -2,6 +2,7 @@ package entry
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -41,6 +42,37 @@ func TestEntryContainingUsesUUIDWhenDifferenceAlsoAppearsElsewhere(t *testing.T)
 	}
 	if got.UUID != "target" {
 		t.Errorf("entryContaining() UUID = %q, want %q", got.UUID, "target")
+	}
+}
+
+func TestLoadFieldsHidesConfiguredUUIDAndKeepsLaterUUIDField(t *testing.T) {
+	const source = `#Entry: {
+ID: string @cuebook(uuid)
+OtherID: string @cuebook(uuid)
+Name: string @cuebook(title)
+}
+[...#Entry] & [{ID: "primary", OtherID: "secondary", Name: "Ada"}]`
+	book, err := cuebook.New([]byte(source))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := book.GetEntryByIndex(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	message := LoadFields(entry)()
+	cards, ok := message.(fieldListCards)
+	if !ok {
+		t.Fatalf("LoadFields() returned %T, want fieldListCards", message)
+	}
+	for _, name := range cards.KnownFieldNames {
+		if name == "ID" {
+			t.Fatal("configured UUID field was included in the terminal entry view")
+		}
+	}
+	if !slices.Contains(cards.KnownFieldNames, "OtherID") {
+		t.Errorf("later UUID-marked field not shown; fields = %v", cards.KnownFieldNames)
 	}
 }
 

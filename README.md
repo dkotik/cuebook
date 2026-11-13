@@ -21,25 +21,12 @@ changes in data to other users and, most importantly, programs.
 
 ## Development
 
-- [ ] Implement UUID-based patch variants for
-  - [ ] insert
-  - [ ] delete
-  - [ ] update
-  - [ ] swap
-  - [ ] add field
+- [ ] Handle cases where identity_patch matches multiple entries in the same file. Identifier uniqueness is not enforced. Any changes to a list item that has a `UUID` field will similarly update all other items in the same list with the same `UUID`.
 - [x] the search index keeps accumulating entries
 - [ ] Use progressive xxhaxx hash value for each entry, if it does not have its own value. Or just called it .Hash and use it regardless of ID field.
 - [ ] Add `@cuebook(default=uuid)` attribute support that fills in random IDs for entities that do not have them
-- [x] add metadata.IsOpen function
 - [ ] move default assigning logic from FormatAccordingToAttributes to entry form as auto-filled in value
-- [x] add Markdown metadata loading and editing
-- [x] add editing history tracking
-- [x] saving should merge the state on disk with the state in memory
 - [ ] responsive color scheme: lipgloss.HasDarkBackground() at initialization
-- [x] handle change of entry index due to modification of the file by other processes
-    - [x] after patch, check if item at current index has the same byte signature as the last change
-    - [x] count potential preceding duplicates
-    - [x] locate the entry with identical byte content as the last change, taking duplicates into account
 - [ ] double entry ledger support with `@cuebook(ledger)` attribute
 - [ ] turn replace patch into insert patch, if the original entry disappeared, but not without letting the user choose
 - [ ] remove security headers from htmx package. The slop machine keeps putting it back in.

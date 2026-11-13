@@ -16,8 +16,9 @@ type addFieldRequest struct {
 }
 
 type addRequest struct {
-	File    string            `schema:"file"`
-	Entries []addFieldRequest `schema:"entry"`
+	File       string            `schema:"file"`
+	Identifier string            `schema:"identifier"`
+	Entries    []addFieldRequest `schema:"entry"`
 }
 
 func (*addRequest) Validate(context.Context) error { return nil }
@@ -40,43 +41,46 @@ func (a *handler) add(ctx context.Context, request *addRequest) (addResponse, er
 	if err != nil {
 		return addResponse{}, err
 	}
-	fieldNames := make([]string, len(request.Entries))
-	values := make([]string, len(request.Entries))
-	for index, entry := range request.Entries {
-		fieldNames[index] = entry.Field
-		values[index] = entry.Value
-	}
-
 	definitions := entryFieldDefinitions(document)
-	if len(definitions) == 0 {
+	allDefinitions := allEntryFieldDefinitions(document)
+	if len(allDefinitions) == 0 {
 		return addResponse{}, ErrNoEntryFieldsToAdd
 	}
-	if len(fieldNames) == 0 || len(fieldNames) != len(values) {
+	identifierFieldName := document.EntryUniqueIdentifierFieldName()
+	if len(request.Entries) == 0 && request.Identifier == "" {
 		return addResponse{}, ErrInvalidAddEntryFields
+	}
+	if identifierFieldName == "" && request.Identifier != "" {
+		return addResponse{}, ErrUnknownAddEntryField
 	}
 
 	knownFields := make(map[string]entryFieldDefinition, len(definitions))
 	for _, definition := range definitions {
 		knownFields[definition.Field.Name] = definition
 	}
-	submitted := make(map[string]string, len(fieldNames))
-	for i, name := range fieldNames {
+	submitted := make(map[string]string, len(request.Entries))
+	for _, entry := range request.Entries {
+		name := entry.Field
 		if _, ok := knownFields[name]; !ok {
 			return addResponse{}, ErrUnknownAddEntryField
 		}
 		if _, exists := submitted[name]; exists {
 			return addResponse{}, ErrDuplicateAddEntryField
 		}
-		submitted[name] = values[i]
+		submitted[name] = entry.Value
 	}
 
-	declarations := make([]any, 0, len(definitions))
-	for _, definition := range definitions {
+	declarations := make([]any, 0, len(allDefinitions))
+	for _, definition := range allDefinitions {
 		field := definition.Field
 		optional := definition.Optional
 		boolean := field.Value.IncompleteKind() == cue.BoolKind && !isSecretField(field.Value)
 
 		value, ok := submitted[field.Name]
+		if field.Name == identifierFieldName {
+			value = request.Identifier
+			ok = value != ""
+		}
 		if !ok {
 			if optional {
 				continue

@@ -38,6 +38,7 @@ func FormatAccordingToAttributes(v cue.Value, input string) (_ string, err error
 				"title",
 				"detail",
 				"multiline",
+				"uuid",
 			}, attributeField.Key) > -1 {
 				continue
 			}

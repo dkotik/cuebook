@@ -163,7 +163,10 @@ func (a *handler) renderEntryPage(filePath string, fileNames []string, raw []byt
 	page.FileBreadcrumb[len(page.FileBreadcrumb)-1].URL = fileURL(filePath)
 	page.SelectedEntry = &view
 	if !page.ReadOnly {
-		page.AddFields = makeAddFieldViews(document)
+		page.AddFields, page.AddIdentifier, err = makeAddFieldViews(document)
+		if err != nil {
+			return entryResponse{}, CauseError{Code: ErrUnableToDisplayCUEDocument, Cause: err}
+		}
 		page.RequiredAddFields, page.OptionalAddFields = splitAddFieldViews(page.AddFields)
 	}
 

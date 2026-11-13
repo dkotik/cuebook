@@ -37,6 +37,7 @@ type pageData struct {
 	Entries           []entryView
 	SelectedEntry     *entryView
 	AddFields         []addFieldView
+	AddIdentifier     *addIdentifierView
 	RequiredAddFields []addFieldView
 	OptionalAddFields []addFieldView
 	GitEnabled        bool
@@ -152,7 +153,10 @@ func (a *handler) loadPage(fileName, notice string) (pageData, error) {
 		return data, err
 	}
 	if !data.ReadOnly {
-		data.AddFields = makeAddFieldViews(document)
+		data.AddFields, data.AddIdentifier, err = makeAddFieldViews(document)
+		if err != nil {
+			return data, CauseError{Code: ErrUnableToDisplayCUEDocument, Cause: err}
+		}
 		data.RequiredAddFields, data.OptionalAddFields = splitAddFieldViews(data.AddFields)
 	}
 	entries, err := makeEntryViews(document, fileName, data.ReadOnly)
@@ -209,6 +213,7 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 	if view.Title == "" {
 		view.Title = fmt.Sprintf("Entry %d", index+1)
 	}
+	identifierFieldName := entryIdentifierFieldName(entry)
 	hasTitleField := false
 	if !includeTitleField {
 		for _, field := range entry.Fields {
@@ -219,6 +224,9 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 		}
 	}
 	for fieldIndex, field := range entry.Fields {
+		if field.Name == identifierFieldName {
+			continue
+		}
 		if !includeTitleField && (metadata.IsTitleField(field.Value) || (!hasTitleField && fieldIndex == 0 && entry.Title != "")) {
 			continue
 		}
@@ -227,6 +235,9 @@ func makeEntryView(entry cuebook.Entry, fileName string, index int, entryRange c
 		view.Fields = append(view.Fields, fieldView)
 	}
 	for _, field := range entry.Details {
+		if field.Name == identifierFieldName {
+			continue
+		}
 		if !includeTitleField && metadata.IsTitleField(field.Value) {
 			continue
 		}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -206,6 +207,24 @@ func (l EntryList) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	return l, cmd
 }
 
+func entryDescription(entry cuebook.Entry) []string {
+	identifierFieldName := entry.UniqueIdentifierFieldName()
+	var description []string
+	for _, fields := range [][]cuebook.Field{entry.Fields, entry.Details} {
+		for _, field := range fields {
+			if field.Name == identifierFieldName {
+				continue
+			}
+			value := field.String()
+			if !field.Value.IsConcrete() || strings.TrimSpace(value) == "" {
+				value = "..."
+			}
+			description = append(description, value)
+		}
+	}
+	return description
+}
+
 func LoadEntries(r cuebook.Result, selectionIndex int) tea.Cmd {
 	return func() tea.Msg {
 		total, err := r.Document.Len()
@@ -269,7 +288,7 @@ func LoadEntries(r cuebook.Result, selectionIndex int) tea.Cmd {
 				Entry{
 					Model: card.New(card.Configuration{
 						Title:       entry.Title,
-						Description: entry.GetDescription(),
+						Description: entryDescription(entry),
 					}),
 					Index: index,
 				},

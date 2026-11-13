@@ -277,28 +277,10 @@ func isSecretField(field cue.Value) bool {
 	return ok
 }
 
-// entryFieldOptional also checks inherited constraints: populated optional
-// fields have regular selectors on the unified entry, but not on its schema.
+// entryFieldOptional delegates to the core CUE optionality logic so forms in
+// HTMX and the terminal UI interpret unified schema constraints consistently.
 func entryFieldOptional(entry cue.Value, name string) bool {
-	if optionalField(entry, name) {
-		return true
-	}
-	if op, operands := entry.Expr(); op == cue.AndOp {
-		// A regular data field does not make an optional schema field required,
-		// but a regular field inherited from another list constraint does.
-		for _, operand := range operands {
-			if _, inherited := operand.Source().(*ast.Ellipsis); inherited &&
-				operand.LookupPath(cue.MakePath(cue.Str(name))).Exists() && !optionalField(operand, name) {
-				return false
-			}
-		}
-		for _, operand := range operands {
-			if entryFieldOptional(operand, name) {
-				return true
-			}
-		}
-	}
-	return false
+	return cuebook.FieldIsOptional(entry, name)
 }
 
 func optionalField(entry cue.Value, name string) bool {

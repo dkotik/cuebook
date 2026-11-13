@@ -4,6 +4,7 @@
     <h2 id="add-entry-heading" class="is-sr-only">Add entry</h2>
     <form id="add-entry-form" action="{{route "/add"}}" method="post" hx-post="{{route "/add"}}" hx-target="#workspace" hx-swap="innerHTML">
       <input type="hidden" name="file" value="{{.Selected}}">
+      {{if .AddIdentifier}}<input type="hidden" name="identifier" value="{{.AddIdentifier.Value}}">{{end}}
       {{range .RequiredAddFields}}{{template "entry-add-field.html" .}}{{end}}
       {{range .OptionalAddFields}}{{template "entry-add-field.html" .}}{{end}}
       <div id="add-entry-error" class="form-error block" aria-live="assertive"></div>
