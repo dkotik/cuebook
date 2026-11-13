@@ -65,9 +65,27 @@ func setFilePickerOptions(nodes []fileTreeNode, current string, options filePick
 }
 
 func fileURL(name string) string {
+	if routePath, ok := cueFileRoutePath(name); ok {
+		return routePath
+	}
 	query := url.Values{}
 	query.Set("file", name)
 	return "/?" + query.Encode()
+}
+
+func cueFileRoutePath(name string) (string, bool) {
+	if !strings.HasSuffix(name, ".cue") {
+		return "", false
+	}
+	name = strings.TrimSuffix(name, ".cue")
+	if name == "" {
+		return "", false
+	}
+	parts := strings.Split(name, "/")
+	for index := range parts {
+		parts[index] = url.PathEscape(parts[index])
+	}
+	return "/" + strings.Join(parts, "/"), true
 }
 
 func folderURL(name string) string {

@@ -74,8 +74,9 @@ type entryView struct {
 }
 
 type listRequest struct {
-	File   string `schema:"file"`
-	Folder string `schema:"folder"`
+	File     string `schema:"file"`
+	Filepath string `schema:"filepath"`
+	Folder   string `schema:"folder"`
 }
 
 func (*listRequest) Validate(context.Context) error { return nil }
@@ -87,10 +88,14 @@ type listResponse struct {
 func (a *handler) list(_ context.Context, request *listRequest) (listResponse, error) {
 	var data pageData
 	var err error
-	if request.File == "" {
+	fileName := request.Filepath
+	if fileName == "" {
+		fileName = request.File
+	}
+	if fileName == "" {
 		data, err = a.loadFolderPage(request.Folder, "")
 	} else {
-		data, err = a.loadPage(request.File, "")
+		data, err = a.loadPage(fileName, "")
 	}
 	if err != nil {
 		return listResponse{}, err
@@ -299,7 +304,7 @@ func entryURL(fileName string, entryRange cuebook.ByteRange) string {
 
 func entryURLForEntry(fileName string, entryRange cuebook.ByteRange, uuid string) string {
 	query := url.Values{}
-	query.Set("path", fileName)
+	filePath, hasFileRoute := cueFileRoutePath(fileName)
 	entryPath := "/entry"
 	if uuid != "" {
 		query.Set("uuid", uuid)
@@ -307,6 +312,11 @@ func entryURLForEntry(fileName string, entryRange cuebook.ByteRange, uuid string
 	} else {
 		query.Set("head", strconv.Itoa(entryRange.Head))
 		query.Set("tail", strconv.Itoa(entryRange.Tail))
+	}
+	if hasFileRoute {
+		entryPath += filePath
+	} else {
+		query.Set("path", fileName)
 	}
 	return entryPath + "?" + query.Encode()
 }

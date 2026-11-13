@@ -66,7 +66,7 @@ func TestNewFieldAddsAFieldOfTheChosenKindAndValue(t *testing.T) {
 				t.Errorf("response does not show the new field: %s", body)
 			}
 			// Adding a field moves the end of the entry, so its URL changes.
-			if got := response.Header().Get("HX-Replace-Url"); !strings.HasPrefix(got, "/entry?") {
+			if got := response.Header().Get("HX-Replace-Url"); !strings.HasPrefix(got, "/entry/") {
 				t.Errorf("HX-Replace-Url = %q, want the updated entry URL", got)
 			}
 		})

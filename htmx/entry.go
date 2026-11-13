@@ -12,18 +12,20 @@ import (
 )
 
 type entryRouteRequest struct {
-	Path string `schema:"path"`
-	File string `schema:"file"`
-	Head string `schema:"head"`
-	Tail string `schema:"tail"`
+	Path     string `schema:"path"`
+	File     string `schema:"file"`
+	Filepath string `schema:"filepath"`
+	Head     string `schema:"head"`
+	Tail     string `schema:"tail"`
 }
 
 func (*entryRouteRequest) Validate(context.Context) error { return nil }
 
 type entryUUIDRouteRequest struct {
-	Path string `schema:"path"`
-	File string `schema:"file"`
-	UUID string `schema:"uuid"`
+	Path     string `schema:"path"`
+	File     string `schema:"file"`
+	Filepath string `schema:"filepath"`
+	UUID     string `schema:"uuid"`
 }
 
 func (*entryUUIDRouteRequest) Validate(context.Context) error { return nil }
@@ -34,7 +36,10 @@ type entryResponse struct {
 }
 
 func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryResponse, error) {
-	filePath := input.Path
+	filePath := input.Filepath
+	if filePath == "" {
+		filePath = input.Path
+	}
 	if filePath == "" {
 		filePath = input.File
 	}
@@ -50,7 +55,10 @@ func (a *handler) entry(_ context.Context, input *entryRouteRequest) (entryRespo
 }
 
 func (a *handler) entryUUID(_ context.Context, input *entryUUIDRouteRequest) (entryResponse, error) {
-	filePath := input.Path
+	filePath := input.Filepath
+	if filePath == "" {
+		filePath = input.Path
+	}
 	if filePath == "" {
 		filePath = input.File
 	}

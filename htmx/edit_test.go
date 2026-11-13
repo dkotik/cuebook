@@ -230,7 +230,7 @@ func TestListAndEntryFieldsUseModalEditor(t *testing.T) {
 		t.Fatal("list view should hide field labels")
 	}
 	body := pageResponse.Body.String()
-	linkStart := strings.Index(body, `href="/entry?`)
+	linkStart := strings.Index(body, "href=\"/entry/")
 	if linkStart < 0 {
 		t.Fatal("list entry does not link to its entry view")
 	}
@@ -387,7 +387,7 @@ func TestLockedFieldsRenderWithoutEditControls(t *testing.T) {
 		t.Fatalf("list status = %d, want %d; body: %s", listResponse.Code, http.StatusOK, listResponse.Body.String())
 	}
 	listBody := listResponse.Body.String()
-	linkStart := strings.Index(listBody, `href="/entry?`)
+	linkStart := strings.Index(listBody, "href=\"/entry/")
 	if linkStart < 0 {
 		t.Fatal("list entry does not link to its entry view")
 	}
@@ -647,7 +647,7 @@ func TestEditURLReplacementUsesMountedRoutePrefix(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
-	if got := response.Header().Get("HX-Replace-Url"); !strings.HasPrefix(got, "/catalog/entry?") {
+	if got := response.Header().Get("HX-Replace-Url"); !strings.HasPrefix(got, "/catalog/entry/") {
 		t.Errorf("HX-Replace-Url = %q; want mounted entry URL", got)
 	}
 	for _, header := range []string{"HX-Location", "HX-Redirect", "Location"} {

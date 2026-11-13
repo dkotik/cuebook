@@ -79,11 +79,11 @@ func TestUUIDEntryRoutesAndGeneratedActionsAreSeparate(t *testing.T) {
 	}
 
 	listResponse := serveGET(t, handler, "/?file=people.cue")
-	if !strings.Contains(listResponse.Body.String(), `href="/entry/uuid?path=people.cue&amp;uuid=target"`) {
+	if !strings.Contains(listResponse.Body.String(), `href="/entry/uuid/people?uuid=target"`) {
 		t.Fatalf("identified entry link does not use the UUID route: %s", listResponse.Body.String())
 	}
 
-	entryResponse := serveGET(t, handler, "/entry/uuid?path=people.cue&uuid=target")
+	entryResponse := serveGET(t, handler, "/entry/uuid/people?uuid=target")
 	body := entryResponse.Body.String()
 	if !strings.Contains(body, "Target") || strings.Contains(body, "First") {
 		t.Fatalf("UUID entry route did not select only the requested entry: %s", body)
@@ -151,7 +151,7 @@ func TestUUIDEntryHandlerRejectsMissingOrDuplicateIdentifiers(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			response := serveGET(t, handler, "/entry/uuid?path=people.cue&uuid="+url.QueryEscape(tt.uuid))
+			response := serveGET(t, handler, "/entry/uuid/people?uuid="+url.QueryEscape(tt.uuid))
 			if response.Code == http.StatusOK || !strings.Contains(strings.ToLower(response.Body.String()), tt.want) {
 				t.Fatalf("UUID route status/body = %d/%q, want error containing %q", response.Code, response.Body.String(), tt.want)
 			}
@@ -178,7 +178,7 @@ func TestUUIDEditHandlerTargetsIdentifierRoute(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("UUID edit status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
-	if got, want := response.Header().Get("HX-Replace-Url"), "/entry/uuid?path=people.cue&uuid=target"; got != want {
+	if got, want := response.Header().Get("HX-Replace-Url"), "/entry/uuid/people?uuid=target"; got != want {
 		t.Errorf("replacement URL = %q, want %q", got, want)
 	}
 
@@ -234,7 +234,7 @@ func TestUUIDNewFieldHandlerTargetsIdentifierRoute(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("UUID add-field status = %d, want %d; body: %s", response.Code, http.StatusOK, response.Body.String())
 	}
-	if got, want := response.Header().Get("HX-Replace-Url"), "/entry/uuid?path=people.cue&uuid=target"; got != want {
+	if got, want := response.Header().Get("HX-Replace-Url"), "/entry/uuid/people?uuid=target"; got != want {
 		t.Errorf("replacement URL = %q, want %q", got, want)
 	}
 	book, err := cuebook.New(files["people.cue"].Data)

@@ -424,12 +424,13 @@ func TestSearchResultsLinkToMatchingEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse search result href %q: %v", entryHref, err)
 	}
-	if parsedHref.Path != "/entry" {
-		t.Errorf("search result path = %q, want /entry", parsedHref.Path)
+	wantEntryPath := "/entry/" + strings.TrimSuffix(filePath, ".cue")
+	if parsedHref.Path != wantEntryPath {
+		t.Errorf("search result path = %q, want %q", parsedHref.Path, wantEntryPath)
 	}
 	query := parsedHref.Query()
-	if got := query.Get("path"); got != filePath {
-		t.Errorf("entry path query = %q, want %q", got, filePath)
+	if got := query.Get("path"); got != "" {
+		t.Errorf("search result unexpectedly includes a path query = %q", got)
 	}
 	if got := query.Get("head"); got != strconv.Itoa(expectedRange.Head) {
 		t.Errorf("entry head query = %q, want %d", got, expectedRange.Head)

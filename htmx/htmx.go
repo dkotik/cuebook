@@ -23,6 +23,7 @@ import (
 
 	"github.com/dkotik/cuebook"
 	gitview "github.com/dkotik/cuebook/htmx/git"
+	htmxinternal "github.com/dkotik/cuebook/htmx/internal"
 	"github.com/dkotik/cuebook/search"
 	"github.com/dkotik/htadaptor"
 )
@@ -118,6 +119,28 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 	}
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "{$}"), NewHTMXSwitch(listPageHandler, listWorkspaceHandler))
 
+	filepathExtractor := htmxinternal.NewFilepathExtractor("filepath", ".cue")
+	filepathListPageHandler, err := config.Adaptor.AdaptFunc(app.list,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
+		htadaptor.WithExtractors(filepathExtractor),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt filepath list route: %w", err)
+	}
+	filepathListWorkspaceHandler, err := config.Adaptor.AdaptFunc(app.list,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("workspace.html")),
+		htadaptor.WithExtractors(filepathExtractor),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt filepath list HTMX route: %w", err)
+	}
+	mux.Handle(
+		routeWithPrefix(config.ServeMuxPrefix, "{filepath...}"),
+		getOnlyHandler(NewHTMXSwitch(filepathListPageHandler, filepathListWorkspaceHandler)),
+	)
+
 	if app.gitFileLinker != nil {
 		changesPageHandler, err := config.Adaptor.AdaptFunc(app.changes,
 			htadaptor.WithErrorHandler(errorHandler),
@@ -196,6 +219,26 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 	}
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "entry"), NewHTMXSwitch(entryPageHandler, entryFragmentHandler))
 
+	filepathEntryPageHandler, err := config.Adaptor.AdaptFunc(app.entry,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
+		htadaptor.WithQueryValues("head", "tail"),
+		htadaptor.WithExtractors(filepathExtractor),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt filepath entry route: %w", err)
+	}
+	filepathEntryFragmentHandler, err := config.Adaptor.AdaptFunc(app.entry,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("entry-workspace.html")),
+		htadaptor.WithQueryValues("head", "tail"),
+		htadaptor.WithExtractors(filepathExtractor),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt filepath entry HTMX route: %w", err)
+	}
+	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "entry/{filepath...}"), NewHTMXSwitch(filepathEntryPageHandler, filepathEntryFragmentHandler))
+
 	uuidEntryPageHandler, err := config.Adaptor.AdaptFunc(app.entryUUID,
 		htadaptor.WithErrorHandler(errorHandler),
 		htadaptor.WithTemplate(templates.Lookup("page.html")),
@@ -213,6 +256,26 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 		return nil, fmt.Errorf("htmx: adapt UUID entry HTMX route: %w", err)
 	}
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "entry/uuid"), NewHTMXSwitch(uuidEntryPageHandler, uuidEntryFragmentHandler))
+
+	filepathUUIDEntryPageHandler, err := config.Adaptor.AdaptFunc(app.entryUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("page.html")),
+		htadaptor.WithQueryValues("uuid"),
+		htadaptor.WithExtractors(filepathExtractor),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt filepath UUID entry route: %w", err)
+	}
+	filepathUUIDEntryFragmentHandler, err := config.Adaptor.AdaptFunc(app.entryUUID,
+		htadaptor.WithErrorHandler(errorHandler),
+		htadaptor.WithTemplate(templates.Lookup("entry-workspace.html")),
+		htadaptor.WithQueryValues("uuid"),
+		htadaptor.WithExtractors(filepathExtractor),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("htmx: adapt filepath UUID entry HTMX route: %w", err)
+	}
+	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "entry/uuid/{filepath...}"), NewHTMXSwitch(filepathUUIDEntryPageHandler, filepathUUIDEntryFragmentHandler))
 
 	searchHandler, err := config.Adaptor.AdaptFunc(app.search,
 		htadaptor.WithErrorHandler(errorHandler),
@@ -445,6 +508,17 @@ func newHandler(source fs.FS, files cuebook.FileSystem, opts ...Option) (http.Ha
 	mux.Handle("GET "+routeWithPrefix(config.ServeMuxPrefix, "assets/{name}"), http.HandlerFunc(serveAsset))
 
 	return mux, nil
+}
+
+func getOnlyHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func selectEditTemplateHandler(form, view http.Handler) http.Handler {

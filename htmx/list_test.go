@@ -117,9 +117,7 @@ func TestIndexEntryLinksOpenMatchingEntry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			indexQuery := url.Values{}
-			indexQuery.Set("file", test.filePath)
-			indexRequest := httptest.NewRequest(http.MethodGet, "http://example.test/?"+indexQuery.Encode(), nil)
+			indexRequest := httptest.NewRequest(http.MethodGet, "http://example.test"+fileURL(test.filePath), nil)
 			indexResponse := httptest.NewRecorder()
 			handler.ServeHTTP(indexResponse, indexRequest)
 			if indexResponse.Code != http.StatusOK {
@@ -155,12 +153,13 @@ func TestIndexEntryLinksOpenMatchingEntry(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parse generated entry href %q: %v", entryHref, err)
 			}
-			if parsedHref.Path != "/entry" {
-				t.Errorf("entry href path = %q, want /entry", parsedHref.Path)
+			wantEntryPath := "/entry/" + strings.TrimSuffix(test.filePath, ".cue")
+			if parsedHref.Path != wantEntryPath {
+				t.Errorf("entry href path = %q, want %q", parsedHref.Path, wantEntryPath)
 			}
 			query := parsedHref.Query()
-			if got := query.Get("path"); got != test.filePath {
-				t.Errorf("entry href path query = %q, want %q", got, test.filePath)
+			if got := query.Get("path"); got != "" {
+				t.Errorf("entry href unexpectedly includes a path query = %q", got)
 			}
 			if got := query.Get("head"); got != strconv.Itoa(selectedRange.Head) {
 				t.Errorf("entry href head query = %q, want %d", got, selectedRange.Head)
@@ -390,7 +389,7 @@ func TestReadOnlyHandler(t *testing.T) {
 			method:     http.MethodGet,
 			path:       "/",
 			wantStatus: http.StatusOK,
-			contains:   []string{"core1.cue", "subfolder", "sub1.cue", `<span>core1</span>`, `<span>sub1</span>`, `data-file="core1.cue"`, `data-file="subfolder/sub1.cue"`, `href="/?file=subfolder%2Fsub1.cue"`, `<file-tree-node class="file-tree-node" data-node-path="subfolder">`, `class="tree-folder-icon"`, `class="tree-file-icon"`, `class="tree-children"`, `<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">`, "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", "/assets/file-tree.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, `<button id="theme-toggle" class="button has-text-info" type="button" aria-label="Toggle color theme" aria-pressed="true">`, `☼`},
+			contains:   []string{"core1.cue", "subfolder", "sub1.cue", `<span>core1</span>`, `<span>sub1</span>`, `data-file="core1.cue"`, `data-file="subfolder/sub1.cue"`, `href="/subfolder/sub1"`, `<file-tree-node class="file-tree-node" data-node-path="subfolder">`, `class="tree-folder-icon"`, `class="tree-file-icon"`, `class="tree-children"`, `<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">`, "bulma.css", "htmx-2.0.4.min.js", "/assets/theme.js", "/assets/file-tree.js", `data-theme="dark"`, `id="theme-toggle"`, `aria-pressed="true"`, `<button id="theme-toggle" class="button has-text-info" type="button" aria-label="Toggle color theme" aria-pressed="true">`, `☼`},
 			omits:      []string{"notes.txt", `<span>core1.cue</span>`, `<span>sub1.cue</span>`, "First11111aa", "Dark mode", "Light mode"},
 		},
 		{
@@ -440,9 +439,15 @@ func TestReadOnlyHandler(t *testing.T) {
 			omits:      []string{`<script>alert(1)</script>`},
 		},
 		{
-			name:       "unsupported method is rejected",
+			name:       "unsupported method on index is rejected",
 			method:     http.MethodPut,
 			path:       "/",
+			wantStatus: http.StatusMethodNotAllowed,
+		},
+		{
+			name:       "unsupported method on filepath route is rejected",
+			method:     http.MethodPut,
+			path:       "/core1",
 			wantStatus: http.StatusMethodNotAllowed,
 		},
 	}
